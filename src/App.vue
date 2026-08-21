@@ -11,6 +11,7 @@ import { useMemoryStore } from './stores/memory'
 import CommandPalette from './components/CommandPalette.vue'
 import OnboardingOverlay from './components/OnboardingOverlay.vue'
 
+// 初始化workingTree的宽度
 const filesWidth = ref(320)
 const session = useSessionStore()
 const settings = useSettingsStore()
@@ -23,11 +24,17 @@ function applyTheme() {
 }
 
 onMounted(async () => {
+  // 应用主题
   applyTheme()
+  // 创建Demo会话
   await seedDemoIfNeeded()
+  // 模拟工作树（编码版本管理）[初始化workingTree树结构到Store中]
   if (settings.demoMode) working.seedDemo()
+  // 模拟记忆数据[初始化memory到Store中]
   if (settings.demoMode) memory.seedDemo()
-  await session.load()
+  // 默认加载会话列表
+  await session.load() 
+  // 默认打开第一个会话列表
   if (!session.activeId) await session.create()
 })
 

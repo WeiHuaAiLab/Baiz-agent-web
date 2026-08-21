@@ -15,8 +15,10 @@ function msg(
   return { id: `seed-${kind}-${seedSeq}`, conversationId, kind, text, createdAt, ...(meta ? { meta } : {}) }
 }
 
+// 创建demo会话，并添加到本地indexedDb
 export async function seedDemoIfNeeded(): Promise<void> {
   if (localStorage.getItem('baiz.seeded') === '1') return
+  // 惰性创建，用户第一次执行indexedDb操作是，会默认按BaizDatabase 创建表和库
   const count = await db.conversations.count()
   if (count > 0) {
     localStorage.setItem('baiz.seeded', '1')

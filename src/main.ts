@@ -41,30 +41,38 @@ app.use(i18n)
 app.use(router)
 app.mount('#app')
 
+// 错误信息监听
 window.addEventListener('error', (event) => {
   const errors = (window as unknown as { __errors?: string[] }).__errors ?? []
   errors.push(String(event.message))
   ;(window as unknown as { __errors?: string[] }).__errors = errors
 })
+// 监听错误的promise拒绝报错
 window.addEventListener('unhandledrejection', (event) => {
   const errors = (window as unknown as { __errors?: string[] }).__errors ?? []
   errors.push(`unhandled: ${String(event.reason)}`)
   ;(window as unknown as { __errors?: string[] }).__errors = errors
 })
 
+// 获取（首次创建）传输层 + RPC 客户端
 const { client, transport } = getClientSetup()
+// 创建store 
 const messages = useMessageStore(pinia)
 const approvals = useApprovalStore(pinia)
 const settings = useSettingsStore(pinia)
 settings.setDemoMode(transport.kind === 'mock')
+
 client.onEvent((frame) => routeFrame(frame, messages, approvals))
 
+// 创建断线自动重连管理器
 const reconnect = new SseReconnect({
   transport,
   taskId: '*',
   subscribe: (params) => client.subscribe(params),
   onStateChange: (state) => settings.setConnection(state),
 })
+
+// SSE 流断线自动续、不丢事件
 void reconnect.start().catch((error) => console.warn('[baiz] reconnect failed:', error))
 
 if (detectRuntime() !== 'tauri') {
