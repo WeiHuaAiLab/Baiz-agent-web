@@ -32,7 +32,16 @@ export function createClient(transport: RpcTransport): BaizClient {
   return {
     connect: () => transport.connect(),
     handshake: (params) => rpc.call('auth.handshake', params),
-    subscribe: (params) => rpc.call('event.subscribe', params),
+    // DEBT-277（裁1015①）：tauri 面走 proxy_subscribe 长连接（订阅先行
+    // 口径）；http/mock 无此面回落 event.subscribe RPC
+    subscribe: (params) => {
+      if (transport.subscribe) {
+        return transport
+          .subscribe(params.task_id ?? '', params.last_event_id)
+          .then(() => ({ subscribed: true, latest_seq: 0, oldest_seq: 0 }))
+      }
+      return rpc.call('event.subscribe', params)
+    },
     provideKey: (key) => rpc.call('auth.provide_key', { key }),
     chatSend: (params) => rpc.call('chat.send', params),
     permissionPending: () => rpc.call('permission.pending'),

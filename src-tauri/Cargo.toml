@@ -14,3 +14,9 @@ tauri-build = { version = "2", features = [] }
 tauri = { version = "2", features = [] }
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
+# DEBT-277 棒1：proxy 直连 daemon TCP（spawn/TcpStream/BufReader/timeout）
+tokio = { version = "1", features = ["net", "io-util", "sync", "time", "rt-multi-thread", "macros"] }
+
+[dev-dependencies]
+# DEBT-277 验收门实录用：live_daemon 探针读 config [provider] key
+toml = "0.8"

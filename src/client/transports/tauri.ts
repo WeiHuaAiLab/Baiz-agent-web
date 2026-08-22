@@ -16,19 +16,32 @@ interface TauriInvokeError {
 
 function createRealTauriTransport(): RpcTransport {
   const handlers = new Set<(frame: SseFrame) => void>()
+  const disconnectHandlers = new Set<() => void>()
   let unlisten: (() => void) | null = null
+  let unlistenDisconnect: (() => void) | null = null
 
   return {
     kind: 'tauri',
     async connect() {
-      const [{ invoke }, { listen }] = await Promise.all([
-        import('@tauri-apps/api/core'),
-        import('@tauri-apps/api/event'),
-      ])
+      const { listen } = await import('@tauri-apps/api/event')
       unlisten = await listen<SseFrame>('daemon://frame', (event) => {
         handlers.forEach((handler) => handler(event.payload))
       })
-      await invoke('proxy_subscribe')
+      // P2 修复（2026-08-22）：Rust 壳订阅循环退出时 emit daemon://disconnect，
+      // 前端即时触发重连（SseReconnect.onDisconnect），不再等 90s 看门狗。
+      unlistenDisconnect = await listen<void>('daemon://disconnect', () => {
+        disconnectHandlers.forEach((handler) => handler())
+      })
+      // DEBT-277（裁1015①）：connect 不再空订阅（红1：空 task_id 订阅
+      // 必败且败相静默）——订阅由 subscribe(taskId) 按发送轮先行建立
+    },
+    async subscribe(taskId: string, lastEventId?: number) {
+      const { invoke } = await import('@tauri-apps/api/core')
+      await invoke('proxy_subscribe', { taskId, lastEventId })
+    },
+    async abort() {
+      const { invoke } = await import('@tauri-apps/api/core')
+      await invoke('proxy_abort').catch(() => undefined)
     },
     async request(req: RpcRequest) {
       const { invoke } = await import('@tauri-apps/api/core')
@@ -44,9 +57,17 @@ function createRealTauriTransport(): RpcTransport {
         handlers.delete(handler)
       }
     },
+    onDisconnect(handler) {
+      disconnectHandlers.add(handler)
+      return () => {
+        disconnectHandlers.delete(handler)
+      }
+    },
     close() {
       unlisten?.()
       unlisten = null
+      unlistenDisconnect?.()
+      unlistenDisconnect = null
     },
   }
 }
@@ -93,6 +114,11 @@ export function createTauriTransport(): RpcTransport {
           throw error
         }
       }
+    },
+    async subscribe(taskId: string, lastEventId?: number) {
+      if (mode === 'mock') return
+      if (!real) throw new RpcError({ code: -32603, message: 'transport not connected' })
+      await real.subscribe?.(taskId, lastEventId)
     },
     async request(req: RpcRequest) {
       if (mode === 'mock') return mock.request(req)

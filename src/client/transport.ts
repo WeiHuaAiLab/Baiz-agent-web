@@ -7,6 +7,11 @@ export type TransportKind = 'tauri' | 'http' | 'mock'
 export interface RpcTransport {
   readonly kind: TransportKind
   connect(): Promise<void>
+  /**
+   * DEBT-277（裁1015①）：订阅先行口——前端自报 client_task_id 建订阅；
+   * tauri 实现走 proxy_subscribe 长连接，http/mock 无此面（可选）。
+   */
+  subscribe?(taskId: string, lastEventId?: number): Promise<void>
   /** 中止在途连接/流（供重连前清理），不改变连接的永久状态。 */
   abort?(): void
   request(req: RpcRequest): Promise<unknown>
