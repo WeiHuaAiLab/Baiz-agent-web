@@ -32,6 +32,8 @@ const searchOpen = ref(false)
 const searchQuery = ref('')
 const taskConfig = ref<TaskItem | null>(null)
 const editDraft = ref<TaskDraft>(createEmptyTaskDraft())
+const editingId = ref('')
+const editingTitle = ref('')
 
 const filteredSessions = computed(() => {
   const query = searchQuery.value.trim().toLowerCase()
@@ -60,10 +62,19 @@ function toggleSearch() {
   }
 }
 
-async function renameFromMenu(item: Conversation) {
-  const title = window.prompt(t('chat.renamePrompt'), item.title)
-  if (title) await session.rename(item.id, title)
+function startRename(item: Conversation) {
+  // 内联编辑（不用 window.prompt——规范 §4.1）
+  editingId.value = item.id
+  editingTitle.value = item.title
   menuFor.value = ''
+}
+
+async function commitRename() {
+  const id = editingId.value
+  const title = editingTitle.value.trim()
+  editingId.value = ''
+  editingTitle.value = ''
+  if (id && title) await session.rename(id, title)
 }
 
 function togglePin(item: Conversation) {
@@ -224,7 +235,17 @@ function sendFeedback() {
               :key="item.id"
               :class="{ active: item.id === session.activeId, pinned: !!item.pinnedAt }"
             >
+              <input
+                v-if="editingId === item.id"
+                v-model="editingTitle"
+                class="session-rename-input"
+                :placeholder="item.title"
+                @keyup.enter="commitRename"
+                @keyup.esc="editingId = ''"
+                @blur="commitRename"
+              />
               <span
+                v-else
                 class="session-title"
                 :title="item.title"
                 @click="session.select(item.id)"
@@ -242,7 +263,7 @@ function sendFeedback() {
                 ⋯
               </button>
               <div v-if="menuFor === item.id" class="session-menu" @click.stop>
-                <button type="button" @click="renameFromMenu(item)">
+                <button type="button" @click="startRename(item)">
                   <Icon name="pen" :size="14" />
                   <span>{{ t('chat.renameTitle') }}</span>
                 </button>
@@ -266,33 +287,31 @@ function sendFeedback() {
           <span>{{ t('sidebar.newTask') }}</span>
         </button>
 
-        <div class="section-block">
-          <button
-            type="button"
-            class="menu-item"
-            :title="t('tasks.addScheduled')"
-            @click="ui.openCreate('scheduled')"
-          >
-            <Icon name="alarm" :size="15" />
-            <span>{{ t('sidebar.scheduledTasks') }}</span>
-          </button>
-          <ul v-if="workspace.tasks.length" class="project-list">
-            <li v-for="task in workspace.tasks" :key="task.id">
-              <Icon name="tasks" :size="13" />
-              <span class="project-title">{{ task.title }}</span>
-              <span class="task-when">{{ scheduleText(task) }}</span>
-              <button
-                type="button"
-                class="task-config-btn"
-                :title="t('tasks.scheduleTitle')"
-                @click="openTaskConfig(task)"
-              >
-                <Icon name="settings" :size="13" />
-              </button>
-            </li>
-          </ul>
-          <p v-else class="placeholder">{{ t('sidebar.noTasks') }}</p>
-        </div>
+        <button
+          type="button"
+          class="menu-item"
+          :title="t('tasks.addScheduled')"
+          @click="ui.openCreate('scheduled')"
+        >
+          <Icon name="alarm" :size="15" />
+          <span>{{ t('sidebar.scheduledTasks') }}</span>
+        </button>
+        <ul v-if="workspace.tasks.length" class="project-list task-list-slim">
+          <li v-for="task in workspace.tasks" :key="task.id">
+            <Icon name="tasks" :size="13" />
+            <span class="project-title">{{ task.title }}</span>
+            <span class="task-when">{{ scheduleText(task) }}</span>
+            <button
+              type="button"
+              class="task-config-btn"
+              :title="t('tasks.scheduleTitle')"
+              @click="openTaskConfig(task)"
+            >
+              <Icon name="settings" :size="13" />
+            </button>
+          </li>
+        </ul>
+        <p v-else class="placeholder">{{ t('sidebar.noTasks') }}</p>
 
         <div class="section-block">
           <div class="menu-item static">

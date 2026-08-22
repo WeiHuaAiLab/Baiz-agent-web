@@ -279,6 +279,15 @@ function activityText(run: RunState): string {
 
 <template>
   <section class="chat-view">
+    <div
+      v-if="
+        !settings.demoMode &&
+        (settings.connection === 'reconnecting' || settings.connection === 'connecting')
+      "
+      class="reconnect-banner"
+    >
+      {{ t('status.disconnectedReconnect') }}
+    </div>
     <header class="chat-header">
       <div class="chat-title">
         <span class="conv-title">{{ session.active?.title ?? t('app.title') }}</span>
@@ -314,9 +323,12 @@ function activityText(run: RunState): string {
 
     <div v-if="exportOpen" class="menu-mask" @click="exportOpen = false" />
 
-    <p v-if="displayItems.length === 0 && streamingRuns.length === 0" class="empty">
-      {{ t('chat.empty') }}
-    </p>
+    <div v-if="displayItems.length === 0 && streamingRuns.length === 0" class="empty-state">
+      <p class="empty">{{ t('chat.empty') }}</p>
+      <button type="button" class="empty-start" @click="ui.openCreate('session')">
+        {{ t('chat.emptyStart') }}
+      </button>
+    </div>
     <DynamicScroller
       v-if="displayItems.length > 0"
       ref="scroller"

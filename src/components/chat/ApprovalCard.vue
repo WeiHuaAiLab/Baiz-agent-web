@@ -21,7 +21,17 @@ async function decide(approved: boolean) {
 </script>
 
 <template>
-  <div class="approval-card">
+  <!-- 决议后立即收起为一行（不残留占位，老壳最大痛点回归项） -->
+  <div v-if="resolved" class="approval-card resolved">
+    <span class="approval-check" :class="{ denied: !message.meta?.approved }">
+      {{ message.meta?.approved ? '✓' : '✗' }}
+    </span>
+    <span class="approval-action">{{ message.meta?.toolName }}</span>
+    <span class="approval-result" :class="{ denied: !message.meta?.approved }">
+      {{ message.meta?.approved ? t('approval.approved') : t('approval.denied') }}
+    </span>
+  </div>
+  <div v-else class="approval-card">
     <div class="approval-head">
       <span class="approval-title">{{ t('approval.title') }}</span>
       <span class="risk" :class="risk">
@@ -34,10 +44,7 @@ async function decide(approved: boolean) {
         message.meta.argsPreview
       }}</pre>
     </div>
-    <div v-if="resolved" class="approval-result" :class="{ denied: !message.meta?.approved }">
-      {{ message.meta?.approved ? t('approval.approved') : t('approval.denied') }}
-    </div>
-    <div v-else class="approval-actions">
+    <div class="approval-actions">
       <button type="button" class="approve" :disabled="working" @click="decide(true)">
         {{ t('approval.approve') }}
       </button>

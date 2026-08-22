@@ -66,6 +66,7 @@ export const useMessageStore = defineStore('message', {
     runs: {} as Record<string, RunState>,
     callToMessage: {} as Record<string, string>,
     requestToMessage: {} as Record<string, string>,
+    requestToConversation: {} as Record<string, string>,
   }),
   actions: {
     list(conversationId: string): ChatMessage[] {
@@ -104,6 +105,14 @@ export const useMessageStore = defineStore('message', {
       const clientTaskId = `t-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 6)}`
       this.ensureRun(clientTaskId, conversationId)
       try {
+        // DEBT-284 口径B 预防性钉桩（裁1020）：发送路径禁 per-task
+        // subscribe——main.ts 的 SseReconnect 已用 task_id='*'
+        // （DEBT-87 通配）建立全局订阅；Rust 壳 proxy_subscribe 是单例
+        // （新订阅会 abort 旧订阅），此处若再 subscribe 会把全局订阅
+        // 顶掉，导致跨会话/多任务事件丢失。事件归属由 daemon gate.rs
+        // 按帧 task_id 过滤后全量推送。
+        // 注记（勘盘轻红修订）：e77fecd 基面无实删面——「每次发送都
+        // subscribe」系预防性口径，非既存缺陷修复。
         const result = await getClient().chatSend({
           message: effective,
           conversation_id: conversationId,
@@ -341,18 +350,33 @@ export const useMessageStore = defineStore('message', {
         toolName: data.tool_name,
         argsPreview: data.args_preview,
         action: data.tool_name,
-        risk: 'high',
+        // P2 修复（2026-08-22）：daemon 协议帧零扩（裁985②），approval.required
+        // 不带 risk；此处默认 medium 占位，真实档位由 approval store 的
+        // refreshRisk（permission.pending RPC）异步回填后覆盖。
+        risk: 'medium',
         details: data.args_preview,
       })
       this.requestToMessage[data.request_id] = msg.id
+      this.requestToConversation[data.request_id] = run.conversationId
       void this.push(run.conversationId, msg)
+    },
+    updateRisk(requestId: string, risk: string) {
+      const messageId = this.requestToMessage[requestId]
+      if (!messageId) return
+      const conversationId = this.requestToConversation[requestId]
+      const list = conversationId ? this.byConversation[conversationId] : undefined
+      const msg = list?.find((item) => item.id === messageId)
+      if (msg?.meta) {
+        msg.meta = { ...msg.meta, risk }
+        void db.messages.put(cloneForDb(msg))
+      }
     },
     onApprovalResolved(data: { request_id: string; approved: boolean }) {
       const messageId = this.requestToMessage[data.request_id]
       if (messageId) {
-        const list = Object.values(this.byConversation).find((items) =>
-          items.some((item) => item.id === messageId),
-        )
+        // P3 顺手修：按 requestToConversation 直接定位，避免线性扫描全部会话
+        const conversationId = this.requestToConversation[data.request_id]
+        const list = conversationId ? this.byConversation[conversationId] : undefined
         const msg = list?.find((item) => item.id === messageId)
         if (msg) {
           msg.meta = { ...msg.meta, approved: data.approved }
@@ -360,6 +384,7 @@ export const useMessageStore = defineStore('message', {
           void db.messages.put(cloneForDb(msg))
         }
         delete this.requestToMessage[data.request_id]
+        delete this.requestToConversation[data.request_id]
       }
     },
     onDone(data: DoneData) {

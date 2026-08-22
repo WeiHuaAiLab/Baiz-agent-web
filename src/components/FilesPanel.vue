@@ -16,6 +16,8 @@ const files = useFilesStore()
 const working = useWorkingTreeStore()
 const ui = useUiStore()
 
+const emit = defineEmits<{ close: [] }>()
+
 const treeRoots = computed<TreeNode[]>(() => buildTree(working.list))
 const active = computed(() => working.active)
 const stats = computed(() =>
@@ -77,9 +79,14 @@ async function toggleAuthorized(key: string) {
   <aside class="files-panel">
     <header class="files-header">
       <span>{{ t('files.title') }}</span>
-      <button type="button" :title="t('files.upload')" @click="files.attachFromPicker()">
-        <Icon name="plus" :size="15" />
-      </button>
+      <div class="files-head-actions">
+        <button type="button" :title="t('files.upload')" @click="files.attachFromPicker()">
+          <Icon name="plus" :size="15" />
+        </button>
+        <button type="button" :title="t('files.collapse')" @click="emit('close')">
+          <Icon name="x" :size="14" />
+        </button>
+      </div>
     </header>
     <div class="files-body">
       <template v-if="active">

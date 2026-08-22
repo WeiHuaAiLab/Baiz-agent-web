@@ -31,9 +31,11 @@ export function routeFrame(frame: SseFrame, messages: MessageStore, approvals: A
       approvals.upsert({
         request_id: approval.request_id,
         action: approval.tool_name,
-        risk: 'high',
+        // P2 修复：默认档位占位，真实 risk 由 refreshRisk 异步回填
+        risk: 'medium',
         details: approval.args_preview,
       })
+      void approvals.refreshRisk(approval.request_id)
       break
     }
     case 'approval.resolved':

@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { onMounted, ref, watch } from 'vue'
+import { onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import SidebarPanel from './components/SidebarPanel.vue'
 import FilesPanel from './components/FilesPanel.vue'
 import { useSessionStore } from './stores/session'
@@ -13,6 +13,7 @@ import OnboardingOverlay from './components/OnboardingOverlay.vue'
 
 // 初始化workingTree的宽度
 const filesWidth = ref(320)
+const filesOpen = ref(true)
 const session = useSessionStore()
 const settings = useSettingsStore()
 const ui = useUiStore()
@@ -21,6 +22,18 @@ const memory = useMemoryStore()
 
 function applyTheme() {
   document.documentElement.dataset.theme = settings.theme
+}
+
+function toggleFiles() {
+  filesOpen.value = !filesOpen.value
+}
+
+function onGlobalKeydown(event: KeyboardEvent) {
+  // Ctrl+B：文件区开关（规范 §九）
+  if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'b') {
+    event.preventDefault()
+    toggleFiles()
+  }
 }
 
 onMounted(async () => {
@@ -36,9 +49,14 @@ onMounted(async () => {
   await session.load() 
   // 默认打开第一个会话列表
   if (!session.activeId) await session.create()
+  window.addEventListener('keydown', onGlobalKeydown)
 })
 
 watch(() => settings.theme, applyTheme)
+
+onBeforeUnmount(() => {
+  window.removeEventListener('keydown', onGlobalKeydown)
+})
 
 function startDrag(event: MouseEvent) {
   const startX = event.clientX
@@ -61,8 +79,10 @@ function startDrag(event: MouseEvent) {
     <main class="chat-area">
       <router-view />
     </main>
-    <div class="divider" title="拖拽调整宽度" @mousedown="startDrag" />
-    <FilesPanel class="files" :style="{ width: filesWidth + 'px' }" />
+    <template v-if="filesOpen">
+      <div class="divider" title="拖拽调整宽度" @mousedown="startDrag" />
+      <FilesPanel class="files" :style="{ width: filesWidth + 'px' }" @close="toggleFiles" />
+    </template>
 
     <div class="toast-container">
       <div v-for="toast in ui.toasts" :key="toast.id" class="toast" :class="toast.type">
