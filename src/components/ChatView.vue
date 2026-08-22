@@ -11,6 +11,7 @@ import { useFilesStore } from '../stores/files'
 import MessageItem from './chat/MessageItem.vue'
 import ComposerBox from './chat/ComposerBox.vue'
 import MarkdownView from './markdown/MarkdownView.vue'
+import StreamingMarkdownView from './markdown/StreamingMarkdownView.vue'
 import Icon from './common/Icon.vue'
 import TaskForm from './common/TaskForm.vue'
 import type { ChatMessage } from '../models'
@@ -350,7 +351,7 @@ function activityText(run: RunState): string {
           <span class="activity-dot" />
           {{ activityText(run) }}
         </div>
-        <MarkdownView :text="run.text" />
+        <StreamingMarkdownView :text="run.text" />
         <span class="caret" />
       </div>
     </div>
