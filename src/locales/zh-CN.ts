@@ -202,6 +202,8 @@ export default {
     disconnectedReconnect: '连接已断开，重连中…',
     sendFailed: '发送失败',
     taskError: '任务错误',
+    demo: '演示模式',
+    chars: '字符',
   },
   errors: {
     network: '无法连接 daemon，请检查网关设置',
@@ -245,6 +247,8 @@ export default {
     highRisk: '高风险',
     mediumRisk: '中风险',
     lowRisk: '低风险',
+    viewChanges: '查看改动',
+    hideChanges: '收起改动',
   },
   common: {
     back: '返回',

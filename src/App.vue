@@ -10,6 +10,7 @@ import { useWorkingTreeStore } from './stores/workingTree'
 import { useMemoryStore } from './stores/memory'
 import CommandPalette from './components/CommandPalette.vue'
 import OnboardingOverlay from './components/OnboardingOverlay.vue'
+import StatusBar from './components/StatusBar.vue'
 
 // 初始化workingTree的宽度
 const filesWidth = ref(320)
@@ -77,7 +78,10 @@ function startDrag(event: MouseEvent) {
   <div class="app-shell">
     <SidebarPanel class="sidebar" />
     <main class="chat-area">
-      <router-view />
+      <div class="chat-router">
+        <router-view />
+      </div>
+      <StatusBar />
     </main>
     <template v-if="filesOpen">
       <div class="divider" title="拖拽调整宽度" @mousedown="startDrag" />

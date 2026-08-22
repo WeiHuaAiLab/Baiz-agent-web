@@ -19,6 +19,7 @@ import { createEmptyTaskDraft } from '../stores/workspace'
 import type { TaskDraft } from '../stores/workspace'
 import { clearDraft, loadDraft, saveDraft } from '../drafts'
 import { downloadText, exportConversation } from '../utils/export'
+import { getBridge } from '../bridge'
 import type { RunState } from '../models'
 
 const { t } = useI18n()
@@ -276,6 +277,34 @@ function activityText(run: RunState): string {
   if (run.reasoning) return t('chat.activityThinking')
   return t('chat.activityGenerating')
 }
+
+// 捎修一宗（MSG-1434，偏离②在册）：流式期链接/复制按钮点击面——
+// streaming-tail 容器事件委托，逻辑与现盘 MarkdownView.onClick 同源
+// （done 后 MarkdownView 自带处理恢复；此处只补流式期间交互面）。
+async function onStreamingClick(event: MouseEvent) {
+  const anchor = (event.target as HTMLElement).closest<HTMLAnchorElement>('a')
+  if (anchor) {
+    const href = anchor.getAttribute('href')
+    if (href) {
+      event.preventDefault()
+      await getBridge().openExternal(href)
+    }
+    return
+  }
+  const target = (event.target as HTMLElement).closest<HTMLButtonElement>('.code-copy')
+  if (!target) return
+  const code = decodeURIComponent(target.dataset.code ?? '')
+  try {
+    await getBridge().clipboard.writeText(code)
+    const original = target.textContent
+    target.textContent = '已复制'
+    setTimeout(() => {
+      target.textContent = original
+    }, 1200)
+  } catch {
+    /* clipboard unavailable */
+  }
+}
 </script>
 
 <template>
@@ -345,7 +374,7 @@ function activityText(run: RunState): string {
       </template>
     </DynamicScroller>
 
-    <div v-if="streamingRuns.length" class="streaming-tail">
+    <div v-if="streamingRuns.length" class="streaming-tail" @click="onStreamingClick">
       <div v-for="run in streamingRuns" :key="run.taskId" class="msg assistant streaming-block">
         <div class="activity-line">
           <span class="activity-dot" />

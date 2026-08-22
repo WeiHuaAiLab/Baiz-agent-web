@@ -3,6 +3,7 @@ import { computed, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useRouter } from 'vue-router'
 import { useSessionStore } from '../stores/session'
+import { useMessageStore } from '../stores/message'
 import { useSettingsStore } from '../stores/settings'
 import { useWorkspaceStore } from '../stores/workspace'
 import { useUiStore } from '../stores/ui'
@@ -20,6 +21,22 @@ const session = useSessionStore()
 const settings = useSettingsStore()
 const workspace = useWorkspaceStore()
 const ui = useUiStore()
+const messages = useMessageStore()
+
+/** 取会话最后一条有内容的文本，截断 48 字作预览 */
+function lastPreview(conversationId: string): string {
+  const list = messages.byConversation[conversationId]
+  if (!list || list.length === 0) return ''
+  for (let i = list.length - 1; i >= 0; i -= 1) {
+    const text = list[i].text?.trim()
+    if (text) return text.length > 48 ? `${text.slice(0, 48)}…` : text
+  }
+  return ''
+}
+
+function messageCount(conversationId: string): number {
+  return messages.byConversation[conversationId]?.length ?? 0
+}
 
 const showAbout = ref(false)
 const showFeedback = ref(false)
@@ -252,7 +269,13 @@ function sendFeedback() {
               >
                 {{ item.title }}
               </span>
-              <span class="session-time">{{ formatRelativeTime(item.updatedAt) }}</span>
+              <span class="session-time">
+                {{ formatRelativeTime(item.updatedAt) }}
+                <template v-if="messageCount(item.id)"> · {{ messageCount(item.id) }} 条</template>
+              </span>
+              <span v-if="lastPreview(item.id)" class="session-preview">
+                {{ lastPreview(item.id) }}
+              </span>
               <Icon v-if="item.pinnedAt" name="pin" :size="12" class="pin-badge" />
               <button
                 type="button"

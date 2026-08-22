@@ -202,6 +202,8 @@ export default {
     disconnectedReconnect: 'Disconnected, reconnecting…',
     sendFailed: 'Send failed',
     taskError: 'Task error',
+    demo: 'Demo mode',
+    chars: 'chars',
   },
   errors: {
     network: 'Cannot reach daemon. Check gateway settings',
@@ -245,6 +247,8 @@ export default {
     highRisk: 'High risk',
     mediumRisk: 'Medium risk',
     lowRisk: 'Low risk',
+    viewChanges: 'View changes',
+    hideChanges: 'Hide changes',
   },
   common: {
     back: 'Back',
