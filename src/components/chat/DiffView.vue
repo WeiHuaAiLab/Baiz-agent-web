@@ -1,9 +1,12 @@
 <script setup lang="ts">
 // Diff 渲染：行号 + 红绿 + 语法高亮 + 折叠（件 2，对照 codex diff_render.rs）
 import { computed, ref } from 'vue'
+import { useI18n } from 'vue-i18n'
 import hljs from 'highlight.js/lib/common'
 import { computeLineDiff } from '../../utils/diff'
 import type { DiffLine } from '../../utils/diff'
+
+const { t } = useI18n()
 
 const props = defineProps<{
   original?: string
@@ -78,7 +81,7 @@ function lineClass(type: DiffLine['type']): string {
         class="diff-toggle"
         @click="unfolded = !unfolded"
       >
-        {{ collapsed ? `展开全部（${hiddenCount} 行）` : '收起' }}
+        {{ collapsed ? t('diff.expandAll', { n: hiddenCount }) : t('diff.collapse') }}
       </button>
     </div>
     <div class="diff-body">
@@ -88,7 +91,7 @@ function lineClass(type: DiffLine['type']): string {
         <span class="diff-sign">{{ line.type === 'added' ? '+' : line.type === 'removed' ? '−' : ' ' }}</span>
         <span class="diff-text" v-html="highlight(line.text)" />
       </div>
-      <div v-if="hiddenCount > 0" class="diff-more">… 另有 {{ hiddenCount }} 行（点击展开全部查看）</div>
+      <div v-if="hiddenCount > 0" class="diff-more">{{ t('diff.more', { n: hiddenCount }) }}</div>
     </div>
   </div>
 </template>

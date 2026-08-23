@@ -297,7 +297,7 @@ async function onStreamingClick(event: MouseEvent) {
   try {
     await getBridge().clipboard.writeText(code)
     const original = target.textContent
-    target.textContent = '已复制'
+    target.textContent = t('common.copied')
     setTimeout(() => {
       target.textContent = original
     }, 1200)

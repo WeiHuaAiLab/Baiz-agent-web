@@ -261,4 +261,9 @@ export default {
     off: 'Off',
     retry: 'Retry',
   },
+  diff: {
+    expandAll: 'Expand all ({n} rows)',
+    collapse: 'Collapse',
+    more: '… {n} more rows (click to expand all)',
+  },
 }

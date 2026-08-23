@@ -261,4 +261,9 @@ export default {
     off: '关',
     retry: '重试',
   },
+  diff: {
+    expandAll: '展开全部（{n} 行）',
+    collapse: '收起',
+    more: '… 另有 {n} 行（点击展开全部查看）',
+  },
 }

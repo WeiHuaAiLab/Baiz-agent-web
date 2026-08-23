@@ -1,6 +1,8 @@
 @import "./core.css";
 @import "./markdown.css";
-@import "./components.css";
+@import "./chat.css";
+@import "./panels.css";
+@import "./batch.css";
 @import "./settings.css";
 @import "./sidebar.css";
 @import "./extras.css";
