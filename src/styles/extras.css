@@ -67,18 +67,80 @@
   flex: none;
 }
 
+/* 会话信息主盒子：默认占满整行（flex: 1），hover 时随 more-wrap 展开自动收缩让位 */
+.session-title-box {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-wrap: wrap; /* 预览换行显示在底部一行 */
+  align-items: center;
+  gap: 4px;
+}
+
+/* 操作图标容器：文档流内 flex 项，默认宽度 0 不占位，hover 行时展开 */
+/* align-self: stretch 与行内容等高，按钮垂直居中且不撑高 li（hover 高度不变） */
+.session-more-wrap {
+  flex: none;
+  align-self: stretch;
+  display: flex;
+  align-items: center; /* 按钮垂直居中 */
+  width: 0;
+  overflow: hidden;
+  border-radius: 4px;
+  visibility: hidden;
+  opacity: 0;
+  transition:
+    width 0.15s,
+    opacity 0.15s,
+    visibility 0.15s,
+    background 0.15s;
+}
+
+/* 容器背景：hover 行时浮现，底色与行 hover 背景一致 */
+.session-list li:hover .session-more-wrap {
+  visibility: visible;
+  opacity: 1;
+  width: auto;
+  background: var(--sidebar-hover);
+}
+
 .session-more {
+  /* 按钮自身背景更深一层，与容器形成层次 */
   color: var(--muted);
-  padding: 0 4px;
+  background: transparent;
+  border: none;
+  border-radius: 3px;
+  padding: 1px 4px;
   font-size: 14px;
   line-height: 1;
-  flex: none;
-  opacity: 0.75;
+  white-space: nowrap;
+  cursor: pointer;
 }
 
 .session-list li:hover .session-more {
-  opacity: 1;
   color: var(--text);
+  background: rgba(0, 0, 0, 0.12);
+}
+
+:root[data-theme='dark'] .session-list li:hover .session-more {
+  background: rgba(255, 255, 255, 0.12);
+}
+
+/* 重命名弹窗输入框 */
+.rename-input {
+  width: 100%;
+  padding: 10px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  font: inherit;
+  font-size: 13px;
+  background: var(--bg);
+  color: var(--text);
+  outline: none;
+}
+
+.rename-input:focus {
+  border-color: var(--muted);
 }
 
 .session-menu {

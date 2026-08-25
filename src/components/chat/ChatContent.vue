@@ -117,6 +117,8 @@ async function onStreamingClick(event: MouseEvent) {
       {{ t('chat.emptyStart') }}
     </button>
   </div>
+
+  
   <DynamicScroller
     v-if="displayItems.length > 0"
     ref="scroller"

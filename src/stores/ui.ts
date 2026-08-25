@@ -1,5 +1,6 @@
 // UI 状态：聊天区中央创建模式（会话/普通任务/定时任务）。
 import { defineStore } from 'pinia'
+import { useSessionStore } from './session'
 
 export type CreateMode = '' | 'session' | 'task' | 'scheduled'
 
@@ -29,6 +30,10 @@ export const useUiStore = defineStore('ui', {
   }),
   actions: {
     openCreate(mode: 'session' | 'task' | 'scheduled') {
+      if (mode === 'session') {
+        // 新建会话：清空当前选中，聊天区回到空白新会话页（消息列表为空）
+        useSessionStore().activeId = ''
+      }
       this.createMode = mode
     },
     closeCreate() {

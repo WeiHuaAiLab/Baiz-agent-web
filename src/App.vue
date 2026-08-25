@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { onMounted, watch } from 'vue'
-import SidebarPanel from './components/SidebarPanel.vue'
+import SidebarPanel from './components/Sidebar/SidebarPanel.vue'
 import { useSessionStore } from './stores/session'
 import { useSettingsStore } from './stores/settings'
 import { seedDemoIfNeeded } from './demo/seed'
