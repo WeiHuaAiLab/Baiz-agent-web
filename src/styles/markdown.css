@@ -96,6 +96,8 @@
   font-family: 'Cascadia Code', 'JetBrains Mono', Consolas, monospace;
   font-size: 13px;
   line-height: 1.55;
+  /* 保留行与行之间的 \n：默认 white-space: normal 会把换行折叠成空格，导致代码块所有行挤成一行 */
+  white-space: pre;
 }
 
 .code-body .ln {
