@@ -12,6 +12,9 @@
   --link: #2563eb;
   --hover: rgba(0, 0, 0, 0.04);
   --user-bg: #f3f4f6;
+  --sidebar-bg: #f8f8f8;
+  --sidebar-hover: #eeeeee;
+  --sidebar-active: #e2e2e2;
 }
 
 :root[data-theme='dark'] {
@@ -28,6 +31,9 @@
   --link: #6cb2ff;
   --hover: rgba(255, 255, 255, 0.06);
   --user-bg: #2f2f32;
+  --sidebar-bg: #1e1e1e;
+  --sidebar-hover: #2d2d2f;
+  --sidebar-active: #353537;
 }
 
 * {
@@ -78,7 +84,8 @@ button {
 .sidebar {
   width: 248px;
   flex: none;
-  background: var(--panel);
+  /* 浅灰背景，比内容区（白色）略深，形成层次 */
+  background: var(--sidebar-bg);
   border-right: 1px solid var(--border);
   display: flex;
   flex-direction: column;
@@ -89,6 +96,8 @@ button {
   min-width: 0;
   display: flex;
   flex-direction: column;
+  /* 白色内容区，与浅灰侧栏区分 */
+  background: var(--panel);
 }
 
 .divider {
@@ -874,6 +883,15 @@ button {
 
 .chat-view {
   display: flex;
+  flex-direction: row;
+  height: 100%;
+  position: relative;
+}
+
+.chat-main {
+  flex: 1;
+  min-width: 0;
+  display: flex;
   flex-direction: column;
   height: 100%;
   position: relative;
@@ -884,9 +902,16 @@ button {
   align-items: center;
   justify-content: space-between;
   width: 100%;
-  max-width: 720px;
-  margin: 0 auto;
-  padding: 12px 0;
+  /* 头部占满内容区宽度；内容缩进与消息列（720px 居中）对齐，避免滚动条悬在空白中显得突兀 */
+  padding: 12px max(16px, calc((100% - 720px) / 2));
+}
+
+/* 窄窗口（<900px）：消息列降级全宽 + 16px 边距，头部同步对齐 */
+@media (max-width: 899px) {
+  .chat-header {
+    padding-left: 16px;
+    padding-right: 16px;
+  }
 }
 
 .status {

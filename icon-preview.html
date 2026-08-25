@@ -1,0 +1,329 @@
+<!doctype html>
+<html lang="zh-CN">
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <title>Icon 图标预览</title>
+        <style>
+            :root {
+                --bg: #0f1115;
+                --panel: #171a21;
+                --panel-2: #1c2028;
+                --border: #2a2f3a;
+                --text: #e6e9ef;
+                --muted: #8b93a1;
+                --accent: #4c8dff;
+                --hover: #232834;
+            }
+            * {
+                margin: 0;
+                padding: 0;
+                box-sizing: border-box;
+            }
+            body {
+                font-family:
+                    -apple-system, "Segoe UI", "PingFang SC", "Microsoft YaHei",
+                    sans-serif;
+                background: var(--bg);
+                color: var(--text);
+                min-height: 100vh;
+                padding: 32px 24px 64px;
+            }
+            header {
+                max-width: 1200px;
+                margin: 0 auto 24px;
+                display: flex;
+                align-items: center;
+                justify-content: space-between;
+                gap: 16px;
+                flex-wrap: wrap;
+            }
+            h1 {
+                font-size: 22px;
+                font-weight: 600;
+            }
+            h1 small {
+                color: var(--muted);
+                font-weight: 400;
+                font-size: 14px;
+                margin-left: 8px;
+            }
+            .search {
+                flex: 1;
+                min-width: 220px;
+                max-width: 360px;
+                position: relative;
+            }
+            .search input {
+                width: 100%;
+                padding: 10px 14px 10px 38px;
+                border-radius: 10px;
+                border: 1px solid var(--border);
+                background: var(--panel);
+                color: var(--text);
+                font-size: 14px;
+                outline: none;
+            }
+            .search input:focus {
+                border-color: var(--accent);
+            }
+            .search svg {
+                position: absolute;
+                left: 12px;
+                top: 50%;
+                transform: translateY(-50%);
+                color: var(--muted);
+            }
+            .grid {
+                max-width: 1200px;
+                margin: 0 auto;
+                display: grid;
+                grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+                gap: 12px;
+            }
+            .card {
+                background: var(--panel);
+                border: 1px solid var(--border);
+                border-radius: 12px;
+                padding: 18px 14px 14px;
+                display: flex;
+                flex-direction: column;
+                align-items: center;
+                gap: 10px;
+                cursor: pointer;
+                transition:
+                    transform 0.15s,
+                    border-color 0.15s,
+                    background 0.15s;
+                user-select: none;
+            }
+            .card:hover {
+                transform: translateY(-2px);
+                border-color: var(--accent);
+                background: var(--panel-2);
+            }
+            .card .icon {
+                color: var(--text);
+            }
+            .card .name {
+                font-size: 13px;
+                font-weight: 500;
+                font-family: "SF Mono", Consolas, monospace;
+            }
+            .card .path {
+                font-size: 10px;
+                color: var(--muted);
+                text-align: center;
+                max-width: 100%;
+                overflow: hidden;
+                text-overflow: ellipsis;
+                white-space: nowrap;
+                line-height: 1.4;
+            }
+            .empty {
+                grid-column: 1 / -1;
+                text-align: center;
+                color: var(--muted);
+                padding: 60px 0;
+            }
+            #toast {
+                position: fixed;
+                left: 50%;
+                bottom: 32px;
+                transform: translateX(-50%) translateY(20px);
+                background: var(--panel-2);
+                border: 1px solid var(--border);
+                padding: 10px 18px;
+                border-radius: 10px;
+                font-size: 13px;
+                opacity: 0;
+                pointer-events: none;
+                transition:
+                    opacity 0.2s,
+                    transform 0.2s;
+                box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+            }
+            #toast.show {
+                opacity: 1;
+                transform: translateX(-50%) translateY(0);
+            }
+        </style>
+    </head>
+    <body>
+        <header>
+            <h1>
+                Icon 图标预览<small
+                    >共 <span id="count"></span> 个 · 点击卡片复制名称</small
+                >
+            </h1>
+            <div class="search">
+                <svg
+                    width="16"
+                    height="16"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="1.7"
+                    stroke-linecap="round"
+                >
+                    <path
+                        d="M11 19a8 8 0 1 0 0-16 8 8 0 0 0 0 16Zm10 2-4.3-4.3"
+                    />
+                </svg>
+                <input
+                    id="filter"
+                    type="text"
+                    placeholder="搜索图标名称…"
+                    autocomplete="off"
+                />
+            </div>
+        </header>
+
+        <div class="grid" id="grid"></div>
+        <div id="toast"></div>
+
+        <script>
+            // 与 src/components/common/Icon.vue 的 IconName / paths 保持一致
+            const ICONS = [
+                {
+                    name: "chat",
+                    path: "M4 4h16a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2H9l-5 4v-4H4a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2Z",
+                },
+                {
+                    name: "workspace",
+                    path: "M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V7Z",
+                },
+                {
+                    name: "tools",
+                    path: "M14.7 6.3a4.5 4.5 0 0 0-6.1 5.6L4 16.6 7.4 20l4.7-4.6a4.5 4.5 0 0 0 5.6-6.1l-2.6 2.6-2.8-.8-.8-2.8 2.6-2.6Z",
+                },
+                {
+                    name: "skills",
+                    path: "M12 3l1.9 4.7L18.5 9l-4.6 1.3L12 15l-1.9-4.7L5.5 9l4.6-1.3L12 3ZM5 16l1 2.5L8.5 19.5 6 20l-1 2.5L4 20l-2.5-.5L4 18.5 5 16Z",
+                },
+                {
+                    name: "tasks",
+                    path: "M9 11l3 3 8-8M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11",
+                },
+                {
+                    name: "settings",
+                    path: "M12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6Zm7.4-3a7.4 7.4 0 0 0-.1-1.2l2-1.5-2-3.5-2.4 1a7.4 7.4 0 0 0-2-1.2L14.5 3h-5l-.4 2.6a7.4 7.4 0 0 0-2 1.2l-2.4-1-2 3.5 2 1.5a7.4 7.4 0 0 0 0 2.4l-2 1.5 2 3.5 2.4-1a7.4 7.4 0 0 0 2 1.2l.4 2.6h5l.4-2.6a7.4 7.4 0 0 0 2-1.2l2.4 1 2-3.5-2-1.5c.1-.4.1-.8.1-1.2Z",
+                },
+                { name: "plus", path: "M12 5v14M5 12h14" },
+                { name: "x", path: "M6 6l12 12M18 6L6 18" },
+                { name: "send", path: "M5 12h14M12 5l7 7-7 7" },
+                { name: "copy", path: "M9 9h11v11H9zM5 15V5h10" },
+                { name: "refresh", path: "M21 12a9 9 0 1 1-2.6-6.4M21 3v6h-6" },
+                { name: "check", path: "M4 12l5 5L20 7" },
+                {
+                    name: "user",
+                    path: "M12 12a4 4 0 1 0 0-8 4 4 0 0 0 0 8Zm-7 8a7 7 0 0 1 14 0",
+                },
+                {
+                    name: "feedback",
+                    path: "M21 15a2 2 0 0 1-2 2H9l-5 4V5a2 2 0 0 1 2-2h13a2 2 0 0 1 2 2v10ZM12 8v3M12 14h.01",
+                },
+                {
+                    name: "info",
+                    path: "M12 21a9 9 0 1 0 0-18 9 9 0 0 0 0 18Zm0-13v5M12 16h.01",
+                },
+                {
+                    name: "pen",
+                    path: "M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5ZM12 20h9",
+                },
+                {
+                    name: "alarm",
+                    path: "M12 21a8 8 0 1 0 0-16 8 8 0 0 0 0 16Zm0-12v4l3 2M5 3 2 6M19 3l3 3",
+                },
+                {
+                    name: "extension",
+                    path: "M10 21v-1a2 2 0 1 1 4 0v1h6v-6h-1a2 2 0 0 1 0-4h1V5h-6v1a2 2 0 1 1-4 0V5H4v6h1a2 2 0 0 1 0 4H4v6h6Z",
+                },
+                { name: "chevron", path: "M9 6l6 6-6 6" },
+                {
+                    name: "pin",
+                    path: "M9 4h6l-1 4 2 3v2H8v-2l2-3-1-4ZM12 17v3",
+                },
+                {
+                    name: "trash",
+                    path: "M4 7h16M10 11v6M14 11v6M6 7l1 13h10l1-13M9 7V4h6v3",
+                },
+                {
+                    name: "mic",
+                    path: "M12 3a3 3 0 0 1 3 3v6a3 3 0 0 1-6 0V6a3 3 0 0 1 3-3Zm6 9a6 6 0 0 1-12 0M12 18v3",
+                },
+                {
+                    name: "search",
+                    path: "M11 19a8 8 0 1 0 0-16 8 8 0 0 0 0 16Zm10 2-4.3-4.3",
+                },
+                { name: "stop", path: "M6 6h12v12H6z" },
+                { name: "download", path: "M12 3v12m0 0 4-4m-4 4-4-4M4 21h16" },
+                {
+                    name: "extesionPanel",
+                    path: "M9.56 10.36h11.25c0.1 0 0.19-0.08 0.19-0.19v-1.31c0-0.1-0.08-0.19-0.19-0.19H9.56c-0.1 0-0.19 0.08-0.19 0.19v1.31c0 0.1 0.08 0.19 0.19 0.19zm-0.19 4.78c0 0.1 0.08 0.19 0.19 0.19h11.25c0.1 0 0.19-0.08 0.19-0.19v-1.31c0-0.1-0.08-0.19-0.19-0.19H9.56c-0.1 0-0.19 0.08-0.19 0.19v1.31zm11.81-11.39H2.81c-0.1 0-0.19 0.08-0.19 0.19v1.31c0 0.1 0.08 0.19 0.19 0.19h18.38c0.1 0 0.19-0.08 0.19-0.19v-1.31c0-0.1-0.08-0.19-0.19-0.19zm0 14.81H2.81c-0.1 0-0.19 0.08-0.19 0.19v1.31c0 0.1 0.08 0.19 0.19 0.19h18.38c0.1 0 0.19-0.08 0.19-0.19v-1.31c0-0.1-0.08-0.19-0.19-0.19zM3.34 15.05L7 12.16a0.21 0.21 0 0 0 0-0.33L3.34 8.95c-0.14-0.11-0.34-0.01-0.34 0.16v5.77a0.21 0.21 0 0 0 0.34 0.16z",
+                    fill: true,
+                },
+            ];
+
+            const grid = document.getElementById("grid");
+            const filter = document.getElementById("filter");
+            const count = document.getElementById("count");
+            const toastEl = document.getElementById("toast");
+            let timer = null;
+
+            count.textContent = ICONS.length;
+
+            function svgFor(icon, size) {
+                const paint = icon.fill
+                    ? 'fill="currentColor" stroke="none"'
+                    : 'fill="none" stroke="currentColor"';
+                return `<svg width="${size}" height="${size}" viewBox="0 0 24 24" ${paint}
+    stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+    <path d="${icon.path}" /></svg>`;
+            }
+
+            function render(keyword = "") {
+                const list = ICONS.filter((icon) =>
+                    icon.name.includes(keyword.toLowerCase()),
+                );
+                if (!list.length) {
+                    grid.innerHTML = '<div class="empty">没有匹配的图标</div>';
+                    return;
+                }
+                grid.innerHTML = list
+                    .map(
+                        (icon) => `
+      <div class="card" data-name="${icon.name}" title="点击复制图标名称">
+        <span class="icon">${svgFor(icon, 44)}</span>
+        <span class="name">${icon.name}</span>
+        <span class="path">${icon.path}</span>
+      </div>`,
+                    )
+                    .join("");
+            }
+
+            function showToast(text) {
+                toastEl.textContent = text;
+                toastEl.classList.add("show");
+                clearTimeout(timer);
+                timer = setTimeout(
+                    () => toastEl.classList.remove("show"),
+                    1600,
+                );
+            }
+
+            filter.addEventListener("input", () => render(filter.value));
+            grid.addEventListener("click", (event) => {
+                const card = event.target.closest(".card");
+                if (!card) return;
+                const name = card.dataset.name;
+                navigator.clipboard?.writeText(name).then(
+                    () => showToast(`已复制图标名称：${name}`),
+                    () => showToast(`图标名称：${name}`),
+                );
+            });
+
+            render();
+        </script>
+    </body>
+</html>

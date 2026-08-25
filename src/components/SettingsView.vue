@@ -1,4 +1,5 @@
 <script setup lang="ts">
+// 设置页：语言/主题/模型切换、API Key 配置、工作区管理、记忆（memory）管理与数据导出。
 import { ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useRouter } from 'vue-router'

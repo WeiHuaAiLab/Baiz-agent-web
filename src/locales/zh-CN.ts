@@ -28,6 +28,7 @@ export default {
     stop: '停止',
     scrollToLatest: '回到最新',
     export: '导出会话',
+    openPanel: '打开文件面板',
     modelLocal: 'Qwen 本地 · 隐私',
     projectChoose: '选择项目',
     projectNew: '新建项目',

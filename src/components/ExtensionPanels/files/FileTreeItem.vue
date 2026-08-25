@@ -1,8 +1,8 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue'
-import type { TreeNode } from '../../utils/tree'
-import { diffStats } from '../../utils/diff'
-import Icon from '../common/Icon.vue'
+import type { TreeNode } from '../../../utils/tree'
+import { diffStats } from '../../../utils/diff'
+import Icon from '../../common/Icon.vue'
 
 const props = defineProps<{ node: TreeNode; depth: number }>()
 const emit = defineEmits<{ select: [path: string] }>()

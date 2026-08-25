@@ -1,40 +1,23 @@
 <script setup lang="ts">
-import { onBeforeUnmount, onMounted, ref, watch } from 'vue'
+import { onMounted, watch } from 'vue'
 import SidebarPanel from './components/SidebarPanel.vue'
-import FilesPanel from './components/FilesPanel.vue'
 import { useSessionStore } from './stores/session'
 import { useSettingsStore } from './stores/settings'
 import { seedDemoIfNeeded } from './demo/seed'
-import { useUiStore } from './stores/ui'
 import { useWorkingTreeStore } from './stores/workingTree'
 import { useMemoryStore } from './stores/memory'
 import CommandPalette from './components/CommandPalette.vue'
 import OnboardingOverlay from './components/OnboardingOverlay.vue'
 import StatusBar from './components/StatusBar.vue'
+import ToastContainer from './components/ToastContainer.vue'
 
-// 初始化workingTree的宽度
-const filesWidth = ref(320)
-const filesOpen = ref(true)
 const session = useSessionStore()
 const settings = useSettingsStore()
-const ui = useUiStore()
 const working = useWorkingTreeStore()
 const memory = useMemoryStore()
 
 function applyTheme() {
   document.documentElement.dataset.theme = settings.theme
-}
-
-function toggleFiles() {
-  filesOpen.value = !filesOpen.value
-}
-
-function onGlobalKeydown(event: KeyboardEvent) {
-  // Ctrl+B：文件区开关（规范 §九）
-  if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'b') {
-    event.preventDefault()
-    toggleFiles()
-  }
 }
 
 onMounted(async () => {
@@ -50,28 +33,9 @@ onMounted(async () => {
   await session.load() 
   // 默认打开第一个会话列表
   if (!session.activeId) await session.create()
-  window.addEventListener('keydown', onGlobalKeydown)
 })
 
 watch(() => settings.theme, applyTheme)
-
-onBeforeUnmount(() => {
-  window.removeEventListener('keydown', onGlobalKeydown)
-})
-
-function startDrag(event: MouseEvent) {
-  const startX = event.clientX
-  const startWidth = filesWidth.value
-  const onMove = (moveEvent: MouseEvent) => {
-    filesWidth.value = Math.max(240, Math.min(560, startWidth - (moveEvent.clientX - startX)))
-  }
-  const onUp = () => {
-    window.removeEventListener('mousemove', onMove)
-    window.removeEventListener('mouseup', onUp)
-  }
-  window.addEventListener('mousemove', onMove)
-  window.addEventListener('mouseup', onUp)
-}
 </script>
 
 <template>
@@ -83,18 +47,12 @@ function startDrag(event: MouseEvent) {
       </div>
       <StatusBar />
     </main>
-    <template v-if="filesOpen">
-      <div class="divider" title="拖拽调整宽度" @mousedown="startDrag" />
-      <FilesPanel class="files" :style="{ width: filesWidth + 'px' }" @close="toggleFiles" />
-    </template>
 
-    <div class="toast-container">
-      <div v-for="toast in ui.toasts" :key="toast.id" class="toast" :class="toast.type">
-        {{ toast.message }}
-      </div>
-    </div>
-
+    <!-- 处理弹窗内容 -->
+    <ToastContainer />
+    <!-- 命令行控制面板 -->
     <CommandPalette />
+    <!-- 新手指引 -->
     <OnboardingOverlay />
   </div>
 </template>

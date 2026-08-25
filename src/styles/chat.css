@@ -280,6 +280,12 @@
   }
 }
 
+/* 输入区容器：占满父级 100% 宽度，高度由内容（.composer）撑开 */
+.chat-input {
+  width: 100%;
+  flex: none;
+}
+
 .composer {
   display: flex;
   flex-direction: column;

@@ -1,15 +1,16 @@
 <script setup lang="ts">
+// 文件面板（抽屉内容）：工作区文件树 + 当前文件 diff 预览与行级变更，支持授权目录浏览外部文件。
 import { computed, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { useFilesStore } from '../stores/files'
-import { useWorkingTreeStore } from '../stores/workingTree'
-import { buildTree } from '../utils/tree'
-import type { TreeNode } from '../utils/tree'
-import { computeLineDiff, diffStats } from '../utils/diff'
+import { useFilesStore } from '../../stores/files'
+import { useWorkingTreeStore } from '../../stores/workingTree'
+import { buildTree } from '../../utils/tree'
+import type { TreeNode } from '../../utils/tree'
+import { computeLineDiff, diffStats } from '../../utils/diff'
 import FileTreeItem from './files/FileTreeItem.vue'
-import Icon from './common/Icon.vue'
-import { useUiStore } from '../stores/ui'
-import type { FileEntry } from '../bridge'
+import Icon from '../common/Icon.vue'
+import { useUiStore } from '../../stores/ui'
+import type { FileEntry } from '../../bridge'
 
 const { t } = useI18n()
 const files = useFilesStore()

@@ -1,4 +1,5 @@
 <script setup lang="ts">
+// 工具调用行：展示工具名、运行状态（运行中/成功/失败）、文件引用与 diff 统计、可展开参数预览。
 import { computed, ref } from 'vue'
 import type { ChatMessage } from '../../models'
 import { useWorkingTreeStore } from '../../stores/workingTree'

@@ -28,7 +28,7 @@ export const useUiStore = defineStore('ui', {
     pendingPrompt: '',
   }),
   actions: {
-    openCreate(mode: 'session' | 'task') {
+    openCreate(mode: 'session' | 'task' | 'scheduled') {
       this.createMode = mode
     },
     closeCreate() {

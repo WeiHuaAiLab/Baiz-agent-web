@@ -28,6 +28,7 @@ export default {
     stop: 'Stop',
     scrollToLatest: 'Back to latest',
     export: 'Export chat',
+    openPanel: 'Open files panel',
     modelLocal: 'Qwen Local · private',
     projectChoose: 'Choose project',
     projectNew: 'New project',

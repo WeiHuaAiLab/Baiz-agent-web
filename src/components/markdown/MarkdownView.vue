@@ -1,4 +1,5 @@
 <script setup lang="ts">
+// Markdown 渲染视图：调用 renderMarkdown 生成 HTML（含代码高亮），并委托处理外链打开与代码复制。
 import { computed, onMounted, onUnmounted, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { getBridge } from '../../bridge'
@@ -18,7 +19,7 @@ async function onClick(event: MouseEvent) {
     const href = anchor.getAttribute('href')
     if (href) {
       event.preventDefault()
-      await getBridge().openExternal(href)
+      await getBridge().openExternal.open(href)
     }
     return
   }

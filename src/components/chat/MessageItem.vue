@@ -1,4 +1,5 @@
 <script setup lang="ts">
+// 单条聊天消息：用户/助手消息内容（Markdown）、工具调用行、审批卡，耗时显示与复制/重新生成/重试操作。
 import { computed, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useRouter } from 'vue-router'

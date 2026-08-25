@@ -1,4 +1,7 @@
-<script setup lang="ts">
+<script setup lang="ts">
+// 命令面板（VS Code Ctrl+K 风格）：全局命令搜索浮层，任意页面可按快捷键或 ui.openPalette() 唤出，
+// 输入文字过滤并执行命令（新建会话/任务/定时任务、导出 md/json、切换主题、跳设置页、切换会话等）。
+// 显隐由 ui store 的 paletteOpen 控制，Esc 或点击遮罩关闭；挂在 App.vue 最外层、路由之外。
 import { computed, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'

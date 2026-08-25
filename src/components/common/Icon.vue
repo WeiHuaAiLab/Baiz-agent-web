@@ -1,4 +1,5 @@
 <script setup lang="ts">
+// 图标组件：集中维护 SVG path（默认 24×24 描边风格，支持个别实心填充/坐标系特例），按 name 渲染统一尺寸图标。
 type IconName =
   | 'chat'
   | 'workspace'
@@ -25,6 +26,7 @@ type IconName =
   | 'search'
   | 'stop'
   | 'download'
+  | 'extesionPanel'
 
 const props = defineProps<{ name: IconName; size?: number }>()
 
@@ -56,7 +58,13 @@ const paths: Record<IconName, string> = {
   search: 'M11 19a8 8 0 1 0 0-16 8 8 0 0 0 0 16Zm10 2-4.3-4.3',
   stop: 'M6 6h12v12H6z',
   download: 'M12 3v12m0 0 4-4m-4 4-4-4M4 21h16',
+  // 源自 antd MenuUnfoldOutlined，已由 1024 坐标系换算到 24 坐标系（×24/1024）
+  extesionPanel:
+    'M9.56 10.36h11.25c0.1 0 0.19-0.08 0.19-0.19v-1.31c0-0.1-0.08-0.19-0.19-0.19H9.56c-0.1 0-0.19 0.08-0.19 0.19v1.31c0 0.1 0.08 0.19 0.19 0.19zm-0.19 4.78c0 0.1 0.08 0.19 0.19 0.19h11.25c0.1 0 0.19-0.08 0.19-0.19v-1.31c0-0.1-0.08-0.19-0.19-0.19H9.56c-0.1 0-0.19 0.08-0.19 0.19v1.31zm11.81-11.39H2.81c-0.1 0-0.19 0.08-0.19 0.19v1.31c0 0.1 0.08 0.19 0.19 0.19h18.38c0.1 0 0.19-0.08 0.19-0.19v-1.31c0-0.1-0.08-0.19-0.19-0.19zm0 14.81H2.81c-0.1 0-0.19 0.08-0.19 0.19v1.31c0 0.1 0.08 0.19 0.19 0.19h18.38c0.1 0 0.19-0.08 0.19-0.19v-1.31c0-0.1-0.08-0.19-0.19-0.19zM3.34 15.05L7 12.16a0.21 0.21 0 0 0 0-0.33L3.34 8.95c-0.14-0.11-0.34-0.01-0.34 0.16v5.77a0.21 0.21 0 0 0 0.34 0.16z',
 }
+
+// 特殊图标：实心填充渲染（非描边）
+const fillIcons: IconName[] = ['extesionPanel']
 </script>
 
 <template>
@@ -64,8 +72,8 @@ const paths: Record<IconName, string> = {
     :width="props.size ?? 18"
     :height="props.size ?? 18"
     viewBox="0 0 24 24"
-    fill="none"
-    stroke="currentColor"
+    :fill="fillIcons.includes(props.name) ? 'currentColor' : 'none'"
+    :stroke="fillIcons.includes(props.name) ? 'none' : 'currentColor'"
     stroke-width="1.7"
     stroke-linecap="round"
     stroke-linejoin="round"

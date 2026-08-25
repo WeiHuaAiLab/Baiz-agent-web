@@ -303,3 +303,21 @@
   margin: 0;
 }
 
+/* 侧栏 hover / active 加深：浅灰底（#f8f8f8）上需要更深的选中/悬停色才有反差。
+   此处用 .sidebar 前缀提高特异性，覆盖 core.css 中 session/workspace 列表的 --code-bg 默认色 */
+.sidebar .side-tabs button.active,
+.sidebar .session-list li.active,
+.sidebar .workspace-list li.active {
+  background: var(--sidebar-active);
+}
+
+.sidebar .session-list li:hover,
+.sidebar .workspace-list li:hover,
+.sidebar .menu-item:not(.static):hover,
+.sidebar .mini-add:hover,
+.sidebar .project-list li:hover,
+.sidebar .ext-row:hover,
+.sidebar .user-pop button:hover {
+  background: var(--sidebar-hover);
+}
+

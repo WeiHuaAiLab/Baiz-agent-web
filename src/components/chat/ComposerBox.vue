@@ -1,4 +1,5 @@
 <script setup lang="ts">
+// 聊天输入框：附件展示与添加、语音按钮、发送/停止；centered 模式用于创建流程的居中布局。
 import { ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useFilesStore } from '../../stores/files'

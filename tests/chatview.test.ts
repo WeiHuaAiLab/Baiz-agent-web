@@ -12,6 +12,8 @@ import { useWorkspaceStore } from '../src/stores/workspace'
 import { useSettingsStore } from '../src/stores/settings'
 import { useFilesStore } from '../src/stores/files'
 import ChatView from '../src/components/ChatView.vue'
+import ChatContent from '../src/components/chat/ChatContent.vue'
+import ChatInput from '../src/components/chat/ChatInput.vue'
 import { router } from '../src/router'
 import { createMockBridge } from '../src/bridge/mock'
 import { resetBridgeForTests } from '../src/bridge'
@@ -41,10 +43,6 @@ describe('ChatView 消息流渲染', () => {
     const wrapper = mount(ChatView, {
       global: { plugins: [i18n, router] },
     })
-    const vm = wrapper.vm as unknown as {
-      displayItems: { kind: string }[]
-      streamingRuns: unknown[]
-    }
 
     const frames = buildDemoFrames(taskId, '测试')
     for (const frame of frames.slice(0, 5)) {
@@ -52,8 +50,8 @@ describe('ChatView 消息流渲染', () => {
     }
     await wrapper.vm.$nextTick()
 
-    expect(vm.displayItems.filter((item) => item.kind === 'assistant')).toHaveLength(0)
-    expect(vm.streamingRuns).toHaveLength(1)
+    expect(messages.list(conversationId).filter((item) => item.kind === 'assistant')).toHaveLength(0)
+    expect(messages.activeRuns(conversationId)).toHaveLength(1)
     expect(wrapper.find('.streaming-tail').exists()).toBe(true)
 
     for (const frame of frames.slice(5)) {
@@ -61,7 +59,7 @@ describe('ChatView 消息流渲染', () => {
     }
     await wrapper.vm.$nextTick()
 
-    expect(vm.streamingRuns).toHaveLength(0)
+    expect(messages.activeRuns(conversationId)).toHaveLength(0)
     expect(wrapper.find('.streaming-tail').exists()).toBe(false)
     const assistant = messages.list(conversationId).find((item) => item.kind === 'assistant')
     expect(assistant).toBeDefined()
@@ -143,8 +141,11 @@ describe('ChatView 消息流渲染', () => {
 
     ui.openCreate('task')
     await wrapper.vm.$nextTick()
-    const vm = wrapper.vm as unknown as { projectOption: string; chosenDir: string }
-    vm.projectOption = 'folder'
+    const inputVm = wrapper.findComponent(ChatInput).vm as unknown as {
+      projectOption: string
+      chosenDir: string
+    }
+    inputVm.projectOption = 'folder'
 
     await wrapper.find('.create-center textarea').setValue('任务A')
     await wrapper.vm.$nextTick()
@@ -153,7 +154,7 @@ describe('ChatView 消息流渲染', () => {
     expect(workspace.tasks).toHaveLength(0)
     expect(ui.createMode).toBe('task')
 
-    vm.chosenDir = 'C:/projects/x'
+    inputVm.chosenDir = 'C:/projects/x'
     await wrapper.find('.create-center .composer').trigger('submit')
     await new Promise((resolve) => setTimeout(resolve, 100))
     expect(workspace.tasks[0]?.title).toBe('任务A')
@@ -172,12 +173,12 @@ describe('ChatView 消息流渲染', () => {
 
     ui.openCreate('task')
     await wrapper.vm.$nextTick()
-    const vm = wrapper.vm as unknown as {
+    const inputVm = wrapper.findComponent(ChatInput).vm as unknown as {
       projectOption: string
       selectedDrive: string
       newProjectName: string
     }
-    vm.projectOption = 'new'
+    inputVm.projectOption = 'new'
     await new Promise((resolve) => setTimeout(resolve, 50))
 
     expect(wrapper.find('.location-picker').exists()).toBe(true)
@@ -192,7 +193,7 @@ describe('ChatView 消息流渲染', () => {
     expect(ui.createMode).toBe('task')
 
     // 创建项目目录后提交 → 成功并绑定授权工作区
-    vm.newProjectName = '财务分析'
+    inputVm.newProjectName = '财务分析'
     await wrapper.vm.$nextTick()
     await wrapper.find('.location-picker .btn-primary').trigger('click')
     await new Promise((resolve) => setTimeout(resolve, 50))

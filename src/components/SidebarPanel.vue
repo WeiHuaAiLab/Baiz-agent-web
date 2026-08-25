@@ -1,4 +1,5 @@
 <script setup lang="ts">
+// 左侧边栏：会话列表（搜索/切换/删除）+ 工作区任务（新建/编辑定时任务），以及关于/反馈入口。
 import { computed, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useRouter } from 'vue-router'
@@ -106,7 +107,9 @@ function removeFromMenu(id: string) {
 
 function openTaskConfig(task: TaskItem) {
   taskConfig.value = task
+  // 容错：task.schedule 为可选，未配置调度时用默认草稿兜底，保证 TaskDraft 字段完整
   editDraft.value = {
+    ...createEmptyTaskDraft(),
     ...task.schedule,
     title: task.title,
     instruction: task.instruction,

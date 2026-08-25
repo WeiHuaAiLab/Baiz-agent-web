@@ -1,4 +1,5 @@
 <script setup lang="ts">
+// 新手引导浮层：首次启动展示 3 步使用说明，支持跳过/开始，以及一键试玩 Demo。
 import { useI18n } from 'vue-i18n'
 import { useUiStore } from '../stores/ui'
 

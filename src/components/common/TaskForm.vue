@@ -1,4 +1,5 @@
 <script setup lang="ts">
+// 定时任务表单：任务名称、指令、执行模式（云/本地）、执行周期（月/周/日/时/间隔）及对应时间配置。
 import { useI18n } from 'vue-i18n'
 import type { TaskCycle, TaskDraft, TaskMode } from '../../stores/workspace'
 
