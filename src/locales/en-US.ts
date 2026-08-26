@@ -29,6 +29,7 @@ export default {
     scrollToLatest: 'Back to latest',
     export: 'Export chat',
     openPanel: 'Open files panel',
+    toggleSidebar: 'Toggle sidebar',
     modelLocal: 'Qwen Local · private',
     projectChoose: 'Choose project',
     projectNew: 'New project',

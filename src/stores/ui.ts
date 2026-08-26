@@ -27,6 +27,7 @@ export const useUiStore = defineStore('ui', {
     paletteOpen: false,
     showOnboarding: !onboardingSeen,
     pendingPrompt: '',
+    sidebarCollapsed: false,
   }),
   actions: {
     openCreate(mode: 'session' | 'task' | 'scheduled') {
@@ -62,6 +63,10 @@ export const useUiStore = defineStore('ui', {
     },
     setPendingPrompt(text: string) {
       this.pendingPrompt = text
+    },
+    /** 展开/收起左侧侧栏 */
+    toggleSidebar() {
+      this.sidebarCollapsed = !this.sidebarCollapsed
     },
   },
 })

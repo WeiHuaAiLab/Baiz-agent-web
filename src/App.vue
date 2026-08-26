@@ -1,8 +1,11 @@
 <script setup lang="ts">
 import { onMounted, watch } from 'vue'
+import { useI18n } from 'vue-i18n'
 import SidebarPanel from './components/Sidebar/SidebarPanel.vue'
+import Icon from './components/common/Icon.vue'
 import { useSessionStore } from './stores/session'
 import { useSettingsStore } from './stores/settings'
+import { useUiStore } from './stores/ui'
 import { seedDemoIfNeeded } from './demo/seed'
 import { useWorkingTreeStore } from './stores/workingTree'
 import { useMemoryStore } from './stores/memory'
@@ -11,7 +14,9 @@ import OnboardingOverlay from './components/OnboardingOverlay.vue'
 import StatusBar from './components/StatusBar.vue'
 import ToastContainer from './components/ToastContainer.vue'
 
+const { t } = useI18n()
 const session = useSessionStore()
+const ui = useUiStore()
 const settings = useSettingsStore()
 const working = useWorkingTreeStore()
 const memory = useMemoryStore()
@@ -39,9 +44,18 @@ watch(() => settings.theme, applyTheme)
 </script>
 
 <template>
-  <div class="app-shell">
+  <div class="app-shell" :class="{ 'sidebar-collapsed': ui.sidebarCollapsed }">
     <SidebarPanel class="sidebar" />
     <main class="chat-area">
+      <!-- 侧栏展开/收缩：悬浮于 main 容器左上角，全局控制左侧 sidebar 的显示与展开 -->
+      <button
+        type="button"
+        class="sidebar-toggle-fab"
+        :title="t('chat.toggleSidebar')"
+        @click="ui.toggleSidebar()"
+      >
+        <Icon name="menuFold" :size="15" :class="{ flip: ui.sidebarCollapsed }" />
+      </button>
       <div class="chat-router">
         <router-view />
       </div>
