@@ -1,6 +1,7 @@
 <script setup lang="ts">
 // 对话列表：会话项（选中/置顶/预览/时间）、内联重命名、⋯ 操作菜单与全局遮罩。
 import { ref, watch } from "vue";
+import { useRouter } from "vue-router";
 import { useI18n } from "vue-i18n";
 import { useSessionStore } from "../../../stores/session";
 import { useMessageStore } from "../../../stores/message";
@@ -11,8 +12,17 @@ import Icon from "../../common/Icon.vue";
 const props = defineProps<{ items: Conversation[] }>();
 
 const { t } = useI18n();
+const router = useRouter();
 const session = useSessionStore();
 const messages = useMessageStore();
+
+/** 选中会话：若当前不在 / 聊天路由（如设置页），先跳回 / 再渲染会话内容 */
+function selectSession(id: string) {
+    if (router.currentRoute.value.path !== "/") {
+        void router.push("/");
+    }
+    session.select(id);
+}
 
 const menuFor = ref("");
 const renameTarget = ref<Conversation | null>(null);
@@ -91,7 +101,7 @@ watch(
                 <span
                     class="session-title"
                     :title="item.title"
-                    @click.stop="session.select(item.id)"
+                    @click.stop="selectSession(item.id)"
                 >
                     {{ item.title }}
                 </span>

@@ -44,11 +44,11 @@ function exportCurrent(format: 'md' | 'json') {
 function baseCommands(): Command[] {
   return [
     { id: 'new-session', label: t('palette.newSession'), run: () => ui.openCreate('session') },
-    { id: 'new-task', label: t('palette.newTask'), run: () => ui.openCreate('task') },
+    { id: 'new-task', label: t('palette.newTask'), run: () => router.push('/working/tasks') },
     {
       id: 'new-scheduled',
       label: t('palette.newScheduled'),
-      run: () => ui.openCreate('scheduled'),
+      run: () => router.push('/working/scheduled'),
     },
     { id: 'export-md', label: t('palette.exportMd'), run: () => exportCurrent('md') },
     { id: 'export-json', label: t('palette.exportJson'), run: () => exportCurrent('json') },

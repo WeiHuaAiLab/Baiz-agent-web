@@ -1,0 +1,254 @@
+/* 工作区页面：header / tab 固定，内容区滚动（全宽 + 720 居中，滚动条贴最右） */
+.working-view {
+  height: 100%;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
+.working-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  max-width: 720px;
+  margin: 0 auto;
+  padding: 20px 24px 8px;
+  flex-shrink: 0;
+}
+
+.working-header h1 {
+  font-size: 16px;
+  margin: 0;
+}
+
+.working-tabs {
+  display: flex;
+  gap: 4px;
+  width: 100%;
+  max-width: 720px;
+  margin: 0 auto;
+  padding: 0 24px;
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+}
+
+.working-tab {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 14px;
+  font-size: 13px;
+  color: var(--muted);
+  border-bottom: 2px solid transparent;
+  margin-bottom: -1px;
+}
+
+.working-tab:hover {
+  color: var(--text);
+}
+
+.working-tab.active {
+  color: var(--accent);
+  border-bottom-color: var(--accent);
+}
+
+.working-body {
+  flex: 1;
+  min-height: 0;
+  width: 100%;
+  overflow-y: auto;
+}
+
+.working-inner {
+  max-width: 720px;
+  margin: 0 auto;
+  padding: 16px 24px 20px;
+}
+
+/* 任务条目 */
+.task-list {
+  list-style: none;
+  margin: 0 0 14px;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.task-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 12px 14px;
+}
+
+.task-main {
+  flex: 1;
+  min-width: 0;
+}
+
+.task-title {
+  display: block;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.task-desc {
+  display: block;
+  font-size: 12px;
+  color: var(--muted);
+  margin-top: 4px;
+  line-height: 1.5;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.task-when {
+  display: block;
+  font-size: 11px;
+  color: var(--muted);
+  margin-top: 6px;
+}
+
+.task-del {
+  flex: none;
+  color: var(--muted);
+  padding: 4px;
+  border-radius: 6px;
+}
+
+.task-del:hover {
+  color: #c0392b;
+  background: var(--hover);
+}
+
+/* 内联新建任务 */
+.task-new-form {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.task-new-form input,
+.task-new-form textarea {
+  width: 100%;
+}
+
+.task-new-form .btn-primary {
+  align-self: flex-end;
+}
+
+/* 扩展插件列表 */
+.extension-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.extension-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 14px;
+}
+
+.ext-icon {
+  flex: none;
+  width: 34px;
+  height: 34px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 8px;
+  background: var(--code-bg);
+  color: var(--accent);
+}
+
+.ext-main {
+  flex: 1;
+  min-width: 0;
+}
+
+.ext-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.ext-name {
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.ext-category {
+  font-size: 11px;
+  color: var(--muted);
+  background: var(--code-bg);
+  border-radius: 10px;
+  padding: 0 8px;
+}
+
+.ext-desc {
+  margin: 6px 0 0;
+  font-size: 12px;
+  color: var(--muted);
+  line-height: 1.5;
+}
+
+.ext-meta {
+  margin-top: 6px;
+  font-size: 11px;
+  color: var(--muted);
+}
+
+/* 启用开关 */
+.ext-toggle {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 2px;
+}
+
+.ext-toggle-track {
+  width: 30px;
+  height: 16px;
+  border-radius: 8px;
+  background: var(--border);
+  position: relative;
+  transition: background 0.15s;
+}
+
+.ext-toggle-knob {
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: var(--panel);
+  transition: left 0.15s;
+}
+
+.ext-toggle.on .ext-toggle-track {
+  background: var(--accent);
+}
+
+.ext-toggle.on .ext-toggle-knob {
+  left: 16px;
+}
+
+.ext-toggle-label {
+  font-size: 12px;
+  color: var(--muted);
+}

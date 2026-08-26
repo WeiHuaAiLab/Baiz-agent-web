@@ -84,5 +84,8 @@ export const useWorkspaceStore = defineStore('workspace', {
       task.instruction = draft.instruction
       task.schedule = { ...draft, title: draft.title.trim() }
     },
+    removeTask(id: string) {
+      this.tasks = this.tasks.filter((item) => item.id !== id)
+    },
   },
 })

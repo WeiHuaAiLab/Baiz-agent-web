@@ -1,5 +1,5 @@
 // 定时任务"下次执行"计算与展示。
-import type { TaskDraft } from '../stores/workspace'
+import type { TaskDraft, TaskItem } from '../stores/workspace'
 
 function parseTime(time: string): { h: number; m: number } {
   const [h, m] = (time || '09:00').split(':').map(Number)
@@ -57,4 +57,31 @@ export function formatNextRun(date: Date): string {
   if (date.toDateString() === now.toDateString()) return `今天 ${hm}`
   if (date.toDateString() === tomorrow.toDateString()) return `明天 ${hm}`
   return `${date.getMonth() + 1}月${date.getDate()}日 ${hm}`
+}
+
+/** 任务调度摘要（含下次执行时间），用于列表展示 */
+export function scheduleText(task: TaskItem, t: (key: string) => string): string {
+  const schedule = task.schedule
+  if (!schedule) return t('tasks.notConfigured')
+  const mode = schedule.mode === 'cloud' ? t('tasks.modeCloud') : t('tasks.modeLocal')
+  let base: string
+  if (schedule.cycle === 'monthly') {
+    base = `${t('tasks.cycleMonthly')} ${schedule.day} 日 ${schedule.time} · ${mode}`
+  } else if (schedule.cycle === 'weekly') {
+    base = `${t('tasks.cycleWeekly')} ${t(`tasks.weekday.${schedule.weekday}`)} ${schedule.time} · ${mode}`
+  } else if (schedule.cycle === 'daily') {
+    base = `${t('tasks.cycleDaily')} ${schedule.time} · ${mode}`
+  } else if (schedule.cycle === 'hourly') {
+    base = `${t('tasks.cycleHourly')} · ${mode}`
+  } else {
+    const unit =
+      schedule.unit === 'minute'
+        ? t('tasks.unitMinute')
+        : schedule.unit === 'hour'
+          ? t('tasks.unitHour')
+          : t('tasks.unitDay')
+    base = `${t('tasks.cycleInterval')} ${schedule.every} ${unit} · ${mode}`
+  }
+  const next = nextRunAt(schedule)
+  return next ? `${base} · ${t('tasks.next')} ${formatNextRun(next)}` : base
 }

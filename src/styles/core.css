@@ -919,13 +919,29 @@ button {
   font-size: 12px;
 }
 
-.message-list {
+/* 消息滚动区：相对定位容器，承担 flex 占位；原生滚动条始终隐藏（不占空间、内容永不跳动） */
+/* overlay 滚动容器定位：position/尺寸由 OverlayScrollArea 内部提供，此处只定 flex 占位 */
+.message-scroll {
   flex: 1;
   min-height: 0;
+}
+
+.message-list {
   width: 100%;
+  height: 100%;
+  /* 原生滚动条完全隐藏：宽度恒为 0，内容区宽度恒定，滚动条由 .scroll-rail overlay 承担 */
+  scrollbar-width: none;
+}
+
+.message-list::-webkit-scrollbar {
+  width: 0;
+  height: 0;
+}
+
+/* 消息内容容器：滚动区占满整宽，内容限宽 720px 居中（滚动条贴边、阅读宽度友好） */
+.message-inner {
   max-width: 720px;
   margin: 0 auto;
-  height: 100%;
 }
 
 .empty {

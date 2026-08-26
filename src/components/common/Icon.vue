@@ -1,6 +1,6 @@
 <script setup lang="ts">
 // 图标组件：集中维护 SVG path（默认 24×24 描边风格，支持个别实心填充/坐标系特例），按 name 渲染统一尺寸图标。
-type IconName =
+export type IconName =
   | 'chat'
   | 'workspace'
   | 'tools'

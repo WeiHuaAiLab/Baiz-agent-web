@@ -12,7 +12,30 @@ export const router = createRouter({
     {
       path: '/settings',
       name: 'settings',
-      component: () => import('../components/SettingsView.vue'),
+      component: () => import('../components/settings/SettingsView.vue'),
+    },
+    {
+      path: '/working',
+      name: 'working',
+      component: () => import('../components/working/WorkingView.vue'),
+      redirect: '/working/tasks',
+      children: [
+        {
+          path: 'tasks',
+          name: 'working-tasks',
+          component: () => import('../components/working/TasksView.vue'),
+        },
+        {
+          path: 'scheduled',
+          name: 'working-scheduled',
+          component: () => import('../components/working/ScheduledView.vue'),
+        },
+        {
+          path: 'extensions',
+          name: 'working-extensions',
+          component: () => import('../components/working/ExtensionsView.vue'),
+        },
+      ],
     },
   ],
 })

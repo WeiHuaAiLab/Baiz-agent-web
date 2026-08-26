@@ -12,6 +12,7 @@ import { getBridge } from '../../bridge'
 import type { ChatMessage, RunState } from '../../models'
 import MessageItem from './MessageItem.vue'
 import StreamingMarkdownView from '../markdown/StreamingMarkdownView.vue'
+import OverlayScrollArea from '../common/OverlayScrollArea.vue'
 
 const { t } = useI18n()
 const session = useSessionStore()
@@ -19,8 +20,15 @@ const messages = useMessageStore()
 const settings = useSettingsStore()
 const ui = useUiStore()
 
-const scroller = ref<{ scrollToItem(index: number, options?: ScrollToOptions): void }>()
+const scroller = ref<{
+  scrollToItem(index: number, options?: ScrollToOptions): void
+  $el: HTMLElement
+}>()
 const pinned = ref(true)
+
+// overlay 滚动条容器：滑块视觉与同步逻辑已抽离到 OverlayScrollArea，
+// 此处仅保留"是否贴底"的业务判断
+const scrollArea = ref<InstanceType<typeof OverlayScrollArea>>()
 
 const activeId = computed(() => session.activeId)
 const displayItems = computed<ChatMessage[]>(() => [...messages.list(activeId.value)])
@@ -48,6 +56,7 @@ watch(
     if (!pinned.value) return
     await nextTick()
     scroller.value?.scrollToItem(Math.max(0, displayItems.value.length - 1))
+    scrollArea.value?.sync()
   },
 )
 
@@ -55,6 +64,7 @@ function scrollToBottom() {
   pinned.value = true
   void nextTick(() => {
     scroller.value?.scrollToItem(Math.max(0, displayItems.value.length - 1))
+    scrollArea.value?.sync()
   })
 }
 defineExpose({ scrollToBottom })
@@ -119,20 +129,28 @@ async function onStreamingClick(event: MouseEvent) {
   </div>
 
   
-  <DynamicScroller
+  <OverlayScrollArea
     v-if="displayItems.length > 0"
-    ref="scroller"
-    class="message-list"
-    :items="displayItems"
-    :min-item-size="64"
-    @scroll.passive="onScroll"
+    ref="scrollArea"
+    class="message-scroll"
+    :target="scroller"
   >
-    <template #default="{ item, index, active }">
-      <DynamicScrollerItem :item="item" :active="active" :data-index="index">
-        <MessageItem :message="item" />
-      </DynamicScrollerItem>
-    </template>
-  </DynamicScroller>
+    <DynamicScroller
+      ref="scroller"
+      class="message-list"
+      :items="displayItems"
+      :min-item-size="64"
+      @scroll.passive="onScroll"
+    >
+      <template #default="{ item, index, active }">
+        <DynamicScrollerItem :item="item" :active="active" :data-index="index">
+          <div class="message-inner">
+            <MessageItem :message="item" />
+          </div>
+        </DynamicScrollerItem>
+      </template>
+    </DynamicScroller>
+  </OverlayScrollArea>
 
   <div v-if="streamingRuns.length" class="streaming-tail" @click="onStreamingClick">
     <div v-for="run in streamingRuns" :key="run.taskId" class="msg assistant streaming-block">

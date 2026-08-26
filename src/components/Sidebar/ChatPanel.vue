@@ -1,6 +1,7 @@
 <script setup lang="ts">
 // 侧栏「聊天」Tab：新建会话入口 + 项目列表 + 最近会话（搜索/折叠/列表）。
 import { computed, ref } from 'vue'
+import { useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import { useSessionStore } from '../../stores/session'
 import { useUiStore } from '../../stores/ui'
@@ -9,6 +10,7 @@ import ProjectList from './chat/ProjectList.vue'
 import SessionList from './chat/SessionList.vue'
 
 const { t } = useI18n()
+const router = useRouter()
 const session = useSessionStore()
 const ui = useUiStore()
 
@@ -22,7 +24,11 @@ const filteredSessions = computed(() => {
   return session.conversations.filter((item) => item.title.toLowerCase().includes(query))
 })
 
+/** 新建会话：若当前不在 / 聊天路由（如设置页），先跳回 / 再打开创建流程 */
 function newSession() {
+  if (router.currentRoute.value.path !== '/') {
+    void router.push('/')
+  }
   ui.openCreate('session')
 }
 
