@@ -115,13 +115,12 @@
   padding: 6px 8px;
   border-radius: 6px;
   font-size: 13px;
-  color: var(--muted);
+  color: var(--text);
   cursor: pointer;
 }
 
 .project-list li:hover {
   background: var(--hover);
-  color: var(--text);
 }
 
 .project-list li svg {

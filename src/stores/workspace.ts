@@ -26,6 +26,7 @@ export interface TaskItem {
   title: string
   instruction: string
   schedule?: TaskDraft
+  projectId?: string
 }
 
 let seq = 0
@@ -52,6 +53,10 @@ export const useWorkspaceStore = defineStore('workspace', {
     ],
     tasks: [] as TaskItem[],
   }),
+  getters: {
+    projectById: (state) => (id: string) =>
+      state.projects.find((project) => project.id === id) ?? null,
+  },
   actions: {
     addProject(title: string) {
       if (!title.trim()) return
@@ -68,13 +73,14 @@ export const useWorkspaceStore = defineStore('workspace', {
         schedule: { ...draft, title: draft.title.trim() },
       })
     },
-    addPlainTask(title: string, instruction: string) {
+    addPlainTask(title: string, instruction: string, projectId?: string) {
       if (!title.trim()) return
       seq += 1
       this.tasks.unshift({
         id: `t-${Date.now().toString(36)}-${seq}`,
         title: title.trim(),
         instruction,
+        projectId,
       })
     },
     updateTask(id: string, draft: TaskDraft) {

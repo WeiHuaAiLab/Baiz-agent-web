@@ -5,6 +5,7 @@ import { useRouter } from "vue-router";
 import { useI18n } from "vue-i18n";
 import { useSessionStore } from "../../../stores/session";
 import { useMessageStore } from "../../../stores/message";
+import { useUiStore } from "../../../stores/ui";
 import type { Conversation } from "../../../models";
 import { formatRelativeTime } from "../../../utils/time";
 import Icon from "../../common/Icon.vue";
@@ -15,12 +16,15 @@ const { t } = useI18n();
 const router = useRouter();
 const session = useSessionStore();
 const messages = useMessageStore();
+const ui = useUiStore();
 
-/** 选中会话：若当前不在 / 聊天路由（如设置页），先跳回 / 再渲染会话内容 */
+/** 选中会话：若当前不在 / 聊天路由（如设置页），先跳回 / 再渲染会话内容。
+ * 若正处于创建流程（新建会话/任务/创建项目表单），点击会话即放弃创建并切回会话视图。 */
 function selectSession(id: string) {
     if (router.currentRoute.value.path !== "/") {
         void router.push("/");
     }
+    if (ui.createMode) ui.closeCreate();
     session.select(id);
 }
 

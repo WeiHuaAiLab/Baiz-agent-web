@@ -2,7 +2,13 @@
 import { defineStore } from 'pinia'
 import { useSessionStore } from './session'
 
-export type CreateMode = '' | 'session' | 'task' | 'scheduled'
+export type CreateMode = '' | 'session' | 'task' | 'scheduled' | 'project'
+
+/** 从新建会话/任务跳到「创建项目」时的回归上下文：创建完成后回到原创建视图并恢复输入 */
+export interface CreateReturn {
+  mode: 'session' | 'task'
+  input: string
+}
 
 export interface ToastItem {
   id: number
@@ -23,22 +29,33 @@ let toastSeq = 0
 export const useUiStore = defineStore('ui', {
   state: () => ({
     createMode: '' as CreateMode,
+    // 创建模式进入计数：每次 openCreate 递增，CreateChat 据此感知「重复打开同一模式」
+    // （如新建会话页已打开时再次点新建/点项目），以便重置表单或换选项目
+    createEpoch: 0,
     toasts: [] as ToastItem[],
     paletteOpen: false,
     showOnboarding: !onboardingSeen,
     pendingPrompt: '',
     sidebarCollapsed: false,
+    // 创建项目完成后的回归上下文 + 待自动选中的项目 id（CreateChat 重新挂载时消费）
+    createReturn: null as CreateReturn | null,
+    pendingProjectId: '',
   }),
   actions: {
-    openCreate(mode: 'session' | 'task' | 'scheduled') {
+    openCreate(mode: 'session' | 'task' | 'scheduled' | 'project') {
       if (mode === 'session') {
         // 新建会话：清空当前选中，聊天区回到空白新会话页（消息列表为空）
         useSessionStore().activeId = ''
       }
       this.createMode = mode
+      this.createEpoch += 1
     },
     closeCreate() {
       this.createMode = ''
+      // 清理「创建项目」回归上下文，避免残留导致后续误回跳/误选中
+      this.createReturn = null
+      this.pendingProjectId = ''
+      this.createEpoch += 1
     },
     toast(message: string, type: ToastItem['type'] = 'info') {
       const id = ++toastSeq

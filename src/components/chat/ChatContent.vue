@@ -163,6 +163,7 @@ async function onStreamingClick(event: MouseEvent) {
     </div>
   </div>
 
+  <!-- 滚动到底部的按钮 -->
   <button
     v-if="!pinned && displayItems.length > 0"
     type="button"

@@ -1,9 +1,11 @@
 <script setup lang="ts">
-// 聊天主视图（页面组装层）：头部 / 内容体 / 输入区三块布局 + 右侧扩展面板（抽屉）。
+// 聊天主视图（页面组装层）：创建会话（CreateChat）/ 创建项目（CreateProject）/ 会话展示（头部 / 内容体 / 输入区）三套布局 + 右侧扩展面板（抽屉）。
 // 页面级快捷键（Ctrl+K 命令面板、Ctrl+N 新建会话、Esc 关闭创建流程）在此统一处理。
-import { onBeforeUnmount, onMounted, ref } from 'vue'
+import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useUiStore } from '../stores/ui'
+import CreateChat from './chat/CreateChat.vue'
+import CreateProject from './chat/CreateProject.vue'
 import ChatHeader from './chat/ChatHeader.vue'
 import ChatContent from './chat/ChatContent.vue'
 import ChatInput from './chat/ChatInput.vue'
@@ -19,6 +21,10 @@ const ui = useUiStore()
 const extensionOpen = ref(true)
 const extensionType = ref<ExtensionPanelType>('files')
 const contentRef = ref<InstanceType<typeof ChatContent>>()
+
+// 创建模式（新会话/普通任务/新项目）：chat-main 只显示居中的创建引导，隐藏会话展示
+const isCreating = computed(() => ui.createMode === 'session' || ui.createMode === 'task')
+const isCreatingProject = computed(() => ui.createMode === 'project')
 
 function onKeydown(event: KeyboardEvent) {
     const key = event.key.toLowerCase();
@@ -50,9 +56,13 @@ onBeforeUnmount(() => {
 <template>
     <section class="chat-view">
         <div class="chat-main">
-            <ChatHeader />
-            <ChatContent ref="contentRef" />
-            <ChatInput @submitted="onSubmitted" />
+            <CreateProject v-if="isCreatingProject" />
+            <CreateChat v-else-if="isCreating" />
+            <template v-else>
+                <ChatHeader />
+                <ChatContent ref="contentRef" />
+                <ChatInput @submitted="onSubmitted" />
+            </template>
         </div>
         <!-- 打开文件面板：与 ExtensionPanel 同层级，面板关闭时悬浮于 chatView 右上角 -->
         <button

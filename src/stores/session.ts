@@ -49,13 +49,14 @@ export const useSessionStore = defineStore("session", {
                 this.activeId = this.conversations[0].id;
             }
         },
-        async create(title?: string) {
+        async create(title?: string, projectId?: string) {
             const now = Date.now();
             const conversation: Conversation = {
                 id: makeId(),
                 title: title?.trim() || "新会话",
                 createdAt: now,
                 updatedAt: now,
+                projectId,
             };
             await db.conversations.add(cloneForDb(conversation));
             this.conversations.unshift(conversation);

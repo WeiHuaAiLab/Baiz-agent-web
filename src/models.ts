@@ -4,6 +4,7 @@ export interface Conversation {
   createdAt: number
   updatedAt: number
   pinnedAt?: number
+  projectId?: string
 }
 
 export type MessageKind = 'user' | 'assistant' | 'tool_call' | 'approval' | 'status'

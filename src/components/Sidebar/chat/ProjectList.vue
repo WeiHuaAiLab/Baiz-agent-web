@@ -1,24 +1,31 @@
 <script setup lang="ts">
-// 项目列表：展示 workspace.projects，支持新增项目；点击项目跳回聊天页。
+// 项目列表：展示 workspace.projects，支持新增项目（聊天区 CreateProject 表单）；点击项目跳回聊天页。
 import { useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import { useWorkspaceStore } from '../../../stores/workspace'
+import { useUiStore } from '../../../stores/ui'
 import Icon from '../../common/Icon.vue'
 
 const { t } = useI18n()
 const router = useRouter()
 const workspace = useWorkspaceStore()
+const ui = useUiStore()
 
+/** 新增项目：若当前不在 / 聊天路由（如设置页），先跳回 / 再打开创建项目表单 */
 function newProject() {
-  const title = window.prompt(t('sidebar.newProject'), t('sidebar.projectDefault'))
-  if (title) workspace.addProject(title)
-}
-
-/** 点击项目：若当前不在 / 聊天路由（如设置页），先跳回 / 再渲染聊天内容 */
-function selectProject(_id: string) {
   if (router.currentRoute.value.path !== '/') {
     void router.push('/')
   }
+  ui.openCreate('project')
+}
+
+/** 点击项目：跳回聊天路由并打开「新建会话」，新会话默认关联该项目（CreateChat 消费 pendingProjectId 自动选中） */
+function selectProject(id: string) {
+  if (router.currentRoute.value.path !== '/') {
+    void router.push('/')
+  }
+  ui.pendingProjectId = id
+  ui.openCreate('session')
 }
 </script>
 
