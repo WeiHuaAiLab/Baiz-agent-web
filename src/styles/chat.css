@@ -299,13 +299,15 @@
   max-width: 720px;
 }
 
-.composer.centered .composer-box {
-  padding: 14px 16px;
-  box-shadow: 0 10px 28px rgba(0, 0, 0, 0.12);
+/* 居中创建（新建会话/任务）：输入区整体投影更明显，字号略大 */
+.composer.centered .composer-input,
+.composer.centered .composer-actions {
+  box-shadow:
+    0 10px 28px rgba(0, 0, 0, 0.12),
+    inset 0 1px 2px rgba(0, 0, 0, 0.04);
 }
 
-.composer.centered textarea {
-  min-height: 88px;
+.composer.centered .input-area {
   font-size: 15px;
 }
 
@@ -537,54 +539,6 @@
   pointer-events: none;
 }
 
-.composer-box {
-  display: flex;
-  align-items: flex-end;
-  gap: 10px;
-  width: 100%;
-  background: var(--code-bg);
-  border: none;
-  border-radius: 14px;
-  padding: 10px 12px;
-  box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.04);
-}
-
-.composer textarea {
-  flex: 1;
-  border: none;
-  outline: none;
-  resize: none;
-  background: transparent;
-  font: inherit;
-  font-size: 14px;
-  line-height: 1.6;
-  min-height: 60px;
-  max-height: 200px;
-  padding: 6px 0 0;
-  color: var(--text);
-}
-
-.composer textarea::placeholder {
-  color: var(--muted);
-}
-
-.attach {
-  width: 34px;
-  height: 34px;
-  flex: none;
-  border-radius: 50%;
-  color: var(--muted);
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  margin-bottom: 2px;
-}
-
-.attach:hover {
-  color: var(--text);
-  background: var(--hover);
-}
-
 .send-btn {
   width: 34px;
   height: 34px;
@@ -601,6 +555,213 @@
 .send-btn:disabled {
   opacity: 0.35;
   cursor: default;
+}
+
+/* ChatInput 两段式输入区：输入区（textarea）+ 操作功能区（+项目选择器/语音/发送） */
+.composer-block {
+  padding-top: 6px;
+}
+
+.composer-input {
+  width: 100%;
+  background: var(--code-bg);
+  border-radius: 14px 14px 0 0;
+  padding: 12px 14px 10px;
+  box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.04);
+}
+
+.composer-input .input-area {
+  display: block;
+  width: 100%;
+  /* 高度直接固定控制（98px 固定，超出 300px 输入框内滚动），不使用 auto 伸缩（避免右下角 resize 小图标） */
+  height: 98px;
+  min-height: 98px;
+  max-height: 300px;
+  resize: none; /* 去掉拖拽把手 */
+  overflow-y: auto; /* 内容超高时输入框内滚动 */
+  border: none;
+  outline: none;
+  background: transparent;
+  font: inherit;
+  line-height: 1.55;
+  padding: 0;
+  color: var(--text);
+}
+
+.composer-input .input-area::placeholder {
+  color: var(--muted);
+}
+
+.composer-actions {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  width: 100%;
+  padding: 8px 12px;
+  background: var(--code-bg);
+  border-radius: 0 0 14px 14px;
+  box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.04);
+}
+
+.act-btn {
+  height: 32px;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 0 8px;
+  border-radius: 16px;
+  color: var(--muted);
+}
+
+.act-btn:hover {
+  color: var(--text);
+  background: var(--hover);
+}
+
+.act-btn.active {
+  color: var(--accent);
+  background: var(--hover);
+}
+
+.act-project {
+  max-width: 140px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 12px;
+}
+
+.actions-spacer {
+  flex: 1;
+}
+
+.composer-actions .send-btn {
+  margin-bottom: 0;
+}
+
+/* 「+」项目菜单面板：从操作区向上弹出。
+ * 风格参考百度搭子/豆包/Kimi 底部功能菜单——白卡片 + 大圆角 + 柔和阴影 +
+ * 「标题 → 项目列表 → 分隔线 → 底部操作项」结构、每项左侧图标。 */
+.composer-picker-wrap {
+  position: relative;
+}
+
+.composer-picker {
+  position: absolute;
+  bottom: calc(100% + 10px);
+  left: 0;
+  z-index: 30;
+  width: 300px;
+  max-height: 380px;
+  display: flex;
+  flex-direction: column;
+  padding: 8px;
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.16);
+  overflow: hidden;
+}
+
+/* 顶部小标题（icon + 文字，灰色小字） */
+.picker-header {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 10px 6px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--muted);
+  letter-spacing: 0.02em;
+}
+
+/* 项目列表容器：可滚动 */
+.picker-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  overflow-y: auto;
+  /* 配合父级 max-height，自然占满剩余空间 */
+  flex: 1 1 auto;
+  min-height: 0;
+}
+
+.picker-list--bottom {
+  flex: 0 0 auto;
+}
+
+/* 单项：左侧图标方块 + 标题 + 右侧 ✓ */
+.picker-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 9px 10px;
+  border-radius: 10px;
+  font-size: 13.5px;
+  color: var(--text);
+  cursor: pointer;
+  user-select: none;
+}
+
+.picker-item:hover {
+  background: var(--hover);
+}
+
+.picker-item.active {
+  color: var(--accent);
+  background: var(--hover);
+}
+
+/* 左侧图标小方块（柔和灰底） */
+.picker-item-icon {
+  width: 28px;
+  height: 28px;
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 8px;
+  background: var(--code-bg);
+  color: var(--muted);
+}
+
+.picker-item.active .picker-item-icon {
+  background: var(--accent);
+  color: var(--accent-contrast);
+}
+
+.picker-item-title {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* 右侧 ✓ 标识：自然排放（绝对定位的勾已删除，改为在 flex 末尾） */
+.picker-item > svg {
+  flex: none;
+}
+
+/* 分割线：底部操作项与上方列表分隔 */
+.picker-divider {
+  height: 1px;
+  background: var(--border);
+  margin: 8px 6px;
+}
+
+.picker-empty-li {
+  justify-content: center;
+  color: var(--muted);
+  cursor: default;
+  padding: 18px 10px;
+}
+
+.picker-empty-li:hover {
+  background: transparent;
 }
 
 /* 附件与回到底部 */
@@ -641,7 +802,7 @@
 .scroll-bottom {
   position: absolute;
   right: 28px;
-  bottom: 132px;
+  bottom: 16px;
   width: 34px;
   height: 34px;
   border-radius: 50%;

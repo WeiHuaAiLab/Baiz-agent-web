@@ -23,23 +23,33 @@ const thumbStyle = computed(() => ({
 
 let el: HTMLElement | null = null
 let observer: ResizeObserver | null = null
+// 监听 .scroll-area 自身尺寸（输入框变高 / 输入框拖拽 resize / 窗口变化都会改 area 高度），
+// 用于驱动 rail 高度随之刷新，否则 thumb 在 rail 中的比例尺会失真
+let areaObserver: ResizeObserver | null = null
 
 /**
  * 按滚动容器状态同步滑块位置与高度：
- * - 高度：滑块/轨道 = 视口/内容（等比映射），最小 28px
- * - 位置：滑块位移 = 滑块可动余量 × (scrollTop / 内容可滚余量)
+ * - rail 高度 = area 高度 - 12（top:6 + bottom:6），覆盖整个 chat 区域（含输入框），
+ *   让 thumb 在 rail 中的相对位置与"消息内容在消息区的相对位置"一致。
+ * - 滑块高度按 (clientHeight / scrollHeight) × railHeight 缩放，最低 28px。
+ * - 滑块位移 = (railHeight - thumbHeight) × (scrollTop / 内容可滚余量)。
  */
 function sync() {
   if (!el) return
+  const area = el.closest('.scroll-area') as HTMLElement | null
+  const areaHeight = area?.clientHeight ?? el.clientHeight
+  const railHeight = Math.max(0, areaHeight - 12)
   const { scrollTop, scrollHeight, clientHeight } = el
-  if (scrollHeight <= clientHeight) {
+  if (scrollHeight <= clientHeight || railHeight <= 0) {
     railVisible.value = false
     thumbHeight.value = 0
     return
   }
   const ratio = clientHeight / scrollHeight
-  thumbHeight.value = Math.max(28, clientHeight * ratio)
-  thumbTop.value = (clientHeight - thumbHeight.value) * (scrollTop / (scrollHeight - clientHeight))
+  thumbHeight.value = Math.max(28, railHeight * ratio)
+  const maxOffset = Math.max(0, railHeight - thumbHeight.value)
+  thumbTop.value =
+    maxOffset * (scrollTop / Math.max(1, scrollHeight - clientHeight))
   railVisible.value = true
 }
 
@@ -48,6 +58,8 @@ function detach() {
   observer?.disconnect()
   observer = null
   el = null
+  areaObserver?.disconnect()
+  areaObserver = null
 }
 
 watch(
@@ -61,6 +73,12 @@ watch(
     dom.addEventListener('scroll', sync, { passive: true })
     observer = new ResizeObserver(() => sync())
     observer.observe(dom)
+    // rail 高度依赖 area 高度；输入框拖拽 resize / 输入框改变高度 / 窗口变化都会改 area
+    const area = dom.closest('.scroll-area') as HTMLElement | null
+    if (area) {
+      areaObserver = new ResizeObserver(() => sync())
+      areaObserver.observe(area)
+    }
     sync()
   },
   { immediate: true },
@@ -96,6 +114,7 @@ defineExpose({ sync })
   bottom: 6px;
   width: 8px;
   border-radius: 4px;
+  z-index: 30;
   opacity: 0;
   transition: opacity 0.15s;
   pointer-events: none;

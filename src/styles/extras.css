@@ -310,7 +310,7 @@
   border-radius: 6px;
   font: inherit;
   font-size: 13px;
-  background: var(--bg);
+  background: var(--panel);
   color: var(--text);
 }
 
@@ -328,19 +328,22 @@
   margin-bottom: 6px;
 }
 
-.task-form .field input[type='text'],
-.task-form .field textarea,
-.plain-task-form .field input,
-.plain-task-form .field textarea {
+/* 标题/指令类的输入：全宽 + 与 textarea 同样的视觉
+   注意：排除 .time-field 内的 number/time/select，它们由下方专用规则控制 */
+.task-form .field > input:not([type='number']):not([type='time']),
+.task-form .field > textarea,
+.plain-task-form .field > input,
+.plain-task-form .field > textarea {
   width: 100%;
   padding: 8px 10px;
   border: 1px solid var(--border);
   border-radius: 8px;
   font: inherit;
   font-size: 13px;
-  background: var(--bg);
+  background: var(--panel);
   color: var(--text);
   outline: none;
+  box-sizing: border-box;
 }
 
 .task-form .field textarea,
@@ -349,11 +352,11 @@
   min-height: 64px;
 }
 
-.task-form .field input:focus,
-.task-form .field textarea:focus,
-.plain-task-form .field input:focus,
-.plain-task-form .field textarea:focus {
-  border-color: var(--muted);
+.task-form .field > input:focus,
+.task-form .field > textarea:focus,
+.plain-task-form .field > input:focus,
+.plain-task-form .field > textarea:focus {
+  border-color: var(--accent);
 }
 
 .section-head .with-icon {
@@ -396,7 +399,7 @@
   border-radius: 6px;
   font: inherit;
   font-size: 13px;
-  background: var(--bg);
+  background: var(--panel);
   color: var(--text);
 }
 

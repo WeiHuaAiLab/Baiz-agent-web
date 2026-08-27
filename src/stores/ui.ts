@@ -4,9 +4,10 @@ import { useSessionStore } from './session'
 
 export type CreateMode = '' | 'session' | 'task' | 'scheduled' | 'project'
 
-/** 从新建会话/任务跳到「创建项目」时的回归上下文：创建完成后回到原创建视图并恢复输入 */
+/** 从新建会话/任务/聊天输入框跳到「创建项目」时的回归上下文：创建完成后回到原视图。
+ * mode 为空字符串表示来自聊天输入框（ChatInput）——创建完成后回到普通会话视图。 */
 export interface CreateReturn {
-  mode: 'session' | 'task'
+  mode: 'session' | 'task' | ''
   input: string
 }
 
@@ -55,6 +56,13 @@ export const useUiStore = defineStore('ui', {
       // 清理「创建项目」回归上下文，避免残留导致后续误回跳/误选中
       this.createReturn = null
       this.pendingProjectId = ''
+      this.createEpoch += 1
+    },
+    /** 从创建流程回到普通会话视图（如 ChatInput 发起新建项目后回跳）：
+     * 保留 pendingProjectId，供 ChatInput 重新挂载时消费并自动选中新项目 */
+    backToChat() {
+      this.createMode = ''
+      this.createReturn = null
       this.createEpoch += 1
     },
     toast(message: string, type: ToastItem['type'] = 'info') {

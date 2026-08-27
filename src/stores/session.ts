@@ -105,5 +105,15 @@ export const useSessionStore = defineStore("session", {
                 await db.conversations.put(cloneForDb(item));
             }
         },
+        /** 更新会话关联的项目（ChatInput 项目选择器实时生效；空值清除关联） */
+        async setProject(id: string, projectId?: string) {
+            const item = this.conversations.find((entry) => entry.id === id);
+            if (!item) return;
+            const next = projectId || undefined;
+            if (item.projectId === next) return;
+            if (next) item.projectId = next;
+            else delete item.projectId;
+            await db.conversations.put(cloneForDb(item));
+        },
     },
 });

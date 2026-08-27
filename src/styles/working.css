@@ -1,72 +1,15 @@
-/* 工作区页面：header / tab 固定，内容区滚动（全宽 + 720 居中，滚动条贴最右） */
-.working-view {
-  height: 100%;
-  width: 100%;
-  display: flex;
-  flex-direction: column;
-}
+/* 工作区子页：布局复用设置页（.settings-view / .settings-inner / .settings-header），
+ * 本文件仅保留内容区（任务列表 / 扩展列表 / 内联表单）样式。 */
 
-.working-header {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  width: 100%;
-  max-width: 720px;
-  margin: 0 auto;
-  padding: 20px 24px 8px;
-  flex-shrink: 0;
-}
-
-.working-header h1 {
-  font-size: 16px;
-  margin: 0;
-}
-
-.working-tabs {
-  display: flex;
-  gap: 4px;
-  width: 100%;
-  max-width: 720px;
-  margin: 0 auto;
-  padding: 0 24px;
-  border-bottom: 1px solid var(--border);
-  flex-shrink: 0;
-}
-
-.working-tab {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  padding: 8px 14px;
+/* 任务列表区域标题 */
+.task-section-title {
   font-size: 13px;
-  color: var(--muted);
-  border-bottom: 2px solid transparent;
-  margin-bottom: -1px;
-}
-
-.working-tab:hover {
+  font-weight: 600;
+  margin: 4px 2px 10px;
   color: var(--text);
 }
 
-.working-tab.active {
-  color: var(--accent);
-  border-bottom-color: var(--accent);
-}
-
-.working-body {
-  flex: 1;
-  min-height: 0;
-  width: 100%;
-  overflow-y: auto;
-}
-
-.working-inner {
-  max-width: 720px;
-  margin: 0 auto;
-  padding: 16px 24px 20px;
-}
-
-/* 任务条目 */
+/* 任务列表（卡片形式） */
 .task-list {
   list-style: none;
   margin: 0 0 14px;
@@ -79,11 +22,27 @@
 .task-item {
   display: flex;
   align-items: flex-start;
-  gap: 10px;
+  gap: 12px;
   background: var(--panel);
   border: 1px solid var(--border);
   border-radius: 10px;
-  padding: 12px 14px;
+  padding: 14px 16px;
+  transition: border-color 0.15s, box-shadow 0.15s;
+}
+
+.task-item:hover {
+  border-color: var(--muted);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+}
+
+/* 左侧小圆点（accent 色，提示任务状态） */
+.task-dot {
+  flex: none;
+  width: 8px;
+  height: 8px;
+  margin-top: 6px;
+  border-radius: 50%;
+  background: var(--accent);
 }
 
 .task-main {
@@ -93,31 +52,44 @@
 
 .task-title {
   display: block;
-  font-size: 13px;
+  font-size: 13.5px;
   font-weight: 600;
+  color: var(--text);
+  line-height: 1.4;
 }
 
 .task-desc {
   display: block;
-  font-size: 12px;
+  font-size: 12.5px;
   color: var(--muted);
   margin-top: 4px;
-  line-height: 1.5;
+  line-height: 1.55;
   white-space: pre-wrap;
   word-break: break-word;
 }
 
-.task-when {
-  display: block;
+/* 元信息：关联项目 + 创建时间 */
+.task-meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+  margin-top: 8px;
   font-size: 11px;
   color: var(--muted);
-  margin-top: 6px;
+}
+
+.task-meta-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
 }
 
 .task-del {
   flex: none;
+  align-self: flex-start;
   color: var(--muted);
-  padding: 4px;
+  padding: 5px;
   border-radius: 6px;
 }
 
@@ -126,20 +98,81 @@
   background: var(--hover);
 }
 
-/* 内联新建任务 */
+/* 内联新建任务表单（Settings 风格：label + 全宽输入框 + 行尾操作按钮） */
 .task-new-form {
   display: flex;
   flex-direction: column;
-  gap: 8px;
-}
-
-.task-new-form input,
-.task-new-form textarea {
+  gap: 12px;
   width: 100%;
 }
 
-.task-new-form .btn-primary {
-  align-self: flex-end;
+.form-field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.form-field .row-label {
+  font-size: 13px;
+  color: var(--muted);
+}
+
+.form-field input,
+.form-field textarea {
+  width: 100%;
+  padding: 9px 12px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--panel);
+  color: var(--text);
+  font: inherit;
+  font-size: 13.5px;
+  outline: none;
+  transition: border-color 0.15s, box-shadow 0.15s;
+}
+
+.form-field input:hover,
+.form-field textarea:hover {
+  border-color: var(--muted);
+}
+
+.form-field input:focus,
+.form-field textarea:focus {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px color-mix(in oklab, var(--accent) 15%, transparent);
+}
+
+.form-field input::placeholder,
+.form-field textarea::placeholder {
+  color: var(--muted);
+}
+
+.form-field textarea {
+  resize: vertical;
+  line-height: 1.55;
+  min-height: 64px;
+}
+
+.form-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+/* 次要按钮（重置）：基础样式来自 core.css .btn-ghost，这里补 hover / disabled */
+.btn-ghost:hover:not(:disabled) {
+  border-color: var(--muted);
+  color: var(--text);
+}
+
+.btn-ghost:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+
+/* 任务列表为空时占位容器（中心对齐） */
+.task-list-wrap {
+  margin-top: 6px;
 }
 
 /* 扩展插件列表 */

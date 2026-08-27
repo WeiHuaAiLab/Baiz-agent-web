@@ -58,11 +58,17 @@ async function createProjectDir() {
   ui.toast(`${t('tasks.projectDirCreated')} ${created}`, 'success')
 }
 
-/** 创建完成：若来自新建会话/任务（createReturn），回跳原创建视图并让 CreateChat 自动选中新项目；否则直接关闭 */
+/** 创建完成：若来自新建会话/任务/聊天输入框（createReturn），回跳原视图并自动选中新项目；否则直接关闭 */
 function finish() {
   if (ui.createReturn) {
     ui.pendingProjectId = workspace.projects[0]?.id ?? ''
-    ui.openCreate(ui.createReturn.mode)
+    if (ui.createReturn.mode) {
+      // 来自 CreateChat（session/task）：回创建页，CreateChat 消费 pendingProjectId
+      ui.openCreate(ui.createReturn.mode)
+    } else {
+      // 来自 ChatInput：回到普通会话视图，ChatInput 重新挂载时消费 pendingProjectId
+      ui.backToChat()
+    }
   } else {
     ui.closeCreate()
   }
@@ -79,10 +85,11 @@ function submit() {
   finish()
 }
 
-/** 取消：有回归上下文则回到原创建视图（CreateChat 恢复输入、不选中项目），否则直接关闭 */
+/** 取消：有回归上下文则回到原视图（CreateChat 恢复输入；ChatInput 回普通会话），否则直接关闭 */
 function cancel() {
   if (ui.createReturn) {
-    ui.openCreate(ui.createReturn.mode)
+    if (ui.createReturn.mode) ui.openCreate(ui.createReturn.mode)
+    else ui.backToChat()
   } else {
     ui.closeCreate()
   }

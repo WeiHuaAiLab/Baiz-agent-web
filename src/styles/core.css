@@ -928,6 +928,26 @@ button {
   position: relative;
 }
 
+/* chat 主体滚动容器：外层 OverlayScrollArea 根（.scroll-area）上挂 .chat-body，
+   内部纵向排列「消息区（flex:1 滚动）」+「输入框（flex:none 底部）」，
+   输入框变高时消息区压缩、滚动条轨道仍覆盖整个容器 */
+.chat-body {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  position: relative;
+}
+
+/* ChatContent 统一内容容器：占满输入框以上空间 */
+.chat-content {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  position: relative;
+}
+
 /* 头部占满 100% 宽度，内部内容体与消息列一致（720px 居中） */
 .chat-header {
   display: flex;
@@ -997,21 +1017,28 @@ button {
   font-size: 12px;
 }
 
-/* 消息滚动区：相对定位容器，承担 flex 占位；原生滚动条始终隐藏（不占空间、内容永不跳动） */
-/* overlay 滚动容器定位：position/尺寸由 OverlayScrollArea 内部提供，此处只定 flex 占位 */
+/* 消息滚动区：flex 占位（输入框上方）；内部虚拟滚动容器填满作为唯一滚动层，
+   原生滚动条始终隐藏（不占空间、内容永不跳动）；
+   悬浮滚动条由外层 OverlayScrollArea（target=滚动容器）绘制，轨道覆盖整个 chat 区域 */
 .message-scroll {
   flex: 1;
   min-height: 0;
+  display: flex;
+  flex-direction: column;
+  position: relative;
 }
 
-.message-list {
+/* 虚拟滚动容器（DynamicScroller 根 .vue-recycle-scroller）：
+   注意 class="message-list" 不会传播到该元素（第三方组件 inheritAttrs:false），
+   高度/滚动条规则必须通过子选择器命中，否则滚动容器高度退化为内容高度（无法滚动） */
+.message-scroll > .vue-recycle-scroller {
+  flex: 1;
+  min-height: 0;
   width: 100%;
-  height: 100%;
-  /* 原生滚动条完全隐藏：宽度恒为 0，内容区宽度恒定，滚动条由 .scroll-rail overlay 承担 */
   scrollbar-width: none;
 }
 
-.message-list::-webkit-scrollbar {
+.message-scroll > .vue-recycle-scroller::-webkit-scrollbar {
   width: 0;
   height: 0;
 }
