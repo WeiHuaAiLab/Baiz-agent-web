@@ -109,8 +109,6 @@ function goSettings() {
       {{ t('chat.noOutput') }}
     </p>
     <div v-else-if="message.kind === 'user'" class="user-block">
-      <!-- 附件区：与输入框 chip 一致的视觉——图片显示正方形缩略图，
-           文件显示文件名 + 类型·大小。空文本时缩略图/概要单独成行。 -->
       <div
         v-if="message.meta?.attachments?.length"
         class="user-attachments"

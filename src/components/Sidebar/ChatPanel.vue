@@ -58,7 +58,6 @@ function toggleSearch() {
 
     <ProjectList />
 
-    <!-- 置顶栏目：仅存在置顶会话时显示 -->
     <div v-if="pinnedSessions.length" class="section-block">
       <div class="section-head">
         <span>{{ t('sidebar.pinned') }}</span>

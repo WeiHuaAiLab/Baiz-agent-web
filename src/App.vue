@@ -49,7 +49,6 @@ watch(() => settings.theme, applyTheme)
   <div class="app-shell" :class="{ 'sidebar-collapsed': ui.sidebarCollapsed }">
     <SidebarPanel class="sidebar" />
     <main class="chat-area">
-      <!-- 侧栏展开/收缩：悬浮于 main 容器左上角，全局控制左侧 sidebar 的显示与展开 -->
       <button
         type="button"
         class="sidebar-toggle-fab"
@@ -63,19 +62,11 @@ watch(() => settings.theme, applyTheme)
       </div>
     </main>
 
-    <!-- 状态栏：悬浮窗模式，fixed 定位右下角 -->
     <StatusBar />
-    <!-- 处理弹窗内容 -->
     <ToastContainer />
-    <!-- 命令行控制面板 -->
     <CommandPalette />
-    <!-- 新建项目弹窗：挂在 App 顶层而非 ChatView，让 modal-mask 覆盖任意路由，
-         避免整页切换；ui.createMode 由 ProjectList「+」/CreateChat 工具条触发 -->
     <CreateProject v-if="ui.createMode === 'project'" />
-    <!-- 创建自动化任务弹窗（定时任务）：挂在 App 顶层，遮罩覆盖任意路由；
-         由侧栏工作区「创建任务」入口触发（ui.createMode === 'scheduled'） -->
     <CreateTask v-if="ui.createMode === 'scheduled'" />
-    <!-- 新手指引 -->
     <OnboardingOverlay />
   </div>
 </template>

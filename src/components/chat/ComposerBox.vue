@@ -38,7 +38,6 @@ function submit() {
     :class="{ centered: props.centered }"
     @submit.prevent="submit"
   >
-    <!-- 与 ChatInput 一致的双形态：图片正方形缩略图 / 文件名 + 类型·大小 -->
     <div v-if="files.attachments.length" class="attachment-row">
       <div
         v-for="att in files.attachments"
@@ -68,7 +67,6 @@ function submit() {
       </div>
     </div>
 
-    <!-- 输入区：固定 98px，超出 300px 滚动（与 ChatInput 一致） -->
     <div class="composer-input">
       <textarea
         v-model="text"
@@ -78,7 +76,6 @@ function submit() {
       />
     </div>
 
-    <!-- 操作功能区：+（上传附件，与 ChatInput 一致）/ 语音 / 发送 -->
     <div class="composer-actions">
       <button
         type="button"

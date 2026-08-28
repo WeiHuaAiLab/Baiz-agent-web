@@ -58,7 +58,6 @@ function goExtensions() {
       <span>{{ t('sidebar.scheduledTasks') }}</span>
     </button>
 
-    <!-- 定时任务列表：模式图标（云端/本地） + 标题，点击进入 /working/scheduled -->
     <ul v-if="scheduledTasks.length" class="project-list task-list-slim">
       <li v-for="task in scheduledTasks" :key="task.id" @click="goScheduled">
         <Icon :name="modeIcon(task)" :size="13" />

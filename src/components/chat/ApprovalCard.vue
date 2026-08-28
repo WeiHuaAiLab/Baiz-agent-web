@@ -77,7 +77,6 @@ async function decide(approved: boolean) {
 </script>
 
 <template>
-  <!-- 决议后立即收起为一行（不残留占位，老壳最大痛点回归项） -->
   <div v-if="resolved" class="approval-card resolved">
     <span class="approval-check" :class="{ denied: !message.meta?.approved }">
       {{ message.meta?.approved ? '✓' : '✗' }}

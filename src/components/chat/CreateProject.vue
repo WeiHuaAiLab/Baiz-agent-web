@@ -97,7 +97,6 @@ async function submit() {
 <template>
   <div class="modal-mask modal-create-project" @click.self="cancel">
     <div class="modal-card modal-card-wide">
-      <!-- 标题栏：左侧标题 + 右侧关闭按钮，对齐参考图样式 -->
       <header class="modal-header">
         <h3>{{ t('chat.createProjectTitle') }}</h3>
         <button
@@ -126,7 +125,6 @@ async function submit() {
         {{ t('chat.projectFieldPath') }}
         <span class="required">*</span>
       </label>
-      <!-- 点击路径框即弹系统目录选择器；若跳过此步，点「创建」时也会兜底授权选择 -->
       <button type="button" class="path-picker" @click="pickParent">
         <Icon name="workspace" :size="14" />
         <span class="path-text" :class="{ 'is-placeholder': !parentPath }">

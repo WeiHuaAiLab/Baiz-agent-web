@@ -91,7 +91,6 @@ defineExpose({ sync })
 
 <template>
   <div class="scroll-area">
-    <!-- 默认插槽：内容占位，对应 React 的 props.children -->
     <slot />
     <div v-show="railVisible" class="scroll-rail">
       <div class="scroll-thumb" :style="thumbStyle" />

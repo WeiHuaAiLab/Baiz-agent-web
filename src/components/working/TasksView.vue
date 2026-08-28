@@ -47,7 +47,6 @@ function getProjectTitle(projectId?: string) {
 
 <template>
   <div>
-    <!-- 新建任务表单（卡片形式，与设置页同款） -->
     <div class="settings-card">
       <h2>{{ t('working.tasks') }}</h2>
       <p class="section-desc">{{ t('working.tasksHint') }}</p>
@@ -90,7 +89,6 @@ function getProjectTitle(projectId?: string) {
       </div>
     </div>
 
-    <!-- 任务列表 -->
     <div v-if="plainTasks.length" class="task-list-wrap">
       <h3 class="task-section-title">{{ t('working.taskList') }}</h3>
       <ul class="task-list">
@@ -122,7 +120,6 @@ function getProjectTitle(projectId?: string) {
       </ul>
     </div>
 
-    <!-- 空数据：使用 EmptyCompents 占位 -->
     <EmptyCompents
       v-else
       icon="inbox"

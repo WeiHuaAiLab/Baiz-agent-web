@@ -4,7 +4,6 @@ import Logo from '../common/Logo.vue'
 </script>
 
 <template>
-  <!-- 临时隐藏整个品牌区（含 Logo），查看效果 -->
   <div v-if="false" class="brand">
     <Logo size="md" />
   </div>

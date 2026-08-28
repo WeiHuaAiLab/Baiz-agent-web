@@ -41,7 +41,6 @@ function removeTask(id: string) {
 
 <template>
   <div>
-    <!-- 顶部：左侧大标题 + 描述；右侧刷新 / 通过对话创建 / 创建新任务 -->
     <header class="scheduled-header">
       <div class="scheduled-head-text">
         <h2 class="scheduled-title">{{ t('working.scheduled') }}</h2>
@@ -55,9 +54,7 @@ function removeTask(id: string) {
       </div>
     </header>
 
-    <!-- 定时任务列表 -->
     <div v-if="scheduledTasks.length" class="task-list-wrap">
-      <!-- 列表标题行：左侧标题 + 右侧刷新按钮（两端对齐） -->
       <div class="task-section-head">
         <h3 class="task-section-title">{{ t('working.scheduledList') }}</h3>
         <button
@@ -73,7 +70,6 @@ function removeTask(id: string) {
         <li v-for="task in scheduledTasks" :key="task.id" class="task-item">
           <div class="task-head">
             <div class="task-title">{{ task.title }}</div>
-            <!-- 开关：标识定时任务是否开启（默认开启） -->
             <button
               type="button"
               class="task-toggle"
@@ -107,7 +103,6 @@ function removeTask(id: string) {
       </ul>
     </div>
 
-    <!-- 空数据：使用 EmptyCompents 占位 -->
     <EmptyCompents
       v-else
       icon="alarm"

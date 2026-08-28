@@ -120,8 +120,6 @@ async function submitCreateFromComposer() {
 
 <template>
   <div class="create-center">
-    <!-- 品牌区：Logo 作为新建会话对话框上方的视觉锚点，
-         引导语已移入下方输入框 placeholder，避免视觉重复。 -->
     <div class="create-brand">
       <Logo size="lg" />
     </div>
@@ -153,7 +151,6 @@ async function submitCreateFromComposer() {
         </button>
       </div>
 
-      <!-- 选择已有项目：下拉列表 -->
       <div v-if="pickOpen" class="project-picker">
         <ul v-if="workspace.projects.length" class="picker-list">
           <li

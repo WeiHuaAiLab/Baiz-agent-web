@@ -79,10 +79,6 @@ onBeforeUnmount(() => {
             <CreateChat v-if="showCreateGuide" />
             <template v-else>
                 <ChatHeader />
-                <!-- 内容体 + 输入框共同包裹在 OverlayScrollArea 中：
-                     输入框位于容器最下方（flex:none），消息区 flex:1 滚动；
-                     滚动条轨道覆盖整个 chat 区域（含输入框高度）。
-                     有数据时滚动条默认位于底部（ChatContent 内 pinned 逻辑保证）。 -->
                 <OverlayScrollArea
                     ref="overlayRef"
                     class="chat-body"
@@ -97,7 +93,6 @@ onBeforeUnmount(() => {
                 </OverlayScrollArea>
             </template>
         </div>
-        <!-- 打开文件面板：与 ExtensionPanel 同层级，面板关闭时悬浮于 chatView 右上角 -->
         <button
             v-if="!extensionOpen"
             type="button"
@@ -107,7 +102,6 @@ onBeforeUnmount(() => {
         >
             <Icon name="extesionPanel" :size="15" />
         </button>
-        <!-- 扩展面板（抽屉）：开关与类型由上方配置决定，默认打开 FilesPanel -->
         <ExtensionPanel v-model:open="extensionOpen" :type="extensionType" />
     </section>
 </template>

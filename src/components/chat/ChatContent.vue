@@ -195,7 +195,6 @@ async function onStreamingClick(event: MouseEvent) {
 </script>
 
 <template>
-  <!-- 统一内容容器：外层 OverlayScrollArea 包裹本组件 + 输入框，滚动条轨道覆盖整个 chat 区域 -->
   <div class="chat-content">
     <div
       v-if="
@@ -214,7 +213,6 @@ async function onStreamingClick(event: MouseEvent) {
       </button>
     </div>
 
-    <!-- 消息滚动区：flex:1 占据输入框以上空间，原生滚动条隐藏，滚动条视觉由外层 OverlayScrollArea 绘制 -->
     <div v-if="displayItems.length > 0" class="message-scroll">
       <DynamicScroller
         ref="scroller"
@@ -243,7 +241,6 @@ async function onStreamingClick(event: MouseEvent) {
       </div>
     </div>
 
-    <!-- 滚动到底部的按钮 -->
     <button
       v-if="!pinned && displayItems.length > 0"
       type="button"

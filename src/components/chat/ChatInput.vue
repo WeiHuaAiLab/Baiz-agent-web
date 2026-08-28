@@ -172,8 +172,6 @@ watch(
 
   <div ref="inputRoot" class="chat-input">
     <form class="composer composer-block" @submit.prevent="send">
-      <!-- 已选附件：图片显示正方形缩略图，文件显示文件名 + 类型·大小。
-           chip 右上角悬浮删除按钮，便于逐个取消选择。 -->
       <div v-if="files.attachments.length" class="attachment-row">
         <div
           v-for="att in files.attachments"
@@ -203,7 +201,6 @@ watch(
         </div>
       </div>
 
-      <!-- 输入区：固定 98px，超出 300px 滚动 -->
       <div class="composer-input">
         <textarea
           v-model="input"
@@ -213,7 +210,6 @@ watch(
         />
       </div>
 
-      <!-- 操作功能区：+（上传附件）/ 语音 / 发送 -->
       <div class="composer-actions">
         <button
           type="button"

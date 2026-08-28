@@ -70,7 +70,6 @@ function cancel() {
 <template>
   <div class="modal-mask modal-create-task" @click.self="cancel">
     <div class="modal-card modal-card-task">
-      <!-- 标题栏：左侧标题 + 右侧关闭 X -->
       <header class="modal-header">
         <h3>{{ t('tasks.autoTitle') }}</h3>
         <button
