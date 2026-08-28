@@ -12,6 +12,7 @@ import { useUiStore } from '../../stores/ui'
 import { useFilesStore } from '../../stores/files'
 import ComposerBox from './ComposerBox.vue'
 import Icon from '../common/Icon.vue'
+import Logo from '../common/Logo.vue'
 
 const { t } = useI18n()
 const session = useSessionStore()
@@ -119,6 +120,12 @@ async function submitCreateFromComposer() {
 
 <template>
   <div class="create-center">
+    <!-- 品牌区：Logo 作为新建会话对话框上方的视觉锚点，
+         引导语已移入下方输入框 placeholder，避免视觉重复。 -->
+    <div class="create-brand">
+      <Logo size="lg" />
+    </div>
+
     <div ref="pickerRef" class="create-toolbar">
       <div class="option-tabs">
         <button type="button" class="pick-btn" @click="startCreateProject">
@@ -168,8 +175,8 @@ async function submitCreateFromComposer() {
       v-model="input"
       :placeholder="
         ui.createMode === 'session'
-          ? t('chat.createPlaceholderSession')
-          : t('chat.createPlaceholderTask')
+          ? t('chat.createTaglineSession')
+          : t('chat.createTaglineTask')
       "
       centered
       @submit="submitCreateFromComposer"
