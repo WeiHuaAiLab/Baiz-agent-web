@@ -5,19 +5,32 @@
 import { computed } from 'vue'
 import { useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
-import { useWorkspaceStore, formatRelativeTime } from '../../stores/workspace'
+import { useWorkspaceStore, type TaskItem } from '../../stores/workspace'
+import { useUiStore } from '../../stores/ui'
 import Icon from '../common/Icon.vue'
 
 const { t } = useI18n()
 const router = useRouter()
 const workspace = useWorkspaceStore()
+const ui = useUiStore()
 
-/** 侧栏仅列出普通任务（无 schedule），定时任务列表不进侧栏 */
-const plainTasks = computed(() => workspace.tasks.filter((task) => !task.schedule))
+/** 侧栏默认显示定时任务列表（带 schedule 的任务），点击进入 /working/scheduled */
+const scheduledTasks = computed(() => workspace.tasks.filter((task) => task.schedule))
 
-function goTasks() {
-  void router.push('/working/tasks')
+/** 任务运行模式：cloud → 云端图标，local → 本地图标 */
+function modeIcon(task: TaskItem): 'cloud' | 'local' {
+  return task.schedule?.mode === 'cloud' ? 'cloud' : 'local'
 }
+
+/** 「创建任务」= 创建定时任务：直接弹出「创建自动化任务」弹窗（App.vue 挂载） */
+function createScheduledTask() {
+  ui.openCreate('scheduled')
+}
+
+// 普通任务页暂时不展示，恢复时取消注释
+// function goTasks() {
+//   void router.push('/working/tasks')
+// }
 
 function goScheduled() {
   void router.push('/working/scheduled')
@@ -30,9 +43,9 @@ function goExtensions() {
 
 <template>
   <section class="side-section">
-    <button type="button" class="menu-item" @click="goTasks">
-      <Icon name="tasks" :size="15" />
-      <span>{{ t('sidebar.plainTasks') }}</span>
+    <button type="button" class="menu-item" @click="createScheduledTask">
+      <Icon name="plus" :size="15" />
+      <span>{{ t('sidebar.createTask') }}</span>
     </button>
 
     <button
@@ -45,14 +58,14 @@ function goExtensions() {
       <span>{{ t('sidebar.scheduledTasks') }}</span>
     </button>
 
-    <ul v-if="plainTasks.length" class="project-list task-list-slim">
-      <li v-for="task in plainTasks" :key="task.id" @click="goTasks">
-        <Icon name="tasks" :size="13" />
+    <!-- 定时任务列表：模式图标（云端/本地） + 标题，点击进入 /working/scheduled -->
+    <ul v-if="scheduledTasks.length" class="project-list task-list-slim">
+      <li v-for="task in scheduledTasks" :key="task.id" @click="goScheduled">
+        <Icon :name="modeIcon(task)" :size="13" />
         <span class="project-title">{{ task.title }}</span>
-        <span class="task-when">{{ formatRelativeTime(task.createdAt) }}</span>
       </li>
     </ul>
-    <p v-else class="placeholder">{{ t('sidebar.noPlainTasks') }}</p>
+    <p v-else class="placeholder">{{ t('sidebar.noTasks') }}</p>
 
     <div class="section-block">
       <button type="button" class="menu-item" @click="goExtensions">

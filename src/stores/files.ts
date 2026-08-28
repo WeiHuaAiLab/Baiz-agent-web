@@ -6,8 +6,17 @@ import { useUiStore } from './ui'
 
 export interface AttachmentItem {
   id: string
+  /** 'image' 渲染正方形缩略图，'file' 渲染文件名 + 类型·大小 */
+  kind: 'image' | 'file'
   name: string
-  content: string
+  /** MIME（image/png 等），可能为空字符串 */
+  mimeType: string
+  /** 字节数 */
+  size: number
+  /** 文本文件原始内容（M2 完整化后由后端读取二进制） */
+  content?: string
+  /** 仅图片：dataURL base64，前端 <img :src> 直接展示 */
+  dataUrl?: string
 }
 
 export const useFilesStore = defineStore('files', {
@@ -54,16 +63,20 @@ export const useFilesStore = defineStore('files', {
     },
     async attachFromPicker() {
       const bridge = getBridge()
-      if (!bridge.has('fs.pick')) {
-        useUiStore().toast('当前形态暂不支持本地文件', 'error')
+      if (!bridge.has('fs.pickAttachment')) {
+        useUiStore().toast('当前形态暂不支持选择附件', 'error')
         return
       }
-      const picked = await bridge.fs.pickAndReadText()
+      const picked = await bridge.fs.pickAttachment()
       if (!picked) return
       this.attachments.push({
         id: `att-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 6)}`,
+        kind: picked.kind,
         name: picked.name,
+        mimeType: picked.mimeType,
+        size: picked.size,
         content: picked.content,
+        dataUrl: picked.dataUrl,
       })
     },
     async authorizeDir(): Promise<{ name: string; path: string } | null> {

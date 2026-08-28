@@ -35,6 +35,15 @@ export function createMockBridge(): Bridge {
             '# 演示文件\n\n这是通过 bridge.pickAndReadText 读入的 mock 内容。\n\n| 列A | 列B |\n|---|---|\n| 1 | 2 |\n',
         }
       },
+      async pickAttachment() {
+        // 演示用：固定返回一个 1KB 的「fake」PNG（最小 1×1 透明 PNG base64）+ 一个普通文件样例
+        return {
+          name: 'amber_bee.glb',
+          kind: 'file',
+          mimeType: 'model/gltf-binary',
+          size: 194 * 1024 * 1024 + 500 * 1024, // ≈194.48MB
+        }
+      },
       async pickDirectory() {
         return { name: 'demo-workspace', path: 'C:/projects/demo-workspace' }
       },

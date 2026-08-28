@@ -27,6 +27,8 @@ export interface TaskItem {
   instruction: string
   schedule?: TaskDraft
   projectId?: string
+  /** 是否开启（仅定时任务卡片展示开关，默认开启） */
+  enabled?: boolean
   /** 创建时间（ms 时间戳），用于展示「刚刚 / 5 分钟前」等相对时间 */
   createdAt: number
 }
@@ -192,6 +194,12 @@ export const useWorkspaceStore = defineStore('workspace', {
     },
     removeTask(id: string) {
       this.tasks = this.tasks.filter((item) => item.id !== id)
+    },
+    /** 切换定时任务开关状态（enabled 缺省视为开启） */
+    toggleTask(id: string) {
+      const task = this.tasks.find((item) => item.id === id)
+      if (!task) return
+      task.enabled = task.enabled === false
     },
   },
 })

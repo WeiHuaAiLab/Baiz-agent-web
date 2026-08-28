@@ -59,29 +59,27 @@ export function formatNextRun(date: Date): string {
   return `${date.getMonth() + 1}月${date.getDate()}日 ${hm}`
 }
 
-/** 任务调度摘要（含下次执行时间），用于列表展示 */
+/** 任务调度规则摘要（仅显示定时规则，不含模式/下次执行时间），用于列表展示 */
 export function scheduleText(task: TaskItem, t: (key: string) => string): string {
   const schedule = task.schedule
   if (!schedule) return t('tasks.notConfigured')
-  const mode = schedule.mode === 'cloud' ? t('tasks.modeCloud') : t('tasks.modeLocal')
-  let base: string
   if (schedule.cycle === 'monthly') {
-    base = `${t('tasks.cycleMonthly')} ${schedule.day} 日 ${schedule.time} · ${mode}`
-  } else if (schedule.cycle === 'weekly') {
-    base = `${t('tasks.cycleWeekly')} ${t(`tasks.weekday.${schedule.weekday}`)} ${schedule.time} · ${mode}`
-  } else if (schedule.cycle === 'daily') {
-    base = `${t('tasks.cycleDaily')} ${schedule.time} · ${mode}`
-  } else if (schedule.cycle === 'hourly') {
-    base = `${t('tasks.cycleHourly')} · ${mode}`
-  } else {
-    const unit =
-      schedule.unit === 'minute'
-        ? t('tasks.unitMinute')
-        : schedule.unit === 'hour'
-          ? t('tasks.unitHour')
-          : t('tasks.unitDay')
-    base = `${t('tasks.cycleInterval')} ${schedule.every} ${unit} · ${mode}`
+    return `${t('tasks.cycleMonthly')} ${schedule.day} 日 ${schedule.time}`
   }
-  const next = nextRunAt(schedule)
-  return next ? `${base} · ${t('tasks.next')} ${formatNextRun(next)}` : base
+  if (schedule.cycle === 'weekly') {
+    return `${t('tasks.cycleWeekly')} ${t(`tasks.weekday.${schedule.weekday}`)} ${schedule.time}`
+  }
+  if (schedule.cycle === 'daily') {
+    return `${t('tasks.cycleDaily')} ${schedule.time}`
+  }
+  if (schedule.cycle === 'hourly') {
+    return t('tasks.cycleHourly')
+  }
+  const unit =
+    schedule.unit === 'minute'
+      ? t('tasks.unitMinute')
+      : schedule.unit === 'hour'
+        ? t('tasks.unitHour')
+        : t('tasks.unitDay')
+  return `${t('tasks.cycleInterval')} ${schedule.every} ${unit}`
 }

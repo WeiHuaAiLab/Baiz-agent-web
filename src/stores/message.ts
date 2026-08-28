@@ -95,13 +95,22 @@ export const useMessageStore = defineStore('message', {
     ) {
       let effective = text
       if (attachments && attachments.length > 0) {
-        const blocks = attachments.map(
-          (attachment) =>
-            `\n\n\`\`\`\n[附件：${attachment.name}]\n${attachment.content.slice(0, 4000)}\n\`\`\``,
-        )
+        const blocks = attachments.map((attachment) => {
+          // content 为可选：图片 / 二进制文件本期不读内容（只有元信息），
+          // 此时只带文件名；文本附件才拼接前 4000 字符
+          const body = attachment.content?.slice(0, 4000)
+          return `\n\n\`\`\`\n[附件：${attachment.name}]${body ? `\n${body}` : ''}\n\`\`\``
+        })
         effective = `${text}${blocks.join('')}`
       }
-      await this.push(conversationId, makeMessage(conversationId, 'user', text))
+      // 附件随消息 meta 一起入列：消息区渲染缩略图 / 文件概要；
+      // 发送给后端的仍是 effective（拼接附件正文），两处各司其职。
+      await this.push(
+        conversationId,
+        makeMessage(conversationId, 'user', text, {
+          ...(attachments && attachments.length > 0 ? { attachments } : {}),
+        }),
+      )
       const clientTaskId = `t-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 6)}`
       this.ensureRun(clientTaskId, conversationId)
       try {

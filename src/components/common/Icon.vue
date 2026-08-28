@@ -30,6 +30,8 @@ export type IconName =
   | 'menuFold'
   | 'circle-slash'
   | 'inbox'
+  | 'cloud'
+  | 'local'
 
 const props = defineProps<{ name: IconName; size?: number }>()
 
@@ -71,6 +73,10 @@ const paths: Record<IconName, string> = {
   'circle-slash': 'M5.6 5.6a8 8 0 0 0 0 12.8M18.4 5.6a8 8 0 0 1 0 12.8M5.6 5.6l12.8 12.8',
   // 收件箱 / 列表占位图标，用于空状态展示
   inbox: 'M22 12h-6l-2 3h-4l-2-3H2M5.45 5.22 2 12v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-6l-3.45-6.78A2 2 0 0 0 16.76 4H7.24a2 2 0 0 0-1.79 1.22Z',
+  // 云端：任务调度运行在云端
+  cloud: 'M17.5 19H9a7 7 0 1 1 6.71-9h1.79a4.5 4.5 0 1 1 0 9Z',
+  // 本地：任务调度运行在本机（显示器图标）
+  local: 'M4 5h16a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2ZM2 19h20',
 }
 
 // 特殊图标：实心填充渲染（非描边）

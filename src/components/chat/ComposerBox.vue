@@ -5,6 +5,7 @@
 import { ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useFilesStore } from '../../stores/files'
+import { formatFileSize, shortMime } from '../../utils/format'
 import Icon from '../common/Icon.vue'
 
 const props = defineProps<{
@@ -37,13 +38,34 @@ function submit() {
     :class="{ centered: props.centered }"
     @submit.prevent="submit"
   >
+    <!-- 与 ChatInput 一致的双形态：图片正方形缩略图 / 文件名 + 类型·大小 -->
     <div v-if="files.attachments.length" class="attachment-row">
-      <span v-for="att in files.attachments" :key="att.id" class="attachment-chip">
-        <span class="att-name">{{ att.name }}</span>
-        <button type="button" @click="files.removeAttachment(att.id)">
+      <div
+        v-for="att in files.attachments"
+        :key="att.id"
+        class="attachment-chip"
+        :class="{ 'is-image': att.kind === 'image', 'is-file': att.kind === 'file' }"
+      >
+        <img
+          v-if="att.kind === 'image' && att.dataUrl"
+          class="att-thumb"
+          :src="att.dataUrl"
+          :alt="att.name"
+          :title="att.name"
+        />
+        <div v-else class="att-meta">
+          <div class="att-name" :title="att.name">{{ att.name }}</div>
+          <div class="att-tag">{{ shortMime(att.mimeType) }} · {{ formatFileSize(att.size) }}</div>
+        </div>
+        <button
+          type="button"
+          class="att-remove"
+          :title="t('common.delete')"
+          @click="files.removeAttachment(att.id)"
+        >
           <Icon name="x" :size="12" />
         </button>
-      </span>
+      </div>
     </div>
 
     <!-- 输入区：固定 98px，超出 300px 滚动（与 ChatInput 一致） -->
@@ -56,9 +78,15 @@ function submit() {
       />
     </div>
 
-    <!-- 操作功能区：+（暂时不做功能，仅占位）/ 语音 / 发送 -->
+    <!-- 操作功能区：+（上传附件，与 ChatInput 一致）/ 语音 / 发送 -->
     <div class="composer-actions">
-      <button type="button" class="act-btn" :title="t('files.upload')">
+      <button
+        type="button"
+        class="act-btn"
+        :class="{ active: files.attachments.length > 0 }"
+        :title="t('chat.attachFile')"
+        @click="files.attachFromPicker()"
+      >
         <Icon name="plus" :size="16" />
       </button>
 

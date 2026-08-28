@@ -18,13 +18,14 @@ export const router = createRouter({
       path: '/working',
       name: 'working',
       component: () => import('../components/working/WorkingView.vue'),
-      redirect: '/working/tasks',
+      redirect: '/working/scheduled',
       children: [
-        {
-          path: 'tasks',
-          name: 'working-tasks',
-          component: () => import('../components/working/TasksView.vue'),
-        },
+        // 普通任务页暂时不展示（默认进入定时任务页），恢复时取消注释即可
+        // {
+        //   path: 'tasks',
+        //   name: 'working-tasks',
+        //   component: () => import('../components/working/TasksView.vue'),
+        // },
         {
           path: 'scheduled',
           name: 'working-scheduled',

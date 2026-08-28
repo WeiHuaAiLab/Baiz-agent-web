@@ -129,6 +129,7 @@ defineExpose({ sync })
   right: 0;
   width: 8px;
   border-radius: 4px;
-  background: rgba(128, 128, 128, 0.35);
+  /* 与全局滚动条滑块同色（内容区同色系浅灰），保持一致 */
+  background: var(--scrollbar-thumb);
 }
 </style>

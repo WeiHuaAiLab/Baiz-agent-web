@@ -1,3 +1,5 @@
+import type { AttachmentItem } from './stores/files'
+
 export interface Conversation {
   id: string
   title: string
@@ -36,6 +38,8 @@ export interface MessageMeta {
   statusKey?: string
   errorKey?: string
   streaming?: boolean
+  /** 用户消息随消息携带的附件（图片缩略图 / 文件概要），随消息持久化到 DB */
+  attachments?: AttachmentItem[]
 }
 
 export interface ChatMessage {

@@ -18,11 +18,18 @@ const recentOpen = ref(true)
 const searchOpen = ref(false)
 const searchQuery = ref('')
 
+/** 最近会话：排除已置顶项（置顶项在「置顶」栏单独展示） */
 const filteredSessions = computed(() => {
   const query = searchQuery.value.trim().toLowerCase()
-  if (!query) return session.conversations
-  return session.conversations.filter((item) => item.title.toLowerCase().includes(query))
+  const list = session.conversations.filter((item) => !item.pinnedAt)
+  if (!query) return list
+  return list.filter((item) => item.title.toLowerCase().includes(query))
 })
+
+/** 置顶会话：无置顶项时栏目整体不显示 */
+const pinnedSessions = computed(() =>
+  session.conversations.filter((item) => item.pinnedAt),
+)
 
 /** 新建会话：若当前不在 / 聊天路由（如设置页），先跳回 / 再打开创建流程 */
 function newSession() {
@@ -50,6 +57,14 @@ function toggleSearch() {
     </button>
 
     <ProjectList />
+
+    <!-- 置顶栏目：仅存在置顶会话时显示 -->
+    <div v-if="pinnedSessions.length" class="section-block">
+      <div class="section-head">
+        <span>{{ t('sidebar.pinned') }}</span>
+      </div>
+      <SessionList :items="pinnedSessions" />
+    </div>
 
     <div class="section-block">
       <div class="section-head clickable" @click="recentOpen = !recentOpen">

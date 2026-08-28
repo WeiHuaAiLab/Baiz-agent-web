@@ -11,11 +11,14 @@ const router = useRouter()
 const workspace = useWorkspaceStore()
 const ui = useUiStore()
 
-/** 新增项目：若当前不在 / 聊天路由（如设置页），先跳回 / 再打开创建项目表单 */
+/** 新增项目：若当前不在 / 聊天路由（如设置页），先跳回 / 再打开创建项目弹窗 */
 function newProject() {
   if (router.currentRoute.value.path !== '/') {
     void router.push('/')
   }
+  // 侧栏入口没有回归上下文：清掉可能残留的 createReturn（残留来自 CreateChat
+  // 「新建项目」的取消/完成路径），避免保存后误回跳到新建会话页而非聊天视图
+  ui.createReturn = null
   ui.openCreate('project')
 }
 
