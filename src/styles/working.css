@@ -1,33 +1,121 @@
 /* 工作区子页：布局复用设置页（.settings-view / .settings-inner / .settings-header），
  * 本文件仅保留内容区（任务列表 / 扩展列表 / 内联表单）样式。 */
 
-/* 任务列表区域标题 */
-.task-section-title {
-  font-size: 13px;
+/* 工作区内容体：默认 800px 宽、水平居中（上限不超过 settings-inner 的 1000px） */
+.working-view .settings-inner {
+  width: 800px;
+  max-width: 1000px;
+}
+
+/* 定时任务页：顶部大标题 + 描述 + 右侧操作按钮行（与 settings-card 互不嵌套）。
+   标题/描述与按钮强制同行（nowrap）：描述过长时在左侧文字内换行，按钮保持整行右侧。 */
+.scheduled-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  margin: 0 0 18px;
+  flex-wrap: nowrap;
+}
+
+.scheduled-head-text {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.scheduled-title {
+  font-size: 22px;
   font-weight: 600;
-  margin: 4px 2px 10px;
+  margin: 0;
+  color: var(--text);
+  letter-spacing: 0.2px;
+}
+
+.scheduled-subtitle {
+  font-size: 12.5px;
+  color: var(--muted);
+  margin: 6px 0 0;
+  line-height: 1.6;
+  max-width: 100%;
+}
+
+.scheduled-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex: none;
+}
+
+.scheduled-refresh {
+  width: 32px;
+  height: 32px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--muted);
+  border: none;
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s;
+}
+.scheduled-refresh:hover {
+  background: var(--hover);
   color: var(--text);
 }
 
-/* 任务列表（卡片形式） */
+/* 「通过对话创建」次按钮：与 .btn-ghost 视觉一致（描边+透明底），
+   这里只是把内联图标与文字的间距收一收，不重复圆角/边框。 */
+.scheduled-actions .btn-ghost {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.scheduled-actions .btn-primary {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+
+/* 任务列表区域标题行：左侧标题 + 右侧刷新按钮（两端对齐） */
+.task-section-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin: 4px 2px 12px;
+}
+
+.task-section-title {
+  font-size: 13px;
+  font-weight: 500;
+  margin: 0;
+  line-height: 1.7;
+  color: var(--text);
+}
+
+/* 任务列表（卡片模式）：响应式网格，一行 2~3 个
+   （720px 内容区约 3 列，窗口变窄时自动降为 2 列/1 列） */
 .task-list {
   list-style: none;
   margin: 0 0 14px;
   padding: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(215px, 1fr));
+  gap: 10px;
 }
 
 .task-item {
   display: flex;
-  align-items: flex-start;
-  gap: 12px;
+  flex-direction: column;
+  gap: 10px;
   background: var(--panel);
   border: 1px solid var(--border);
-  border-radius: 10px;
-  padding: 14px 16px;
+  border-radius: 12px;
+  padding: 16px;
   transition: border-color 0.15s, box-shadow 0.15s;
+  min-height: 120px;
 }
 
 .task-item:hover {
@@ -35,62 +123,107 @@
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
 }
 
-/* 左侧小圆点（accent 色，提示任务状态） */
-.task-dot {
+/* 顶部行：标题 + 右上角开关（标识任务是否开启） */
+.task-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+/* 开关（radio 风格）：默认开启态 on 时为 accent 色 */
+.task-toggle {
   flex: none;
-  width: 8px;
-  height: 8px;
-  margin-top: 6px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 2px;
+  background: none;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+}
+
+.task-toggle-track {
+  width: 34px;
+  height: 18px;
+  border-radius: 9px;
+  background: var(--border);
+  position: relative;
+  transition: background 0.15s;
+}
+
+.task-toggle-knob {
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 14px;
+  height: 14px;
   border-radius: 50%;
+  background: var(--panel);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
+  transition: left 0.15s;
+}
+
+.task-toggle.on .task-toggle-track {
   background: var(--accent);
 }
 
-.task-main {
-  flex: 1;
-  min-width: 0;
+.task-toggle.on .task-toggle-knob {
+  left: 18px;
 }
 
 .task-title {
-  display: block;
-  font-size: 13.5px;
-  font-weight: 600;
+  font-size: 14px;
+  font-weight: 500;
   color: var(--text);
   line-height: 1.4;
-}
-
-.task-desc {
-  display: block;
-  font-size: 12.5px;
-  color: var(--muted);
-  margin-top: 4px;
-  line-height: 1.55;
-  white-space: pre-wrap;
   word-break: break-word;
 }
 
-/* 元信息：关联项目 + 创建时间 */
+.task-desc {
+  font-size: 12px;
+  color: var(--muted);
+  line-height: 1.55;
+  white-space: pre-wrap;
+  word-break: break-word;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+/* 底部行：左侧时间 + 右侧删除按钮（两端对齐） */
 .task-meta {
   display: flex;
-  flex-wrap: wrap;
   align-items: center;
-  gap: 10px;
-  margin-top: 8px;
-  font-size: 11px;
+  justify-content: space-between;
+  gap: 8px;
+  margin-top: auto;
+  padding-top: 4px;
+  font-size: 12px;
   color: var(--muted);
 }
 
-.task-meta-item {
+.task-time {
   display: inline-flex;
   align-items: center;
-  gap: 4px;
+  gap: 5px;
+  min-width: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .task-del {
   flex: none;
-  align-self: flex-start;
   color: var(--muted);
-  padding: 5px;
+  padding: 4px;
   border-radius: 6px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .task-del:hover {

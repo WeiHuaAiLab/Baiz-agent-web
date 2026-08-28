@@ -13,6 +13,8 @@ import CommandPalette from './components/CommandPalette.vue'
 import OnboardingOverlay from './components/OnboardingOverlay.vue'
 import StatusBar from './components/StatusBar.vue'
 import ToastContainer from './components/ToastContainer.vue'
+import CreateProject from './components/chat/CreateProject.vue'
+import CreateTask from './components/chat/CreateTask.vue'
 
 const { t } = useI18n()
 const session = useSessionStore()
@@ -59,13 +61,20 @@ watch(() => settings.theme, applyTheme)
       <div class="chat-router">
         <router-view />
       </div>
-      <StatusBar />
     </main>
 
+    <!-- 状态栏：悬浮窗模式，fixed 定位右下角 -->
+    <StatusBar />
     <!-- 处理弹窗内容 -->
     <ToastContainer />
     <!-- 命令行控制面板 -->
     <CommandPalette />
+    <!-- 新建项目弹窗：挂在 App 顶层而非 ChatView，让 modal-mask 覆盖任意路由，
+         避免整页切换；ui.createMode 由 ProjectList「+」/CreateChat 工具条触发 -->
+    <CreateProject v-if="ui.createMode === 'project'" />
+    <!-- 创建自动化任务弹窗（定时任务）：挂在 App 顶层，遮罩覆盖任意路由；
+         由侧栏工作区「创建任务」入口触发（ui.createMode === 'scheduled'） -->
+    <CreateTask v-if="ui.createMode === 'scheduled'" />
     <!-- 新手指引 -->
     <OnboardingOverlay />
   </div>

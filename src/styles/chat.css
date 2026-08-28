@@ -280,10 +280,16 @@
   }
 }
 
-/* 输入区容器：占满父级 100% 宽度，高度由内容（.composer）撑开 */
+/* 输入区容器：绝对定位于消息滚动区底部（bottom: 10px 与底部保持距离），
+   宽度撑满 chat-body，高度由内容（.composer）撑开——随 textarea 输入行数 /
+   附件行数自动变化。脱离文档流后消息区完整占满 chat-body，
+   底部预留空间由 chat-body 的 padding-bottom（--chat-input-h + 20px）承担。 */
 .chat-input {
-  width: 100%;
-  flex: none;
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 10px;
+  z-index: 10;
 }
 
 .composer {
@@ -292,16 +298,18 @@
   width: 100%;
   max-width: 720px;
   margin: 0 auto;
-  padding: 8px 0 18px;
+  /* 顶部 8px 呼吸；底部 0——下沿间距已由 .chat-input 的 bottom: 10px 承担 */
+  padding: 8px 0 0;
 }
 
 .composer.centered {
   max-width: 720px;
 }
 
-/* 居中创建（新建会话/任务）：输入区整体投影更明显，字号略大 */
-.composer.centered .composer-input,
-.composer.centered .composer-actions {
+/* 居中创建（新建会话/任务）：整体 shell 增强外阴影，字号略大。
+   原先分别投在 .composer-input 与 .composer-actions（多个内嵌阴影叠加），
+   升级 shell 后统一投到外层，更接近真实「一个卡片」的视觉。 */
+.composer.composer-block.centered {
   box-shadow:
     0 10px 28px rgba(0, 0, 0, 0.12),
     inset 0 1px 2px rgba(0, 0, 0, 0.04);
@@ -389,6 +397,20 @@
   position: relative;
   width: 100%;
   max-width: 720px;
+  margin-bottom: 16px;
+}
+
+/* 新建会话中央品牌区：Logo 作为对话上方的视觉锚点。
+   与工具条 / 输入框一起被 .create-center 居中布局（flex column + justify-content center），
+   Logo 上方留 36px 呼吸，下方 16px 与工具条拉开层次（引导语已移入
+   输入框 placeholder，这里不再需要副标题的间距）。 */
+.create-brand {
+  width: 100%;
+  max-width: 720px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  margin-top: 36px;
   margin-bottom: 16px;
 }
 
@@ -557,17 +579,30 @@
   cursor: default;
 }
 
-/* ChatInput 两段式输入区：输入区（textarea）+ 操作功能区（+项目选择器/语音/发送） */
+/* ChatInput / ComposerBox 共用 shell：升级为统一边框 + 背景 + 圆角 + inset 投影的整体。
+   内部三段（附件行 / 输入区 / 操作区）都是不带独立背景的「内嵌区域」，
+   由外层视觉整合——避免附件 chip 看起来像孤立卡片悬在外面、不属于输入框。 */
 .composer-block {
-  padding-top: 6px;
+  padding-top: 0;
+  padding-bottom: 0;
+  background: var(--code-bg);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  overflow: hidden;
+  /* 顶部外阴影：卡片与上方消息内容体区分；inset 保留浅内投影增强凹陷感。
+     注意：居中创建（CreateChat 的 ComposerBox）会被下方
+     .composer.composer-block.centered 的 box-shadow 覆盖，不受影响。 */
+  box-shadow:
+    0 -12px 24px rgba(0, 0, 0, 0.07),
+    inset 0 1px 2px rgba(0, 0, 0, 0.04);
 }
 
 .composer-input {
   width: 100%;
-  background: var(--code-bg);
-  border-radius: 14px 14px 0 0;
+  /* 嵌入式背景：实际背景由外层 .composer-block 提供，
+     这里只设 padding 给输入文字留内边距。 */
+  background: transparent;
   padding: 12px 14px 10px;
-  box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.04);
 }
 
 .composer-input .input-area {
@@ -598,9 +633,10 @@
   gap: 4px;
   width: 100%;
   padding: 8px 12px;
-  background: var(--code-bg);
-  border-radius: 0 0 14px 14px;
-  box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.04);
+  /* 嵌入式背景：由外层 .composer-block 提供；
+     上方细线分隔输入区与操作区边界，仍属于「一个 shell」内部。 */
+  background: transparent;
+  border-top: 1px solid var(--border);
 }
 
 .act-btn {
@@ -764,23 +800,61 @@
   background: transparent;
 }
 
-/* 附件与回到底部 */
+/* 附件行：作为外层 .composer-block 的内嵌区域，靠左右 padding 对齐输入区。
+   chip 之间 6px 间距；顶部 10px 让 chip 距离 shell 圆角内壁有呼吸空间，
+   底部 0 让 chip 自然贴近下方输入区（由 .composer-input padding-top: 12px 主导间距）。 */
 .attachment-row {
   display: flex;
   flex-wrap: wrap;
   gap: 6px;
-  margin-bottom: 8px;
+  padding: 10px 14px 0;
+  margin-bottom: 0;
 }
 
+/* 通用 chip 容器：图片走正方形缩略图，文件走名+meta 行——两者尺寸完全不同。
+   is-image 缩略图 56×56；is-file 卡片约高 40px、宽自适应（不超过 220px）。 */
 .attachment-chip {
+  position: relative;
   display: inline-flex;
   align-items: center;
-  gap: 6px;
-  padding: 4px 8px;
   border: 1px solid var(--border);
-  border-radius: 8px;
+  border-radius: 10px;
   background: var(--panel);
   font-size: 12px;
+  overflow: hidden;
+  transition: border-color 0.15s;
+}
+
+.attachment-chip.is-image {
+  width: 56px;
+  height: 56px;
+  padding: 0;
+}
+
+.attachment-chip.is-file {
+  max-width: 220px;
+  padding: 6px 28px 6px 10px; /* 给右上角删除按钮留 28px 内嵌位置 */
+  min-height: 40px;
+}
+
+.attachment-chip:hover {
+  border-color: var(--muted);
+}
+
+/* 图片缩略图：完全填满 chip 容器 */
+.attachment-chip .att-thumb {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+/* 文件名 + 类型·大小：两行布局 */
+.attachment-chip .att-meta {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
 }
 
 .attachment-chip .att-name {
@@ -788,15 +862,58 @@
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+  color: var(--text);
+  font-weight: 500;
 }
 
-.attachment-chip button {
+.attachment-chip .att-tag {
+  font-size: 11px;
+  color: var(--muted);
+  letter-spacing: 0.02em;
+}
+
+/* 删除按钮：右上角绝对定位，覆盖在缩略图/文字之上 */
+.attachment-chip .att-remove {
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  width: 18px;
+  height: 18px;
+  padding: 0;
+  border-radius: 50%;
+  background: rgba(0, 0, 0, 0.06);
   color: var(--muted);
   display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.15s, color 0.15s;
 }
 
-.attachment-chip button:hover {
+.attachment-chip .att-remove:hover {
+  background: rgba(0, 0, 0, 0.16);
   color: var(--text);
+}
+
+:root[data-theme='dark'] .attachment-chip .att-remove {
+  background: rgba(255, 255, 255, 0.1);
+}
+
+:root[data-theme='dark'] .attachment-chip .att-remove:hover {
+  background: rgba(255, 255, 255, 0.2);
+}
+
+/* 消息区附件（用户消息）：复用输入框 chip 视觉——图片缩略图 / 文件概要。
+   容器 flex wrap，与上方文本（user-block）垂直留 8px 呼吸。 */
+.user-attachments {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-bottom: 8px;
+}
+
+/* 消息区无删除按钮：覆盖 .is-file 为删除按钮预留的右侧 28px 内距 */
+.user-attachments .attachment-chip.is-file {
+  padding: 6px 10px;
 }
 
 .scroll-bottom {

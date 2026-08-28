@@ -101,7 +101,12 @@
   flex-direction: column;
 }
 .status-bar {
-  flex: none;
+  /* 悬浮窗模式：fixed 固定于窗口右下角，背景透明，不占文档流 */
+  position: fixed;
+  right: 14px;
+  bottom: 12px;
+  /* 层级低于扩展面板（.files z-index: 20），不遮挡面板内容 */
+  z-index: 10;
   height: 26px;
   display: flex;
   align-items: center;
@@ -109,8 +114,8 @@
   padding: 0 14px;
   font-size: 11px;
   color: var(--muted);
-  background: var(--panel);
-  border-top: 1px solid var(--border);
+  background: transparent;
+  pointer-events: none;
 }
 .sb-item {
   display: inline-flex;
@@ -151,16 +156,4 @@
   text-overflow: ellipsis;
 }
 
-/* ── 件5：会话预览 ── */
-.session-list li {
-  flex-wrap: wrap;
-}
-.session-preview {
-  flex-basis: 100%;
-  font-size: 11px;
-  color: var(--muted);
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  padding-left: 2px;
-}
+/* ── 会话列表：单行（图标/标题/时间），无预览 ── */

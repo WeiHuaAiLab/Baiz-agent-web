@@ -54,17 +54,12 @@
   position: relative;
 }
 
-.session-list li.pinned {
-  background: #fffbe6;
-}
-
-:root[data-theme='dark'] .session-list li.pinned {
-  background: #2e2a1d;
-}
-
-.pin-badge {
-  color: #b7791f;
+/* 会话图标：行首小图标，跟随 muted 色 */
+.session-icon {
   flex: none;
+  display: inline-flex;
+  align-items: center;
+  color: var(--muted);
 }
 
 /* 会话信息主盒子：默认占满整行（flex: 1），hover 时随 more-wrap 展开自动收缩让位 */
@@ -72,7 +67,6 @@
   flex: 1;
   min-width: 0;
   display: flex;
-  flex-wrap: wrap; /* 预览换行显示在底部一行 */
   align-items: center;
   gap: 4px;
 }
@@ -412,10 +406,11 @@
 /* 品牌区 */
 .brand {
   display: flex;
-  align-items: baseline;
+  align-items: center;
   gap: 8px;
-  padding: 14px 12px 10px;
+  padding: 12px 14px 10px;
   border-bottom: 1px solid var(--border);
+  justify-content: center;
 }
 
 .brand-name {

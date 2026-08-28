@@ -1,5 +1,6 @@
 :root {
-  --bg: #f7f7f8;
+  /* 站点底色统一为侧栏背景色（引用 --sidebar-bg，两处颜色永远同步） */
+  --bg: var(--sidebar-bg);
   --panel: #ffffff;
   --border: #e5e5e5;
   --text: #1f1f1f;
@@ -18,7 +19,7 @@
 }
 
 :root[data-theme='dark'] {
-  --bg: #1e1e1e;
+  --bg: var(--sidebar-bg);
   --panel: #252526;
   --border: #3c3c3c;
   --text: #e8e8e8;
@@ -55,8 +56,47 @@ body {
   font-size: 14px;
 }
 
+/* 滚动条统一配色：轨道背景透明（与所在内容区背景一致，视觉上融入内容），
+   滚轴（滑块）用内容区同色系的半透明浅灰；hover 略加深提升可辨性 */
+:root {
+  --scrollbar-thumb: rgba(128, 128, 128, 0.35);
+  --scrollbar-thumb-hover: rgba(128, 128, 128, 0.55);
+}
+
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  /* 轨道透明 = 跟随所在内容区背景色 */
+  background: transparent;
+}
+
+::-webkit-scrollbar-button {
+  /* 移除默认箭头外观 + 背景透明：箭头区域完全融入内容区 */
+  -webkit-appearance: none;
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--scrollbar-thumb);
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--scrollbar-thumb-hover);
+}
+
+/* Firefox */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--scrollbar-thumb) transparent;
+}
+
 /* 规范 §2.2：窗口过窄（<900px）降级全宽，不挤压 */
 @media (max-width: 899px) {
+
   .chat-header,
   .message-list,
   .streaming-tail,
@@ -79,6 +119,7 @@ button {
   display: flex;
   height: 100%;
   overflow: hidden;
+  padding: 10px 10px 10px 0px;
 }
 
 .sidebar {
@@ -86,16 +127,17 @@ button {
   flex: none;
   /* 浅灰背景，比内容区（白色）略深，形成层次 */
   background: var(--sidebar-bg);
-  border-right: 1px solid var(--border);
   display: flex;
   flex-direction: column;
   overflow: hidden;
   transition: width 0.22s ease, border-color 0.22s ease;
+  padding: 0px;
 }
 
 /* 侧栏折叠：宽度收为 0（由 chatHeader 的按钮控制） */
 .sidebar-collapsed .sidebar {
   width: 0;
+  padding-left: 10px;
   border-right-color: transparent;
 }
 
@@ -104,10 +146,13 @@ button {
   min-width: 0;
   display: flex;
   flex-direction: column;
-  /* 白色内容区，与浅灰侧栏区分 */
+  /* chat-area 容器默认白色底（站点其余底色由 --bg=侧栏色 统一） */
   background: var(--panel);
+  /* 容器 10px 圆角 */
+  border-radius: 16px;
   /* 承载悬浮于左上角的侧栏展开/收缩按钮 */
   position: relative;
+  overflow: hidden;
 }
 
 .divider {
@@ -119,8 +164,10 @@ button {
 
 .files {
   flex: none;
+  /* 背景色与聊天内容体一致（白色 --panel），无左侧边框 */
   background: var(--panel);
-  border-left: 1px solid var(--border);
+  /* 扩展面板层级高于右下角悬浮状态栏（.status-bar z-index: 10） */
+  z-index: 20;
 }
 
 .side-panel {
@@ -176,6 +223,12 @@ button {
   cursor: pointer;
   text-overflow: ellipsis;
   white-space: nowrap;
+  /* 会话项之间 5px 空隙（末项去掉，避免底部多余留白） */
+  margin-bottom: 5px;
+}
+
+.session-list li:last-child {
+  margin-bottom: 0;
 }
 
 .session-list li.active,
@@ -929,14 +982,19 @@ button {
 }
 
 /* chat 主体滚动容器：外层 OverlayScrollArea 根（.scroll-area）上挂 .chat-body，
-   内部纵向排列「消息区（flex:1 滚动）」+「输入框（flex:none 底部）」，
-   输入框变高时消息区压缩、滚动条轨道仍覆盖整个容器 */
+   内部纵向排列「消息区（flex:1 滚动）」+「输入框（absolute 底部）」。
+   输入框脱离文档流后消息区占满全高，此处用 padding-bottom 预留
+   「输入框高度（--chat-input-h，由 ChatInput 的 ResizeObserver 同步）+ 20px」，
+   滚动到最底部时最后一条消息恰好停在输入框上方、不被遮挡。
+   ——chat-input-h 默认 200px 兜底：即使 JS 变量延迟/未写入，也保证
+   消息区底部有足够空间，输入框不会盖住最后一条消息。 */
 .chat-body {
   flex: 1;
   min-height: 0;
   display: flex;
   flex-direction: column;
   position: relative;
+  padding-bottom: calc(var(--chat-input-h, 200px) + 20px);
 }
 
 /* ChatContent 统一内容容器：占满输入框以上空间 */
@@ -1031,14 +1089,14 @@ button {
 /* 虚拟滚动容器（DynamicScroller 根 .vue-recycle-scroller）：
    注意 class="message-list" 不会传播到该元素（第三方组件 inheritAttrs:false），
    高度/滚动条规则必须通过子选择器命中，否则滚动容器高度退化为内容高度（无法滚动） */
-.message-scroll > .vue-recycle-scroller {
+.message-scroll>.vue-recycle-scroller {
   flex: 1;
   min-height: 0;
   width: 100%;
   scrollbar-width: none;
 }
 
-.message-scroll > .vue-recycle-scroller::-webkit-scrollbar {
+.message-scroll>.vue-recycle-scroller::-webkit-scrollbar {
   width: 0;
   height: 0;
 }
@@ -1047,6 +1105,10 @@ button {
 .message-inner {
   max-width: 720px;
   margin: 0 auto;
+  /* 消息间距改由 padding 承担：虚拟滚动（DynamicScroller）按 item 的 border-box
+     测量高度，.msg 的 margin-bottom 不计入会导致间距被下一个消息覆盖（叠在一起）。
+     padding 计入测量高度，间距稳定保留 */
+  padding-bottom: 10px;
 }
 
 .empty {
@@ -1101,7 +1163,21 @@ button {
 }
 
 .msg {
-  margin-bottom: 16px;
+  margin-bottom: 10px;
+}
+
+/* 用户消息整体右对齐：flex column + 交叉轴右端，让头部操作行、附件区、
+   文本气泡、时间戳全部靠右；AI 消息保持默认左对齐（普通块）。 */
+.msg.user {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+}
+
+/* 虚拟滚动 item 内：间距已由父容器 .message-inner 的 padding-bottom 承担，
+   此处归零 margin，避免与 padding 叠加成 32px（streaming-tail 中的 .msg 仍走 margin） */
+.message-inner .msg {
+  margin-bottom: 0;
 }
 
 .msg-head {

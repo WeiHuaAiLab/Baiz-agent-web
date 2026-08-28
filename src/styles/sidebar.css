@@ -297,6 +297,225 @@
   margin-top: 12px;
 }
 
+/* 创建项目弹窗：标题栏(标题+关闭 X)+ 两个必填字段 + 取消/保存。
+   .modal-card 默认 320px，表单需要更宽以容纳路径文本与图标 →
+   .modal-card-wide 提到 380px，其余字段/按钮沿用通用 .modal-* 体系。 */
+.modal-card-wide {
+  width: 380px;
+}
+
+.modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 14px;
+}
+
+.modal-create-project .modal-header h3,
+.modal-create-task .modal-header h3 {
+  margin: 0;
+  font-size: 16px;
+}
+
+.modal-close {
+  width: 28px;
+  height: 28px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 6px;
+  background: transparent;
+  border: none;
+  color: var(--muted);
+  cursor: pointer;
+}
+
+.modal-close:hover {
+  background: var(--hover);
+  color: var(--text);
+}
+
+/* 表单字段标签：字段名 + 红色必填星号（flex 布局，字数计数可靠右） */
+.modal-create-project .field-label,
+.modal-create-task .field-label {
+  display: flex;
+  align-items: baseline;
+  gap: 2px;
+  font-size: 12.5px;
+  color: var(--text);
+  margin: 14px 0 6px;
+}
+.modal-create-project .field-label:first-of-type,
+.modal-create-task .field-label:first-of-type {
+  margin-top: 0;
+}
+
+.required {
+  color: #c0392b;
+  margin-left: 2px;
+}
+
+/* 单行输入框：圆角 8px、浅灰背景、聚焦时 accent 色描边 */
+.modal-input {
+  width: 100%;
+  padding: 9px 12px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  font: inherit;
+  font-size: 13.5px;
+  background: var(--bg);
+  color: var(--text);
+  box-sizing: border-box;
+}
+.modal-input:focus {
+  border-color: var(--accent);
+  outline: none;
+}
+.modal-input::placeholder {
+  color: var(--muted);
+}
+
+/* 路径选择器：仿输入框视觉（圆角/边框/背景一致），点击触发 OS 选目录；
+   用 button + flex 让文件夹图标与路径文字水平排版。 */
+.path-picker {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 9px 12px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--bg);
+  color: var(--text);
+  font-size: 13.5px;
+  cursor: pointer;
+  box-sizing: border-box;
+  text-align: left;
+}
+.path-picker:hover {
+  border-color: var(--muted);
+}
+.path-picker:focus-visible {
+  border-color: var(--accent);
+  outline: none;
+}
+.path-text {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.path-text.is-placeholder {
+  color: var(--muted);
+}
+
+/* 创建自动化任务弹窗（modal-create-task）：宽度 580px、高度随内容自适应。
+   配色/圆角对齐 settings 页 form 风格（.settings-card：var(--panel) 底、12px 圆角、16px 18px 内边距）。 */
+.modal-card-task {
+  width: 580px;
+  border-radius: 12px;
+  padding: 16px 18px;
+}
+
+/* 名称字数计数（0/50）：field-label 为 flex，此元素 margin-left:auto 靠右 */
+.char-count {
+  margin-left: auto;
+  color: var(--muted);
+  font-size: 12px;
+}
+
+/* 指令多行输入框 */
+.modal-textarea {
+  resize: vertical;
+  min-height: 68px;
+  line-height: 1.5;
+}
+
+/* 下拉选择器：与 .modal-input 同款视觉 */
+.modal-select {
+  padding: 8px 10px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  font: inherit;
+  font-size: 13.5px;
+  background: var(--bg);
+  color: var(--text);
+  box-sizing: border-box;
+  cursor: pointer;
+}
+.modal-select:focus {
+  border-color: var(--accent);
+  outline: none;
+}
+
+/* 创建任务弹窗内的控件对齐 settings form 风格：
+   输入框/下拉/多行框 统一 var(--panel) 底 + 6px 圆角（同 .key-row input） */
+.modal-create-task .modal-input,
+.modal-create-task .modal-select,
+.modal-create-task .modal-textarea {
+  background: var(--panel);
+  border-radius: 6px;
+}
+
+/* 执行方式行：下拉 + 旁注 */
+.mode-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+.mode-row .modal-select {
+  flex: 1;
+  min-width: 120px;
+}
+.mode-hint {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 12px;
+  color: var(--muted);
+}
+
+/* 执行周期行：下拉 + 时间配置 + 「执行」 */
+.cycle-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+.cycle-select {
+  min-width: 96px;
+}
+.cycle-time {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--muted);
+  font-size: 13px;
+  flex: 1;
+  min-width: 0;
+}
+.time-input {
+  width: 108px;
+  padding: 6px 8px;
+}
+.num-input {
+  width: 56px;
+  padding: 6px 8px;
+}
+.weekday-select {
+  padding: 6px 8px;
+}
+.inline-hint {
+  font-size: 12.5px;
+  color: var(--muted);
+}
+.exec-word {
+  color: var(--text);
+  flex-shrink: 0;
+}
+
 .feedback-sent {
   color: #1e7e34;
   font-size: 13px;
