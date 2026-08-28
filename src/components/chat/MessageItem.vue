@@ -6,6 +6,7 @@ import { useRouter } from 'vue-router'
 import { useMessageStore } from '../../stores/message'
 import { getBridge } from '../../bridge'
 import { formatDuration, formatTime } from '../../utils/time'
+import { formatFileSize, shortMime } from '../../utils/format'
 import MarkdownView from '../markdown/MarkdownView.vue'
 import ToolRow from './ToolRow.vue'
 import ApprovalCard from './ApprovalCard.vue'
@@ -107,7 +108,34 @@ function goSettings() {
     <p v-else-if="message.kind === 'assistant'" class="no-output">
       {{ t('chat.noOutput') }}
     </p>
-    <pre v-else-if="message.kind === 'user'" class="user-text">{{ message.text }}</pre>
+    <div v-else-if="message.kind === 'user'" class="user-block">
+      <!-- 附件区：与输入框 chip 一致的视觉——图片显示正方形缩略图，
+           文件显示文件名 + 类型·大小。空文本时缩略图/概要单独成行。 -->
+      <div
+        v-if="message.meta?.attachments?.length"
+        class="user-attachments"
+      >
+        <div
+          v-for="att in message.meta.attachments"
+          :key="att.id"
+          class="attachment-chip"
+          :class="{ 'is-image': att.kind === 'image', 'is-file': att.kind === 'file' }"
+        >
+          <img
+            v-if="att.kind === 'image' && att.dataUrl"
+            class="att-thumb"
+            :src="att.dataUrl"
+            :alt="att.name"
+            :title="att.name"
+          />
+          <div v-else class="att-meta">
+            <div class="att-name" :title="att.name">{{ att.name }}</div>
+            <div class="att-tag">{{ shortMime(att.mimeType) }} · {{ formatFileSize(att.size) }}</div>
+          </div>
+        </div>
+      </div>
+      <pre v-if="message.text" class="user-text">{{ message.text }}</pre>
+    </div>
     <ToolRow v-else-if="message.kind === 'tool_call'" :message="message" />
     <ApprovalCard v-else-if="message.kind === 'approval'" :message="message" />
     <div v-else-if="message.kind === 'status'" class="status-text" :class="message.meta?.status">

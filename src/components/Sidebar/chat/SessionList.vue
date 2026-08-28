@@ -1,10 +1,9 @@
 <script setup lang="ts">
-// 对话列表：会话项（选中/置顶/预览/时间）、内联重命名、⋯ 操作菜单与全局遮罩。
+// 对话列表：会话项（图标/标题/时间）、内联重命名、⋯ 操作菜单与全局遮罩。
 import { ref, watch } from "vue";
 import { useRouter } from "vue-router";
 import { useI18n } from "vue-i18n";
 import { useSessionStore } from "../../../stores/session";
-import { useMessageStore } from "../../../stores/message";
 import { useUiStore } from "../../../stores/ui";
 import type { Conversation } from "../../../models";
 import { formatRelativeTime } from "../../../utils/time";
@@ -15,7 +14,6 @@ const props = defineProps<{ items: Conversation[] }>();
 const { t } = useI18n();
 const router = useRouter();
 const session = useSessionStore();
-const messages = useMessageStore();
 const ui = useUiStore();
 
 /** 选中会话：若当前不在 / 聊天路由（如设置页），先跳回 / 再渲染会话内容。
@@ -31,21 +29,6 @@ function selectSession(id: string) {
 const menuFor = ref("");
 const renameTarget = ref<Conversation | null>(null);
 const renameTitle = ref("");
-
-/** 取会话最后一条有内容的文本，截断 48 字作预览 */
-function lastPreview(conversationId: string): string {
-    const list = messages.byConversation[conversationId];
-    if (!list || list.length === 0) return "";
-    for (let i = list.length - 1; i >= 0; i -= 1) {
-        const text = list[i].text?.trim();
-        if (text) return text.length > 48 ? `${text.slice(0, 48)}…` : text;
-    }
-    return "";
-}
-
-function messageCount(conversationId: string): number {
-    return messages.byConversation[conversationId]?.length ?? 0;
-}
 
 function openSessionMenu(id: string) {
     menuFor.value = menuFor.value === id ? "" : id;
@@ -101,6 +84,9 @@ watch(
                 pinned: !!item.pinnedAt,
             }"
         >
+            <span class="session-icon" @click.stop>
+                <Icon name="chat" :size="14" />
+            </span>
             <div class="session-title-box">
                 <span
                     class="session-title"
@@ -111,16 +97,6 @@ watch(
                 </span>
                 <span class="session-time" @click.stop>
                     {{ formatRelativeTime(item.updatedAt) }}
-                    <template v-if="messageCount(item.id)">
-                        · {{ messageCount(item.id) }} 条</template
-                    >
-                </span>
-                <span
-                    v-if="item.id === session.activeId && lastPreview(item.id)"
-                    class="session-preview"
-                    @click.stop
-                >
-                    {{ lastPreview(item.id) }}
                 </span>
             </div>
             <div
@@ -130,13 +106,6 @@ watch(
             >
                 <button type="button" class="session-more">⋯</button>
             </div>
-            <Icon
-                v-if="item.pinnedAt"
-                name="pin"
-                :size="12"
-                class="pin-badge"
-                @click.stop
-            />
             <div v-if="menuFor === item.id" class="session-menu" @click.stop>
                 <button type="button" @click="startRename(item)">
                     <Icon name="pen" :size="14" />

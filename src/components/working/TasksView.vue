@@ -1,6 +1,5 @@
 <script setup lang="ts">
-// 工作区 · 普通任务子页：一次性任务列表 + 内联新建表单。
-// 表单风格对齐设置页；任务项用卡片形式展示，标题 / 指令 / 元信息 / 删除操作齐全。
+// 工作区 · 普通任务子页：一次性任务列表 + 内联新建表单。 暂时用不到
 import { computed, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useWorkspaceStore, formatRelativeTime } from '../../stores/workspace'

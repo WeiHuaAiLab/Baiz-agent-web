@@ -1,59 +1,37 @@
 <script setup lang="ts">
-// 工作区 · 定时任务子页：内联新建/编辑表单（复用 TaskForm，不再弹窗）+ 定时任务列表。
-// 页面结构与普通任务页一致：卡片表单在上，列表在下，无数据时用 EmptyCompents 占位。
-import { computed, ref } from 'vue'
+// 定时任务子页：顶部大标题 + 描述 + 右侧操作（刷新 / 通过对话创建 / 创建新任务），
+// 下方是任务列表 / 空状态。
+// 「创建新任务」直接打开「创建自动化任务」弹窗（ui.openCreate('scheduled')）；
+// 「通过对话创建」跳回聊天页并触发「新建会话」弹窗（ui.openCreate('session')）。
+// 不再内联 TaskForm，避免与全局弹窗重复入口。
+import { computed } from 'vue'
 import { useI18n } from 'vue-i18n'
-import {
-  createEmptyTaskDraft,
-  useWorkspaceStore,
-  type TaskDraft,
-  type TaskItem,
-} from '../../stores/workspace'
+import { useWorkspaceStore, type TaskItem } from '../../stores/workspace'
+import { useUiStore } from '../../stores/ui'
 import { scheduleText } from '../../utils/tasks'
 import Icon from '../common/Icon.vue'
-import TaskForm from '../common/TaskForm.vue'
 import EmptyCompents from '../common/EmptyCompents.vue'
 
 const { t } = useI18n()
 const workspace = useWorkspaceStore()
+const ui = useUiStore()
 
 /** 定时任务：带 schedule 调度配置的任务 */
 const scheduledTasks = computed(() => workspace.tasks.filter((task) => task.schedule))
 
-/** 当前编辑目标（null 表示新建） */
-const editTarget = ref<TaskItem | null>(null)
-const editDraft = ref<TaskDraft>(createEmptyTaskDraft())
-
-/** 是否有输入内容——用于启用重置按钮 */
-const isDirty = computed(() => !!(editDraft.value.title.trim() || editDraft.value.instruction.trim()))
-
-/** 点击列表项编辑：回填表单 */
-function openEdit(task: TaskItem) {
-  editTarget.value = task
-  editDraft.value = {
-    ...createEmptyTaskDraft(),
-    ...task.schedule,
-    title: task.title,
-    instruction: task.instruction,
-  }
+/** 「创建新任务」：复用 ui.openCreate('scheduled') 触发 App.vue 挂载的 CreateTask 弹窗 */
+function createNew() {
+  ui.openCreate('scheduled')
 }
 
-/** 重置表单（清空已输入但未提交的内容，回到新建态） */
-function reset() {
-  editTarget.value = null
-  editDraft.value = createEmptyTaskDraft()
+/** 任务是否开启（enabled 缺省视为开启） */
+function isEnabled(task: TaskItem): boolean {
+  return task.enabled !== false
 }
 
-/** 保存：新增或更新后回到新建态 */
-function save() {
-  const draft = editDraft.value
-  if (!draft.title.trim()) return
-  if (editTarget.value) {
-    workspace.updateTask(editTarget.value.id, draft)
-  } else {
-    workspace.addTask(draft)
-  }
-  reset()
+/** 刷新：演示态，弹出 toast；后续可接入定时任务列表的重新拉取逻辑 */
+function refresh() {
+  ui.toast(t('working.scheduledRefreshed'), 'info')
 }
 
 function removeTask(id: string) {
@@ -63,65 +41,68 @@ function removeTask(id: string) {
 
 <template>
   <div>
-    <!-- 新建/编辑定时任务表单（卡片形式，内联显示） -->
-    <div class="settings-card">
-      <h2>{{ t('working.scheduled') }}</h2>
-      <p class="section-desc">{{ t('working.scheduledHint') }}</p>
-
-      <TaskForm v-model="editDraft" />
-
-      <div class="form-actions">
-        <button
-          type="button"
-          class="btn-ghost"
-          :disabled="!isDirty"
-          @click="reset"
-        >
-          {{ t('working.reset') }}
-        </button>
-        <button
-          type="button"
-          class="btn-primary"
-          :disabled="!editDraft.title.trim()"
-          @click="save"
-        >
-          {{ editTarget ? t('tasks.scheduleSave') : t('working.addScheduled') }}
+    <!-- 顶部：左侧大标题 + 描述；右侧刷新 / 通过对话创建 / 创建新任务 -->
+    <header class="scheduled-header">
+      <div class="scheduled-head-text">
+        <h2 class="scheduled-title">{{ t('working.scheduled') }}</h2>
+        <p class="scheduled-subtitle">{{ t('working.scheduledSubtitle') }}</p>
+      </div>
+      <div class="scheduled-actions">
+        <button type="button" class="btn-primary" @click="createNew">
+          <Icon name="plus" :size="14" />
+          <span>{{ t('working.createNewTask') }}</span>
         </button>
       </div>
-    </div>
+    </header>
 
     <!-- 定时任务列表 -->
     <div v-if="scheduledTasks.length" class="task-list-wrap">
-      <h3 class="task-section-title">{{ t('working.scheduledList') }}</h3>
+      <!-- 列表标题行：左侧标题 + 右侧刷新按钮（两端对齐） -->
+      <div class="task-section-head">
+        <h3 class="task-section-title">{{ t('working.scheduledList') }}</h3>
+        <button
+          type="button"
+          class="scheduled-refresh"
+          :title="t('working.refresh')"
+          @click="refresh"
+        >
+          <Icon name="refresh" :size="15" />
+        </button>
+      </div>
       <ul class="task-list">
         <li v-for="task in scheduledTasks" :key="task.id" class="task-item">
-          <div class="task-dot" />
-          <div class="task-main">
+          <div class="task-head">
             <div class="task-title">{{ task.title }}</div>
-            <div v-if="task.instruction" class="task-desc">{{ task.instruction }}</div>
-            <div class="task-meta">
-              <span class="task-meta-item">
-                <Icon name="alarm" :size="12" />
-                {{ scheduleText(task, t) }}
+            <!-- 开关：标识定时任务是否开启（默认开启） -->
+            <button
+              type="button"
+              class="task-toggle"
+              :class="{ on: isEnabled(task) }"
+              :title="isEnabled(task) ? t('working.taskEnabled') : t('working.taskDisabled')"
+              @click="workspace.toggleTask(task.id)"
+            >
+              <span class="task-toggle-track">
+                <span class="task-toggle-knob" />
               </span>
-            </div>
+            </button>
           </div>
-          <button
-            type="button"
-            class="task-del"
-            :title="t('tasks.scheduleTitle')"
-            @click="openEdit(task)"
-          >
-            <Icon name="settings" :size="14" />
-          </button>
-          <button
-            type="button"
-            class="task-del"
-            :title="t('common.delete')"
-            @click="removeTask(task.id)"
-          >
-            <Icon name="trash" :size="14" />
-          </button>
+          <div v-if="task.instruction" class="task-desc" :title="task.instruction">
+            {{ task.instruction }}
+          </div>
+          <div class="task-meta">
+            <span class="task-time">
+              <Icon name="alarm" :size="12" />
+              {{ scheduleText(task as TaskItem, t) }}
+            </span>
+            <button
+              type="button"
+              class="task-del"
+              :title="t('common.delete')"
+              @click="removeTask(task.id)"
+            >
+              <Icon name="trash" :size="14" />
+            </button>
+          </div>
         </li>
       </ul>
     </div>
