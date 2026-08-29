@@ -6,6 +6,7 @@ import { useI18n } from 'vue-i18n'
 import AppearanceCard from './AppearanceCard.vue'
 import ApiKeyCard from './ApiKeyCard.vue'
 import ModelCard from './ModelCard.vue'
+import McpCard from './McpCard.vue'
 import MemoryCard from './MemoryCard.vue'
 import WorkspaceCard from './WorkspaceCard.vue'
 import SystemCard from './SystemCard.vue'
@@ -53,12 +54,9 @@ function selectTab(key: TabKey) {
         <ModelCard />
       </div>
 
-      <!-- MCP：预留入口（功能接入前的占位） -->
+      <!-- MCP：服务配置管理（列表 + 添加/编辑） -->
       <div v-show="activeTab === 'mcp'" class="settings-panel" role="tabpanel">
-        <div class="settings-mcp-empty">
-          <span class="mcp-title">{{ t('settings.mcp.emptyTitle') }}</span>
-          <span class="mcp-hint">{{ t('settings.mcp.emptyHint') }}</span>
-        </div>
+        <McpCard />
       </div>
 
       <!-- 运行与更新：记忆设置 + 演示数据 -->

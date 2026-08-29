@@ -223,6 +223,8 @@
   padding-top: 40px;
 }
 
+
+
 /* 设置页 Tab 切换：顶部细下划线导航 + 下方 panel 容器 */
 .settings-tabs {
   display: flex;
@@ -273,28 +275,330 @@
   display: none;
 }
 
-/* MCP 空态：与现有 .dir-empty 视觉风格一致 */
-.settings-mcp-empty {
-  background: var(--panel);
+
+
+/* MCP 列表：行项布局（参考 .dir-list + .model-option 风格） */
+.mcp-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.mcp-list li {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 12px;
   border: 1px solid var(--border);
-  border-radius: 12px;
-  padding: 36px 24px;
-  text-align: center;
-  color: var(--muted);
+  border-radius: 10px;
+  background: var(--bg);
+  margin-bottom: 8px;
 }
 
-.settings-mcp-empty .mcp-title {
-  display: block;
-  font-size: 14px;
-  font-weight: 400;
+.mcp-list li:last-child {
+  margin-bottom: 0;
+}
+
+.mcp-item-main {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.mcp-item-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.mcp-name {
+  font-size: 13px;
   color: var(--text);
-  margin-bottom: 6px;
 }
 
-.settings-mcp-empty .mcp-hint {
-  display: block;
+.mcp-desc {
   font-size: 12px;
   color: var(--muted);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.mcp-tag {
+  font-size: 11px;
+  padding: 1px 8px;
+  border-radius: 10px;
+  background: var(--code-bg);
+  color: var(--muted);
+}
+
+.mcp-tag.risk-low {
+  background: rgba(30, 126, 52, 0.12);
+  color: #1e7e34;
+}
+
+.mcp-tag.risk-medium {
+  background: rgba(183, 121, 31, 0.14);
+  color: #b7791f;
+}
+
+.mcp-tag.risk-high {
+  background: rgba(192, 57, 43, 0.12);
+  color: #c0392b;
+}
+
+.mcp-item-actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex: none;
+}
+
+.mcp-icon-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--panel);
+  color: var(--muted);
+  cursor: pointer;
+  transition: color 120ms ease, border-color 120ms ease;
+}
+
+.mcp-icon-btn:hover {
+  color: var(--text);
+  border-color: var(--accent);
+}
+
+.mcp-icon-btn.danger:hover {
+  color: #c0392b;
+  border-color: #e5b8b5;
+}
+
+.seg.seg-sm {
+  gap: 4px;
+}
+
+.seg.seg-sm button {
+  padding: 3px 9px;
+  font-size: 12px;
+  border-radius: 6px;
+}
+
+/* MCP 头部：标题 + 描述 与 添加按钮 同行，两端对齐、垂直居中 */
+.mcp-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.mcp-header .mcp-head-text {
+  min-width: 0;
+}
+
+.mcp-header .mcp-head-text h2 {
+  margin: 0 0 4px;
+}
+
+.mcp-header .section-desc {
+  margin: 0;
+}
+
+.mcp-header .btn-ghost {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  flex: none;
+}
+
+/* MCP 添加/编辑弹窗：宽度对齐 modal-card-task，内容超高时内部滚动 */
+.modal-create-mcp .modal-card {
+  width: 600px;
+  max-height: calc(100vh - 48px);
+  overflow-y: auto;
+  border-radius: 12px;
+  padding: 16px 18px;
+}
+
+.modal-create-mcp .modal-header h3 {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 500;
+}
+
+.modal-create-mcp .mcp-editor-name {
+  font-family: 'Cascadia Code', Consolas, monospace;
+  font-size: 13px;
+  font-weight: 400;
+  color: var(--muted);
+}
+
+.mcp-field {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 9px 0;
+  border-bottom: 1px solid var(--border);
+}
+
+.mcp-field:last-child {
+  border-bottom: none;
+}
+
+.mcp-field .row-label {
+  flex: none;
+  width: 96px;
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.mcp-field > input,
+.mcp-field > select {
+  flex: 1;
+  max-width: 100%;
+  padding: 6px 10px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  font: inherit;
+  background: var(--panel);
+  color: var(--text);
+}
+
+.mcp-field > input:focus,
+.mcp-field > select:focus {
+  outline: none;
+  border-color: var(--accent);
+}
+
+/* 风险档三联切换：active 时按档位着色 */
+.seg-risk {
+  display: flex;
+  gap: 6px;
+  flex: 1;
+}
+
+.seg-risk button {
+  flex: 1;
+  padding: 6px 10px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  font-size: 13px;
+  color: var(--muted);
+  background: var(--panel);
+  cursor: pointer;
+  transition: all 120ms ease;
+}
+
+.seg-risk button:hover {
+  color: var(--text);
+}
+
+.seg-risk button.risk-low.active {
+  background: rgba(30, 126, 52, 0.14);
+  color: #1e7e34;
+  border-color: rgba(30, 126, 52, 0.35);
+}
+
+.seg-risk button.risk-medium.active {
+  background: rgba(183, 121, 31, 0.16);
+  color: #b7791f;
+  border-color: rgba(183, 121, 31, 0.35);
+}
+
+.seg-risk button.risk-high.active {
+  background: rgba(192, 57, 43, 0.14);
+  color: #c0392b;
+  border-color: rgba(192, 57, 43, 0.35);
+}
+
+/* 能力协商：chips 多选 + 副标 */
+.chip-row {
+  display: flex;
+  gap: 8px;
+  flex: 1;
+  flex-wrap: wrap;
+}
+
+.chip {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  padding: 8px 12px;
+  min-width: 84px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--panel);
+  color: var(--muted);
+  font-size: 12px;
+  cursor: pointer;
+  transition: all 120ms ease;
+}
+
+.chip .chip-label {
+  font-size: 12px;
+  color: var(--text);
+}
+
+.chip .chip-tag {
+  font-size: 10px;
+  color: var(--muted);
+}
+
+.chip:hover {
+  border-color: var(--accent);
+}
+
+.chip.active {
+  background: var(--code-bg);
+  border-color: var(--accent);
+}
+
+.chip.active.deny {
+  border-color: rgba(192, 57, 43, 0.4);
+}
+
+.chip.active.deny .chip-label {
+  color: #c0392b;
+}
+
+.mcp-verify-row {
+  display: flex;
+  gap: 8px;
+  flex: 1;
+}
+
+.mcp-verify-row .btn-ghost {
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+/* 弹窗底部操作行：左侧提示、右侧 取消/保存（无上边框，避免与字段行形成多余分隔线） */
+.mcp-modal-actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-top: 14px;
+}
+
+.mcp-modal-actions .mcp-editor-hint {
+  margin: 0;
+  font-size: 12px;
+  color: var(--muted);
+}
+
+.mcp-modal-btns {
+  display: flex;
+  gap: 8px;
 }
 
 
