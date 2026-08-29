@@ -32,6 +32,9 @@ export type IconName =
   | 'inbox'
   | 'cloud'
   | 'local'
+  | 'list'
+  | 'more'
+  | 'enter'
 
 const props = defineProps<{ name: IconName; size?: number }>()
 
@@ -77,10 +80,16 @@ const paths: Record<IconName, string> = {
   cloud: 'M17.5 19H9a7 7 0 1 1 6.71-9h1.79a4.5 4.5 0 1 1 0 9Z',
   // 本地：任务调度运行在本机（显示器图标）
   local: 'M4 5h16a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2ZM2 19h20',
+  // 列表（三横线）：队列头/折叠入口
+  list: 'M4 6h16M4 12h16M4 18h16',
+  // 更多（水平三点）：行尾菜单
+  more: 'M5 12m-1 0a1 1 0 1 0 2 0a1 1 0 1 0-2 0M12 12m-1 0a1 1 0 1 0 2 0a1 1 0 1 0-2 0M19 12m-1 0a1 1 0 1 0 2 0a1 1 0 1 0-2 0',
+  // 立即执行（回车键 ↵）：队列行内「立即执行」操作
+  enter: 'M9 4L4 9L9 14M4 9H20',
 }
 
 // 特殊图标：实心填充渲染（非描边）
-const fillIcons: IconName[] = ['extesionPanel', 'menuFold']
+const fillIcons: IconName[] = ['extesionPanel', 'menuFold', 'more']
 </script>
 
 <template>

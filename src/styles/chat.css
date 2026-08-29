@@ -1082,53 +1082,81 @@
   line-height: 1.5;
 }
 
-/* 批0 消息排队（Codex 双输入模式）：会话内 FIFO 队列条，浅色底 */
+/* 批0 消息排队（Codex 双输入模式）：会话内 FIFO 队列面板
+   - 整体 max-height 200，列表超出时内部滚动
+   - 每行高 36px，行间隔 2px（行无独立背景，整张卡片统一底色）
+   - 行操作区默认隐藏，hover 行时淡入 */
 .xp-queue-bar {
   margin: 0 4px 6px;
-  padding: 6px 10px;
   border-radius: 8px;
-  background: rgba(124, 58, 237, 0.05);
-  border: 1px solid rgba(124, 58, 237, 0.14);
+  background: var(--bg);
+  border: 1px solid var(--border);
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  max-height: 200px;
+  overflow: hidden;
 }
 
 .xp-queue-head {
   display: flex;
   align-items: center;
-  gap: 6px;
+  justify-content: space-between;
+  flex: none;
+  padding: 5px 8px;
+  border-bottom: 1px solid var(--border);
   font-size: 11px;
-  font-weight: 600;
-  color: #7c3aed;
-  margin-bottom: 4px;
-}
-
-.xp-queue-tip {
-  font-weight: 400;
   color: var(--muted);
 }
 
-.xp-queue-list {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
+.xp-queue-title {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--text);
+  font-weight: 500;
 }
 
-.xp-queue-chip {
+.xp-queue-head-actions {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+}
+
+.xp-queue-list {
+  list-style: none;
+  margin: 0;
+  padding: 4px 6px;
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.xp-queue-row {
+  flex: none;
+  height: 36px;
   display: flex;
   align-items: center;
   gap: 8px;
-  padding: 4px 8px;
-  border-radius: 6px;
-  background: #fff;
-  border: 1px solid rgba(124, 58, 237, 0.16);
+  padding: 0 8px;
+  border-radius: 4px;
   font-size: 12px;
-  color: var(--fg);
+  color: var(--text);
+  transition: background 120ms ease;
+}
+
+.xp-queue-row:hover {
+  background: rgba(124, 58, 237, 0.06);
 }
 
 .xp-queue-pos {
   flex: none;
-  min-width: 18px;
-  height: 18px;
-  border-radius: 9px;
+  width: 20px;
+  height: 20px;
+  border-radius: 10px;
   background: rgba(124, 58, 237, 0.12);
   color: #7c3aed;
   font-size: 10px;
@@ -1144,24 +1172,44 @@
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-  color: var(--fg);
+  color: var(--text);
 }
 
-.xp-queue-cancel {
+/* 行操作区：默认透明、hover 行时淡入；focus-within 兼容键盘聚焦 */
+.xp-queue-row-actions {
   flex: none;
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  opacity: 0;
+  transition: opacity 120ms ease;
+}
+
+.xp-queue-row:hover .xp-queue-row-actions,
+.xp-queue-row:focus-within .xp-queue-row-actions {
+  opacity: 1;
+}
+
+.xp-queue-icon-btn {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 20px;
-  height: 20px;
-  border-radius: 5px;
+  width: 24px;
+  height: 24px;
   border: none;
+  border-radius: 5px;
   background: transparent;
   color: var(--muted);
   cursor: pointer;
+  transition: background 120ms ease, color 120ms ease;
 }
 
-.xp-queue-cancel:hover {
+.xp-queue-icon-btn:hover {
+  background: var(--hover);
+  color: var(--text);
+}
+
+.xp-queue-icon-btn.danger:hover {
   background: rgba(220, 38, 38, 0.1);
   color: #dc2626;
 }
