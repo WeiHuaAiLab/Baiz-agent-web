@@ -94,11 +94,6 @@ export default {
     feedbackPlaceholder: 'Tell us your suggestions or issues…',
     feedbackSend: 'Send',
     feedbackSent: 'Received. Thank you!',
-    about: 'About',
-    aboutTitle: 'About baiz',
-    aboutSlogan: 'Baiz Agent · Knows all things',
-    aboutVersion: 'Version',
-    aboutClose: 'Close',
   },
   skills: {
     requirement: 'Requirement analysis',
@@ -169,6 +164,18 @@ export default {
   },
   settings: {
     title: 'Settings',
+    tabs: {
+      general: 'General',
+      model: 'Model',
+      mcp: 'MCP',
+      runtime: 'Runtime',
+      about: 'About',
+    },
+    mcp: {
+      emptyTitle: 'No MCP servers yet',
+      emptyHint:
+        'Model Context Protocol servers will be available in a future release',
+    },
     language: 'Language',
     theme: 'Theme',
     apiKey: 'API Key',
@@ -196,9 +203,11 @@ export default {
     modelCloud: 'Cloud',
     modelLocal: 'Local · private',
     dirHint: 'Authorized directories are used for file access and workspace binding',
+    about: 'About',
     system: 'System',
     connection: 'Connection',
     version: 'Version',
+    slogan: 'Baiz Agent · Knows all things',
     demoHint: 'Clear local data and regenerate demo sessions',
     memory: 'Memory settings',
     memoryHint: 'Memory is managed by the daemon (distillation & retrieval); frontend preferences',

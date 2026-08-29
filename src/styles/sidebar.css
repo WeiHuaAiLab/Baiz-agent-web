@@ -264,19 +264,6 @@
   font-size: 15px;
 }
 
-.modal-slogan {
-  margin: 0 0 4px;
-  font-size: 13px;
-  color: var(--muted);
-}
-
-.modal-version {
-  margin: 0 0 16px;
-  font-size: 12px;
-  color: var(--muted);
-  font-family: 'Cascadia Code', Consolas, monospace;
-}
-
 .feedback-input {
   width: 100%;
   padding: 10px;

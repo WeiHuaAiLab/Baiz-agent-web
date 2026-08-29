@@ -1,5 +1,6 @@
 <script setup lang="ts">
-// 侧栏底部用户区：头像 + 用户名 + 悬浮菜单（设置/反馈/关于），以及关于与反馈弹窗。
+// 侧栏底部用户区：头像 + 用户名 + 悬浮菜单（设置/反馈），以及反馈弹窗。
+// 「关于」已并入设置页「关于」Tab（见 SystemCard.vue）。
 import { ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useRouter } from 'vue-router'
@@ -10,7 +11,6 @@ const { t } = useI18n()
 const router = useRouter()
 const settings = useSettingsStore()
 
-const showAbout = ref(false)
 const showFeedback = ref(false)
 const feedbackText = ref('')
 const feedbackSent = ref(false)
@@ -45,21 +45,6 @@ function sendFeedback() {
       <button type="button" @click="openFeedback">
         <Icon name="feedback" :size="14" />
         <span>{{ t('sidebar.feedback') }}</span>
-      </button>
-      <button type="button" @click="showAbout = true">
-        <Icon name="info" :size="14" />
-        <span>{{ t('sidebar.about') }}</span>
-      </button>
-    </div>
-  </div>
-
-  <div v-if="showAbout" class="modal-mask" @click.self="showAbout = false">
-    <div class="modal-card">
-      <h3>{{ t('sidebar.aboutTitle') }}</h3>
-      <p class="modal-slogan">{{ t('sidebar.aboutSlogan') }}</p>
-      <p class="modal-version">{{ t('sidebar.aboutVersion') }} 0.1.0</p>
-      <button type="button" class="btn-primary" @click="showAbout = false">
-        {{ t('sidebar.aboutClose') }}
       </button>
     </div>
   </div>

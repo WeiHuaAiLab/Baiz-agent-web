@@ -8,8 +8,11 @@
 }
 
 .settings-card h2 {
-  font-size: 14px;
-  margin: 0 0 4px;
+  font-size: 13px;
+  font-weight: 400;
+  color: var(--muted);
+  letter-spacing: 0.02em;
+  margin: 0 0 12px;
 }
 
 .section-desc {
@@ -72,6 +75,12 @@
 .model-option.active {
   border-color: var(--accent);
   background: var(--code-bg);
+}
+
+.about-version {
+  font-size: 12px;
+  color: var(--muted);
+  font-family: 'Cascadia Code', Consolas, monospace;
 }
 
 .model-name {
@@ -206,4 +215,87 @@
 .fact-del:hover {
   color: #c0392b;
 }
+
+/* 设置页内容容器：顶部预留悬浮按钮（sidebar-toggle-fab）所在高度的空白头部区，
+   Tab 栏整体下移、不与左上角悬浮按钮平行，形成留白层次。
+   :not(.working-view) 排除工作区子页（其有自己的顶部标题）。 */
+.settings-view:not(.working-view) .settings-inner {
+  padding-top: 40px;
+}
+
+/* 设置页 Tab 切换：顶部细下划线导航 + 下方 panel 容器 */
+.settings-tabs {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  margin-bottom: 18px;
+  border-bottom: 1px solid var(--border);
+}
+
+.settings-tab {
+  position: relative;
+  appearance: none;
+  background: transparent;
+  border: none;
+  padding: 11px 16px;
+  font-size: 13px;
+  letter-spacing: 0.01em;
+  color: var(--muted);
+  cursor: pointer;
+  transition: color 150ms ease;
+}
+
+.settings-tab:hover {
+  color: var(--text);
+}
+
+.settings-tab.active {
+  color: var(--text);
+  font-weight: 500;
+}
+
+.settings-tab.active::after {
+  content: '';
+  position: absolute;
+  left: 14px;
+  right: 14px;
+  bottom: -1px;
+  height: 2px;
+  border-radius: 2px;
+  background: var(--accent);
+}
+
+.settings-panel {
+  /* 单个 tab 的内容区，按钮切换显隐 */
+}
+
+.settings-panel[hidden] {
+  display: none;
+}
+
+/* MCP 空态：与现有 .dir-empty 视觉风格一致 */
+.settings-mcp-empty {
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 36px 24px;
+  text-align: center;
+  color: var(--muted);
+}
+
+.settings-mcp-empty .mcp-title {
+  display: block;
+  font-size: 14px;
+  font-weight: 400;
+  color: var(--text);
+  margin-bottom: 6px;
+}
+
+.settings-mcp-empty .mcp-hint {
+  display: block;
+  font-size: 12px;
+  color: var(--muted);
+}
+
+
 
