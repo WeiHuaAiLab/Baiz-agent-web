@@ -124,50 +124,6 @@ async function submitCreateFromComposer() {
       <Logo size="lg" />
     </div>
 
-    <div ref="pickerRef" class="create-toolbar">
-      <div class="option-tabs">
-        <button type="button" class="pick-btn" @click="startCreateProject">
-          {{ t('chat.projectNew') }}
-        </button>
-        <button
-          type="button"
-          class="pick-btn"
-          :class="{ active: !!selectedProject }"
-          @click="togglePick"
-        >
-          <Icon name="workspace" :size="13" />
-          <span class="pick-label">
-            {{ selectedProject ? selectedProject.title : t('chat.projectChoose') }}
-          </span>
-          <Icon name="chevron" :size="12" :class="{ open: pickOpen }" />
-        </button>
-        <button
-          type="button"
-          class="pick-btn"
-          :class="{ active: !selectedProject }"
-          @click="clearPick"
-        >
-          {{ t('chat.projectNone') }}
-        </button>
-      </div>
-
-      <div v-if="pickOpen" class="project-picker">
-        <ul v-if="workspace.projects.length" class="picker-list">
-          <li
-            v-for="project in workspace.projects"
-            :key="project.id"
-            :class="{ active: project.id === pickedProjectId }"
-            @click="pickProject(project.id)"
-          >
-            <Icon name="workspace" :size="14" />
-            <span class="picker-title">{{ project.title }}</span>
-            <Icon v-if="project.id === pickedProjectId" name="check" :size="14" />
-          </li>
-        </ul>
-        <p v-else class="picker-empty">{{ t('chat.pickEmpty') }}</p>
-      </div>
-    </div>
-
     <ComposerBox
       v-model="input"
       :placeholder="
@@ -176,8 +132,70 @@ async function submitCreateFromComposer() {
           : t('chat.createTaglineTask')
       "
       centered
+      unclipped
       @submit="submitCreateFromComposer"
-    />
+    >
+      <template #leading>
+        <div ref="pickerRef" class="composer-picker-wrap">
+          <button
+            type="button"
+            class="act-btn act-project-btn"
+            :class="{ active: pickOpen, picked: !!selectedProject }"
+            :title="t('chat.linkProject')"
+            @click="togglePick"
+          >
+            <Icon name="workspace" :size="14" />
+            <span class="act-project">
+              {{ selectedProject ? selectedProject.title : t('chat.projectChoose') }}
+            </span>
+            <Icon name="chevron" :size="12" :class="{ open: pickOpen }" />
+          </button>
+
+          <div v-if="pickOpen" class="composer-picker">
+            <ul v-if="workspace.projects.length" class="picker-list">
+              <li
+                v-for="project in workspace.projects"
+                :key="project.id"
+                class="picker-item"
+                :class="{ active: project.id === pickedProjectId }"
+                @click="pickProject(project.id)"
+              >
+                <span class="picker-item-icon">
+                  <Icon name="workspace" :size="14" />
+                </span>
+                <span class="picker-item-title">{{ project.title }}</span>
+                <Icon v-if="project.id === pickedProjectId" name="check" :size="14" />
+              </li>
+            </ul>
+            <ul v-else class="picker-list picker-list--bottom">
+              <li class="picker-empty-li">{{ t('chat.pickEmpty') }}</li>
+            </ul>
+
+            <div class="picker-divider" />
+
+            <ul class="picker-list picker-list--bottom">
+              <li class="picker-item" @click="startCreateProject">
+                <span class="picker-item-icon">
+                  <Icon name="plus" :size="14" />
+                </span>
+                <span class="picker-item-title">{{ t('chat.projectNew') }}</span>
+              </li>
+              <li
+                class="picker-item"
+                :class="{ active: !pickedProjectId }"
+                @click="clearPick"
+              >
+                <span class="picker-item-icon">
+                  <Icon name="circle-slash" :size="14" />
+                </span>
+                <span class="picker-item-title">{{ t('chat.projectNone') }}</span>
+                <Icon v-if="!pickedProjectId" name="check" :size="14" />
+              </li>
+            </ul>
+          </div>
+        </div>
+      </template>
+    </ComposerBox>
     <div class="center-shadow" />
   </div>
 </template>

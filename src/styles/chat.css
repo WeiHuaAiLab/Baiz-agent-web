@@ -562,8 +562,8 @@
 }
 
 .send-btn {
-  width: 34px;
-  height: 34px;
+  width: 32px;
+  height: 32px;
   flex: none;
   border-radius: 50%;
   background: var(--accent);
@@ -580,8 +580,8 @@
 }
 
 /* ChatInput / ComposerBox 共用 shell：升级为统一边框 + 背景 + 圆角 + inset 投影的整体。
-   内部三段（附件行 / 输入区 / 操作区）都是不带独立背景的「内嵌区域」，
-   由外层视觉整合——避免附件 chip 看起来像孤立卡片悬在外面、不属于输入框。 */
+  内部三段（附件行 / 输入区 / 操作区）都是不带独立背景的「内嵌区域」，
+  由外层视觉整合——避免附件 chip 看起来像孤立卡片悬在外面、不属于输入框。 */
 .composer-block {
   padding-top: 0;
   padding-bottom: 0;
@@ -595,6 +595,14 @@
   box-shadow:
     0 -12px 24px rgba(0, 0, 0, 0.07),
     inset 0 1px 2px rgba(0, 0, 0, 0.04);
+}
+
+/* 取消 shell 的 overflow 裁剪：用于 ComposerBox 在 CreateChat 中承载项目选择下拉时，
+   避免绝对定位的 .composer-picker 被 shell 圆角切掉上半部。
+   子区域（attachment-row / composer-input / composer-actions）均为透明背景，
+   没有子元素会跨越圆角边界，因此不会破坏视觉整体性。 */
+.composer-block.unclipped {
+  overflow: visible;
 }
 
 .composer-input {
@@ -667,6 +675,20 @@
   font-size: 12px;
 }
 
+/* 聊天输入区「项目选择」按钮：选中项目时显示主色描边，提示已关联。
+ * 视觉比 .act-btn 默认态略强，但仍属于同款 ghost 风格。 */
+.act-project-btn.picked {
+  color: var(--accent);
+  background: var(--hover);
+}
+
+/* 「项目选择」按钮的下拉箭头：展开时翻转为向上（chevron 原始为右下，旋转 180° 为右上） */
+.composer-picker-wrap .act-btn svg.open {
+  transform: rotate(180deg);
+  transition: transform 0.18s ease;
+}
+
+
 .actions-spacer {
   flex: 1;
 }
@@ -680,6 +702,9 @@
  * 「标题 → 项目列表 → 分隔线 → 底部操作项」结构、每项左侧图标。 */
 .composer-picker-wrap {
   position: relative;
+  /* 默认边框：与 hover 背景色一致（--hover），展开/选中时按钮背景与边框自然融合 */
+  border: 1px solid var(--hover);
+  border-radius: 16px;
 }
 
 .composer-picker {
@@ -687,7 +712,7 @@
   bottom: calc(100% + 10px);
   left: 0;
   z-index: 30;
-  width: 300px;
+  width: 180px;
   max-height: 380px;
   display: flex;
   flex-direction: column;

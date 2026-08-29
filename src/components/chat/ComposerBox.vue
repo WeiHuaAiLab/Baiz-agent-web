@@ -12,6 +12,9 @@ const props = defineProps<{
   placeholder: string
   running?: boolean
   centered?: boolean
+  /** 是否允许子内容超出 shell 圆角溢出（如放置带 absolute 弹出层的项目选择器）。
+   * 仅在 CreateChat 等特殊场景下传 true；ChatInput 保持默认裁剪，保证圆角视觉干净。 */
+  unclipped?: boolean
 }>()
 const emit = defineEmits<{ submit: []; stop: [] }>()
 const text = defineModel<string>({ required: true })
@@ -35,7 +38,7 @@ function submit() {
 <template>
   <form
     class="composer composer-block"
-    :class="{ centered: props.centered }"
+    :class="{ centered: props.centered, unclipped: props.unclipped }"
     @submit.prevent="submit"
   >
     <div v-if="files.attachments.length" class="attachment-row">
@@ -77,6 +80,7 @@ function submit() {
     </div>
 
     <div class="composer-actions">
+      <slot name="leading" />
       <button
         type="button"
         class="act-btn"
