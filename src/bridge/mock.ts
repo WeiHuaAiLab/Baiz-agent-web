@@ -6,6 +6,7 @@ export function createMockBridge(): Bridge {
     'fs.read',
     'fs.pick',
     'fs.pickDir',
+    'fs.pickAttachment',
     'fs.drives',
     'fs.createDir',
     'clipboard',

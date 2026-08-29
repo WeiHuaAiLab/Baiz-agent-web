@@ -12,8 +12,8 @@ import { useWorkspaceStore } from '../src/stores/workspace'
 import { useSettingsStore } from '../src/stores/settings'
 import { useFilesStore } from '../src/stores/files'
 import ChatView from '../src/components/ChatView.vue'
-import ChatContent from '../src/components/chat/ChatContent.vue'
-import ChatInput from '../src/components/chat/ChatInput.vue'
+import CreateProject from '../src/components/chat/CreateProject.vue'
+import CreateTask from '../src/components/chat/CreateTask.vue'
 import { router } from '../src/router'
 import { createMockBridge } from '../src/bridge/mock'
 import { resetBridgeForTests } from '../src/bridge'
@@ -73,11 +73,12 @@ describe('ChatView 消息流渲染', () => {
       global: { plugins: [i18n, router] },
     })
 
-    expect(wrapper.find('.voice-btn').exists()).toBe(true)
+    expect(wrapper.find('.act-project-btn').exists()).toBe(true)
     ui.openCreate('session')
     await wrapper.vm.$nextTick()
     expect(wrapper.find('.create-center').exists()).toBe(true)
-    expect(wrapper.findAll('.option-tabs button')).toHaveLength(2)
+    // 项目选择已并入输入框加号左侧的下拉，而非顶部并排按钮
+    expect(wrapper.find('.composer-picker-wrap').exists()).toBe(true)
 
     await wrapper.find('.create-center textarea').setValue('新项目会话')
     await wrapper.vm.$nextTick()
@@ -98,7 +99,8 @@ describe('ChatView 消息流渲染', () => {
     ui.openCreate('task')
     await wrapper.vm.$nextTick()
     expect(wrapper.find('.create-center').exists()).toBe(true)
-    expect(wrapper.findAll('.option-tabs button')).toHaveLength(3)
+    // 项目选择器位于输入框加号左侧
+    expect(wrapper.find('.composer-picker-wrap').exists()).toBe(true)
 
     await wrapper.find('.create-center textarea').setValue('整理客户名单')
     await wrapper.vm.$nextTick()
@@ -113,17 +115,20 @@ describe('ChatView 消息流渲染', () => {
   it('新增定时任务：完整表单创建定时任务', async () => {
     const ui = useUiStore()
     const workspace = useWorkspaceStore()
-    const wrapper = mount(ChatView, {
-      global: { plugins: [i18n, router] },
-    })
+    // CreateTask 由 App.vue 全局挂载（createMode === 'scheduled'），此处独立挂载验证表单
+    const wrapper = mount(CreateTask, { global: { plugins: [i18n] } })
 
-    ui.openCreate('scheduled')
-    await wrapper.vm.$nextTick()
-    expect(wrapper.find('.task-form').exists()).toBe(true)
+    expect(wrapper.find('.modal-create-task').exists()).toBe(true)
 
-    await wrapper.find('.task-form .field input').setValue('每日日报')
+    // 名称为空/指令为空时创建按钮禁用；名称+指令必填
+    expect((wrapper.find('.btn-primary').element as HTMLButtonElement).disabled).toBe(true)
+
+    await wrapper.findAll('.modal-input')[0].setValue('每日日报')
+    await wrapper.find('.modal-textarea').setValue('每天生成日报')
     await wrapper.vm.$nextTick()
-    await wrapper.find('.create-card .btn-primary').trigger('click')
+    expect((wrapper.find('.btn-primary').element as HTMLButtonElement).disabled).toBe(false)
+
+    await wrapper.find('.btn-primary').trigger('click')
     await new Promise((resolve) => setTimeout(resolve, 100))
 
     expect(ui.createMode).toBe('')
@@ -131,80 +136,67 @@ describe('ChatView 消息流渲染', () => {
     expect(workspace.tasks[0]?.schedule?.cycle).toBe('daily')
   })
 
-  it('工作区：未选文件夹时阻止提交，选择后可创建', async () => {
+  it('项目选择器：下拉选择项目，创建任务时携带 projectId', async () => {
     const ui = useUiStore()
     const workspace = useWorkspaceStore()
-    const settings = useSettingsStore()
     const wrapper = mount(ChatView, {
       global: { plugins: [i18n, router] },
     })
 
     ui.openCreate('task')
     await wrapper.vm.$nextTick()
-    const inputVm = wrapper.findComponent(ChatInput).vm as unknown as {
-      projectOption: string
-      chosenDir: string
-    }
-    inputVm.projectOption = 'folder'
 
-    await wrapper.find('.create-center textarea').setValue('任务A')
+    // 打开输入框加号左侧的项目下拉：展示项目列表
+    await wrapper.find('.act-project-btn').trigger('click')
+    await wrapper.vm.$nextTick()
+    expect(wrapper.findAll('.picker-item').length).toBeGreaterThan(0)
+
+    // 选中第一个项目：按钮显示项目名并高亮
+    const first = workspace.projects[0]!
+    await wrapper.findAll('.picker-item')[0].trigger('click')
+    await wrapper.vm.$nextTick()
+    expect(wrapper.find('.act-project').text()).toBe(first.title)
+    expect(wrapper.find('.act-project-btn.picked').exists()).toBe(true)
+
+    // 创建任务：自动携带选中的 projectId
+    await wrapper.find('.create-center textarea').setValue('整理客户名单')
     await wrapper.vm.$nextTick()
     await wrapper.find('.create-center .composer').trigger('submit')
     await new Promise((resolve) => setTimeout(resolve, 100))
-    expect(workspace.tasks).toHaveLength(0)
-    expect(ui.createMode).toBe('task')
 
-    inputVm.chosenDir = 'C:/projects/x'
-    await wrapper.find('.create-center .composer').trigger('submit')
-    await new Promise((resolve) => setTimeout(resolve, 100))
-    expect(workspace.tasks[0]?.title).toBe('任务A')
-    expect(settings.workspaces).toContain('C:/projects/x')
+    expect(ui.createMode).toBe('')
+    expect(workspace.tasks[0]?.title).toBe('整理客户名单')
+    expect(workspace.tasks[0]?.projectId).toBe(first.id)
   })
 
-  it('新建空白项目：选择盘符 + 新建文件夹后才能提交', async () => {
+  it('新建项目：CreateProject 表单填写名称并选择路径后创建', async () => {
     resetBridgeForTests(createMockBridge())
     const ui = useUiStore()
     const workspace = useWorkspaceStore()
     const settings = useSettingsStore()
     const files = useFilesStore()
-    const wrapper = mount(ChatView, {
-      global: { plugins: [i18n, router] },
-    })
+    const wrapper = mount(CreateProject, { global: { plugins: [i18n] } })
 
-    ui.openCreate('task')
+    // 名称为空时创建按钮禁用
+    expect((wrapper.find('.btn-primary').element as HTMLButtonElement).disabled).toBe(true)
+
+    await wrapper.find('.modal-input').setValue('财务分析')
     await wrapper.vm.$nextTick()
-    const inputVm = wrapper.findComponent(ChatInput).vm as unknown as {
-      projectOption: string
-      selectedDrive: string
-      newProjectName: string
-    }
-    inputVm.projectOption = 'new'
-    await new Promise((resolve) => setTimeout(resolve, 50))
+    expect((wrapper.find('.btn-primary').element as HTMLButtonElement).disabled).toBe(false)
 
-    expect(wrapper.find('.location-picker').exists()).toBe(true)
-    expect(wrapper.findAll('.drive-select option').length).toBeGreaterThan(0)
+    // 选择项目路径（mock 桥接授权 demo-workspace）
+    await wrapper.find('.path-picker').trigger('click')
+    await new Promise((resolve) => setTimeout(resolve, 20))
+    expect(wrapper.find('.path-text').text()).toContain('demo-workspace')
 
-    // 未创建目录直接提交 → 阻止
-    await wrapper.find('.create-center textarea').setValue('任务A')
-    await wrapper.vm.$nextTick()
-    await wrapper.find('.create-center .composer').trigger('submit')
+    await wrapper.find('.btn-primary').trigger('click')
     await new Promise((resolve) => setTimeout(resolve, 100))
-    expect(workspace.tasks).toHaveLength(0)
-    expect(ui.createMode).toBe('task')
 
-    // 创建项目目录后提交 → 成功并绑定授权工作区
-    inputVm.newProjectName = '财务分析'
-    await wrapper.vm.$nextTick()
-    await wrapper.find('.location-picker .btn-primary').trigger('click')
-    await new Promise((resolve) => setTimeout(resolve, 50))
-
-    expect(files.pickedDirs['C:\\财务分析']?.name).toBe('财务分析')
-    expect(settings.workspaces).toContain('C:\\财务分析')
-
-    await wrapper.find('.create-center .composer').trigger('submit')
-    await new Promise((resolve) => setTimeout(resolve, 100))
+    expect(workspace.projects[0]?.title).toBe('财务分析')
+    expect(files.pickedDirs['C:/projects/demo-workspace']?.name).toBe('demo-workspace')
+    expect(settings.workspaces).toContain('C:/projects/demo-workspace')
+    expect(settings.activeWorkspace).toBe('C:/projects/demo-workspace')
+    // 非回归上下文（未设置 createReturn）：创建完成后直接关闭
     expect(ui.createMode).toBe('')
-    expect(workspace.tasks[0]?.title).toBe('任务A')
-    expect(settings.activeWorkspace).toBe('C:\\财务分析')
   })
 })

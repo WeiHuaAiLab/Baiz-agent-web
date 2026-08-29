@@ -5,7 +5,7 @@ import { createI18n } from 'vue-i18n'
 import { createMockBridge } from '../src/bridge/mock'
 import { resetBridgeForTests } from '../src/bridge'
 import { useFilesStore } from '../src/stores/files'
-import FilesPanel from '../src/components/FilesPanel.vue'
+import FilesPanel from '../src/components/ExtensionPanels/FilesPanel.vue'
 import zhCN from '../src/locales/zh-CN'
 
 const i18n = createI18n({

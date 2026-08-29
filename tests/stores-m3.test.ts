@@ -74,7 +74,7 @@ describe('M3 stores', () => {
     const files = useFilesStore()
     await files.attachFromPicker()
     expect(files.attachments).toHaveLength(1)
-    expect(files.attachments[0]?.name).toBe('demo.md')
+    expect(files.attachments[0]?.name).toBe('amber_bee.glb')
     files.removeAttachment(files.attachments[0]!.id)
     expect(files.attachments).toHaveLength(0)
     await files.attachFromPicker()
