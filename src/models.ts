@@ -22,6 +22,29 @@ export interface TraceItem {
   at: number
 }
 
+/** 批0 体验层：工具调用的人话字幕（小白也能看懂工具干了什么） */
+export interface SubtitleItem {
+  toolName: string
+  text: string
+  at: number
+}
+
+/** 批0 体验层：一次运行的成本账（来自 daemon done.usage） */
+export interface UsageCost {
+  promptTokens: number
+  completionTokens: number
+  totalTokens: number
+  costUsd: number
+}
+
+/** 批0 消息排队：会话内待执行 FIFO 条目（Codex 双输入模式——Tab 排队 / 运行中自动入队） */
+export interface PendingQueueItem {
+  taskId: string
+  text: string
+  position: number
+  queuedAt: number
+}
+
 export interface MessageMeta {
   taskId?: string
   callId?: string
@@ -61,4 +84,8 @@ export interface RunState {
   reasoning: string
   text: string
   trace: TraceItem[]
+  /** 批0：工具调用人话字幕（按调用顺序） */
+  subtitles?: SubtitleItem[]
+  /** 批0：done 帧回填的真实 usage/成本 */
+  usage?: UsageCost
 }

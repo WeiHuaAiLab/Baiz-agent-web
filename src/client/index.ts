@@ -8,6 +8,8 @@ import type {
   AuthHandshakeResult,
   ChatSendParams,
   ChatSendResult,
+  ChatQueueCancelParams,
+  ChatQueueCancelResult,
   EventSubscribeParams,
   EventSubscribeResult,
   PendingApproval,
@@ -20,6 +22,7 @@ export interface BaizClient {
   subscribe(params: EventSubscribeParams): Promise<EventSubscribeResult>
   provideKey(key: string): Promise<{ stored: boolean }>
   chatSend(params: ChatSendParams): Promise<ChatSendResult>
+  chatQueueCancel(params: ChatQueueCancelParams): Promise<ChatQueueCancelResult>
   permissionPending(): Promise<{ pending: PendingApproval[] }>
   permissionRespond(params: PermissionRespondParams): Promise<{ resolved: boolean; status: string }>
   a2aStatus(): Promise<A2aStatusResult>
@@ -44,6 +47,7 @@ export function createClient(transport: RpcTransport): BaizClient {
     },
     provideKey: (key) => rpc.call('auth.provide_key', { key }),
     chatSend: (params) => rpc.call('chat.send', params),
+    chatQueueCancel: (params) => rpc.call('chat.queue_cancel', params),
     permissionPending: () => rpc.call('permission.pending'),
     permissionRespond: (params) => rpc.call('permission.respond', params),
     a2aStatus: () => rpc.call('a2a.status'),

@@ -6,7 +6,14 @@ import type { AttachmentItem } from './files'
 import { mapRpcError } from '../utils/errors'
 import { useUiStore } from './ui'
 import { useWorkingTreeStore } from './workingTree'
-import type { ChatMessage, MessageMeta, RunState } from '../models'
+import type {
+  ChatMessage,
+  MessageMeta,
+  PendingQueueItem,
+  RunState,
+  SubtitleItem,
+  UsageCost,
+} from '../models'
 import type {
   ApprovalRequiredData,
   DaemonNotifyData,
@@ -26,6 +33,131 @@ const persistTimers = new Map<string, ReturnType<typeof setTimeout>>()
 const RUNS_LIMIT = 50
 
 let messageSeq = 0
+
+// 批0 循环提示：按会话记录「同类错误」出现次数（错误码/首行摘要），第 3 次起给台阶
+const errorCounters = new Map<string, Map<string, number>>()
+
+// DeepSeek 现行价（美元/百万 token；只做展示口径，真实价由 daemon 归一后回填）
+const USD_PER_MT: Record<string, number> = { input: 0.27, output: 1.1 }
+
+/** 批0 成本小字：token 用量 → 人民币成本（按 7.1 汇率展示） */
+export function estimateCostUsd(usage: {
+  prompt_tokens: number
+  completion_tokens: number
+}): number {
+  const input = (usage.prompt_tokens / 1_000_000) * USD_PER_MT.input
+  const output = (usage.completion_tokens / 1_000_000) * USD_PER_MT.output
+  return input + output
+}
+
+/** 工具名 → 中文俗称（字幕里不说英文，说人话） */
+const TOOL_NAMES_ZH: Record<string, string> = {
+  shell_exec: '命令',
+  cargo_test: '测试',
+  cargo_build: '编译',
+  apply_patch: '改代码',
+  grep_files: '搜代码',
+  read_file: '读文件',
+  list_dir: '看目录',
+  web_fetch: '抓网页',
+  web_search: '搜索',
+  code_edit: '改代码',
+  fs_write: '写文件',
+  fs_read: '读文件',
+  git_commit: '提交代码',
+  git_diff: '看改动',
+  wechat_read: '读微信',
+  classify_customers: '客户分级',
+  crm_push: '推给 CRM',
+}
+
+/** 批0 人话字幕：把一次工具调用翻译成小白能看懂的一句话（说人话，不说术语） */
+export function subtitleForTool(toolName: string, success: boolean, preview: string): string {
+  const zh = TOOL_NAMES_ZH[toolName] ?? toolName
+  const brief = (preview || '').slice(0, 50)
+
+  if (success) {
+    switch (toolName) {
+      case 'cargo_test':
+      case 'cargo_build':
+        return `测试跑通了，${brief || '一切正常'}——你放心，没弄坏任何东西。`
+      case 'apply_patch':
+      case 'code_edit':
+        return `代码已经按你的意思改好了${brief ? `（${brief}）` : ''}，下一步我帮你验证一下。`
+      case 'grep_files':
+        return `帮你找到了${brief ? `：${brief}` : ''}，就是它。`
+      case 'read_file':
+      case 'fs_read':
+        return `文件看完了${brief ? `（${brief}）` : ''}，内容我已经掌握了。`
+      case 'list_dir':
+        return `目录结构看清楚了${brief ? `（${brief}）` : ''}，我知道东西都在哪了。`
+      case 'fs_write':
+        return `文件写好了${brief ? `（${brief}）` : ''}。`
+      case 'git_commit':
+        return `这次改动已经存档了${brief ? `（${brief}）` : ''}，随时可以找回。`
+      case 'git_diff':
+        return `改动对比出来了${brief ? `（${brief}）` : ''}，就这些地方变了。`
+      case 'wechat_read':
+        return `微信消息读完了：${brief || '已整理好'}。`
+      case 'crm_push':
+        return `已经推给 CRM 了${brief ? `（${brief}）` : ''}，客户那边能看到。`
+      case 'web_search':
+        return `网上帮你查到了${brief ? `（${brief}）` : ''}。`
+      case 'web_fetch':
+        return `网页内容拿到了${brief ? `（${brief}）` : ''}。`
+      case 'shell_exec':
+        return `命令执行成功${brief ? `：${brief}` : ''}，这类安全操作不用打扰你。`
+      case 'classify_customers':
+        return `客户分好级了：${brief || '按意向排好了'}。`
+      default:
+        return brief
+          ? `「${zh}」这一步做完了：${brief}。`
+          : `「${zh}」这一步顺利完成了。`
+    }
+  }
+
+  switch (toolName) {
+    case 'cargo_test':
+    case 'cargo_build':
+      return `测试没通过：${brief || '有失败用例'}。别急，先看是哪条没过，我再对症修。`
+    case 'grep_files':
+      return `没搜到你要的内容${brief ? `（${brief}）` : ''}，换个说法或换个位置再试。`
+    case 'web_search':
+      return `这轮没查到有用结果${brief ? `（${brief}）` : ''}，我换个角度再搜。`
+    case 'web_fetch':
+      return `网页没抓下来（${brief || '可能被拦了'}），换个来源试试。`
+    case 'shell_exec':
+      return `命令没跑通：${brief || '看输出'}。没事，我根据报错继续调整。`
+    case 'apply_patch':
+    case 'code_edit':
+      return `这次改动没应用上（${brief || '补丁有问题'}），我检查一下再试。`
+    case 'fs_write':
+      return `文件没写成（${brief || '权限或路径问题'}），我换个位置试试。`
+    case 'git_commit':
+      return `这次改动没存上（${brief || '可能有冲突'}），我处理一下再提交。`
+    case 'crm_push':
+      return `推 CRM 没成功（${brief || '接口报错'}），我先查一下原因。`
+    default:
+      return brief
+        ? `「${zh}」这一步没做成：${brief}。我换个方式继续。`
+        : `「${zh}」这一步卡住了，我换个思路继续。`
+  }
+}
+
+/** 批0 循环提示：同一会话同类错误第 3 次出现时，给"别硬修"的台阶 */
+export function loopHintForError(conversationId: string, message: string): string | null {
+  const code = /E\d{4}/.exec(message)?.[0] ?? message.trim().slice(0, 24)
+  if (!code) return null
+  let perConv = errorCounters.get(conversationId)
+  if (!perConv) {
+    perConv = new Map<string, number>()
+    errorCounters.set(conversationId, perConv)
+  }
+  const n = (perConv.get(code) ?? 0) + 1
+  perConv.set(code, n)
+  if (n < 3) return null
+  return `这是第 ${n} 次尝试修复同类错误（${code}）了，建议别再硬修——先看证据（上次失败的位置/输出），或换一种实现思路。`
+}
 
 function cloneForDb<T>(value: T): T {
   return JSON.parse(JSON.stringify(value)) as T
@@ -67,6 +199,8 @@ export const useMessageStore = defineStore('message', {
     callToMessage: {} as Record<string, string>,
     requestToMessage: {} as Record<string, string>,
     requestToConversation: {} as Record<string, string>,
+    /** 批0 消息排队：会话 id → 待执行 FIFO 镜像（后端 chat.queue 权威；首帧启动摘除） */
+    pendingQueues: {} as Record<string, PendingQueueItem[]>,
   }),
   actions: {
     list(conversationId: string): ChatMessage[] {
@@ -87,11 +221,59 @@ export const useMessageStore = defineStore('message', {
         (run) => run.conversationId === conversationId && run.status === 'running',
       )
     },
+    // ── 批0 消息排队（Codex 双输入模式）：会话级 FIFO 镜像 ──
+    pendingFor(conversationId: string): PendingQueueItem[] {
+      return this.pendingQueues[conversationId] ?? []
+    },
+    pushPending(conversationId: string, item: PendingQueueItem) {
+      if (!this.pendingQueues[conversationId]) this.pendingQueues[conversationId] = []
+      this.pendingQueues[conversationId].push(item)
+      this.renumberPending(conversationId)
+    },
+    removePending(conversationId: string, taskId: string) {
+      const list = this.pendingQueues[conversationId]
+      if (!list) return
+      this.pendingQueues[conversationId] = list.filter((item) => item.taskId !== taskId)
+      this.renumberPending(conversationId)
+    },
+    renumberPending(conversationId: string) {
+      const list = this.pendingQueues[conversationId]
+      if (!list) return
+      list.forEach((item, index) => {
+        item.position = index + 1
+      })
+    },
+    nextQueuePosition(conversationId: string): number {
+      return (this.pendingQueues[conversationId]?.length ?? 0) + 1
+    },
+    /** 排队条目转为运行中：首个 SSE 帧到来时摘除镜像（后端已开始执行） */
+    markRunActive(taskId: string) {
+      const run = this.runs[taskId]
+      if (!run || run.status !== 'queued') return
+      run.status = 'running'
+      this.removePending(run.conversationId, taskId)
+    },
+    async cancelQueued(conversationId: string, taskId: string) {
+      const run = this.runs[taskId]
+      if (run && run.status === 'queued') {
+        run.status = 'cancelled'
+        run.finishedAt = Date.now()
+        run.elapsedMs = run.finishedAt - run.startedAt
+      }
+      // 本地先摘除（乐观）；后端移除失败（旧版/已开始）不阻塞 UI
+      this.removePending(conversationId, taskId)
+      try {
+        await getClient().chatQueueCancel({ conversation_id: conversationId, task_id: taskId })
+      } catch {
+        // 后端旧版不支持 / 条目已开始：SSE 帧会照常落到该 run，本地镜像已摘除即可
+      }
+    },
     async sendUserMessage(
       conversationId: string,
       text: string,
       workspace?: string,
       attachments?: AttachmentItem[],
+      opts?: { queue?: boolean },
     ) {
       let effective = text
       if (attachments && attachments.length > 0) {
@@ -113,6 +295,21 @@ export const useMessageStore = defineStore('message', {
       )
       const clientTaskId = `t-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 6)}`
       this.ensureRun(clientTaskId, conversationId)
+      // 批0 消息排队：本会话已有活跃轮次 → 乐观标记 queued 并入镜像
+      // （后端 chat.queue 权威判定；ack 后回填权威位置，SSE 首帧到来摘除）
+      const otherActive = this.activeRuns(conversationId).some(
+        (run) => run.taskId !== clientTaskId,
+      )
+      if (otherActive) {
+        const run = this.runs[clientTaskId]
+        if (run) run.status = 'queued'
+        this.pushPending(conversationId, {
+          taskId: clientTaskId,
+          text,
+          position: this.nextQueuePosition(conversationId),
+          queuedAt: Date.now(),
+        })
+      }
       try {
         // DEBT-284 口径B 预防性钉桩（裁1020）：发送路径禁 per-task
         // subscribe——main.ts 的 SseReconnect 已用 task_id='*'
@@ -127,6 +324,7 @@ export const useMessageStore = defineStore('message', {
           conversation_id: conversationId,
           client_task_id: clientTaskId,
           ...(workspace ? { workspace } : {}),
+          ...(opts?.queue ? { queue: true } : {}),
         })
         if (result.task_id && result.task_id !== clientTaskId) {
           const run = this.runs[clientTaskId]
@@ -135,6 +333,37 @@ export const useMessageStore = defineStore('message', {
             run.taskId = result.task_id
             this.runs[result.task_id] = run
           }
+          // 队列镜像条目同步迁移 taskId
+          const entry = this.pendingQueues[conversationId]?.find(
+            (item) => item.taskId === clientTaskId,
+          )
+          if (entry) entry.taskId = result.task_id
+        }
+        const actualTaskId = result.task_id || clientTaskId
+        if (result.queued) {
+          const run = this.runs[actualTaskId]
+          if (run) run.status = 'queued'
+          if (typeof result.position === 'number') {
+            const entry = this.pendingQueues[conversationId]?.find(
+              (item) => item.taskId === actualTaskId,
+            )
+            if (entry) {
+              entry.position = result.position
+              this.renumberPending(conversationId)
+            } else {
+              this.pushPending(conversationId, {
+                taskId: actualTaskId,
+                text,
+                position: result.position,
+                queuedAt: Date.now(),
+              })
+            }
+          }
+        } else {
+          // 竞态已消解（上一轮恰好结束）：后端直接开跑 → 摘除镜像
+          this.removePending(conversationId, actualTaskId)
+          const run = this.runs[actualTaskId]
+          if (run && run.status === 'queued') run.status = 'running'
         }
       } catch (error) {
         const run = this.runs[clientTaskId]
@@ -144,6 +373,7 @@ export const useMessageStore = defineStore('message', {
           run.finishedAt = Date.now()
           run.elapsedMs = run.finishedAt - run.startedAt
         }
+        this.removePending(conversationId, clientTaskId)
         await this.push(
           conversationId,
           makeMessage(conversationId, 'status', mapped.detail, {
@@ -253,15 +483,16 @@ export const useMessageStore = defineStore('message', {
     ensureRun(taskId: string, conversationId: string): RunState {
       let run = this.runs[taskId]
       if (!run) {
-        run = {
-          taskId,
-          conversationId,
-          status: 'running',
-          startedAt: Date.now(),
-          reasoning: '',
-          text: '',
-          trace: [],
-        }
+      run = {
+        taskId,
+        conversationId,
+        status: 'running',
+        startedAt: Date.now(),
+        reasoning: '',
+        text: '',
+        trace: [],
+        subtitles: [],
+      }
         this.runs[taskId] = run
       }
       return run
@@ -271,6 +502,7 @@ export const useMessageStore = defineStore('message', {
     },
     onTaskUpdated(data: { task_id: string; status: string; progress?: number }) {
       const run = this.ensureRun(data.task_id, this.conversationOf(data.task_id) ?? '')
+      this.markRunActive(data.task_id)
       if (run.status === 'cancelled') return
       run.status = data.status
       if (['completed', 'failed', 'cancelled'].includes(data.status) && !run.finishedAt) {
@@ -280,6 +512,7 @@ export const useMessageStore = defineStore('message', {
     },
     onToken(data: TokenData) {
       const run = this.ensureRun(data.task_id, this.conversationOf(data.task_id) ?? '')
+      this.markRunActive(data.task_id)
       if (run.status === 'cancelled') return
       if (!run.conversationId) return
       const buffered = tokenBuffers.get(data.task_id)
@@ -297,12 +530,14 @@ export const useMessageStore = defineStore('message', {
     },
     onReasoning(data: ReasoningData) {
       const run = this.ensureRun(data.task_id, this.conversationOf(data.task_id) ?? '')
+      this.markRunActive(data.task_id)
       if (run.status === 'cancelled') return
       run.reasoning += data.reasoning
       run.trace.push({ kind: 'reasoning', text: data.reasoning, at: Date.now() })
     },
     onToolCall(data: ToolCallData) {
       const run = this.ensureRun(data.task_id, this.conversationOf(data.task_id) ?? '')
+      this.markRunActive(data.task_id)
       if (run.status === 'cancelled') return
       run.trace.push({
         kind: 'tool.call',
@@ -322,6 +557,7 @@ export const useMessageStore = defineStore('message', {
       void this.push(run.conversationId, msg)
     },
     onToolResult(data: ToolResultData) {
+      this.markRunActive(data.task_id)
       if (this.runs[data.task_id]?.status === 'cancelled') return
       const conversationId = this.conversationOf(data.task_id)
       const messageId = this.callToMessage[`${data.task_id}:${data.call_id}`]
@@ -347,10 +583,22 @@ export const useMessageStore = defineStore('message', {
           preview: data.preview,
           at: Date.now(),
         })
+        // 批0 人话字幕：工具结果落定后翻译成一句话（失败也翻，方便小白看懂）
+        if (run.subtitles) {
+          const toolName = run.trace.find(
+            (item) => item.kind === 'tool.call' && item.callId === data.call_id,
+          )?.toolName ?? 'tool'
+          run.subtitles.push({
+            toolName,
+            text: subtitleForTool(toolName, data.success, data.preview),
+            at: Date.now(),
+          })
+        }
       }
     },
     onApprovalRequired(data: ApprovalRequiredData) {
       const run = this.ensureRun(data.task_id, this.conversationOf(data.task_id) ?? '')
+      this.markRunActive(data.task_id)
       if (run.status === 'cancelled') return
       if (!run.conversationId) return
       const msg = makeMessage(run.conversationId, 'approval', '', {
@@ -397,12 +645,22 @@ export const useMessageStore = defineStore('message', {
       }
     },
     onDone(data: DoneData) {
+      this.markRunActive(data.task_id)
       const run = this.runs[data.task_id]
       if (!run || run.status === 'cancelled') return
       this.flushRun(data.task_id)
       run.status = 'completed'
       run.finishedAt = Date.now()
       run.elapsedMs = run.finishedAt - run.startedAt
+      // 批0 成本小字：done 帧的真实 usage → 记账
+      if (data.usage) {
+        run.usage = {
+          promptTokens: data.usage.prompt_tokens,
+          completionTokens: data.usage.completion_tokens,
+          totalTokens: data.usage.total_tokens,
+          costUsd: estimateCostUsd(data.usage),
+        }
+      }
       if (!run.conversationId) return
       const msg = this.byConversation[run.conversationId]?.find(
         (item) => item.meta?.taskId === data.task_id && item.kind === 'assistant',
@@ -432,6 +690,7 @@ export const useMessageStore = defineStore('message', {
     },
     onError(data: ErrorData) {
       this.flushRun(data.task_id)
+      this.markRunActive(data.task_id)
       const run = this.runs[data.task_id]
       if (run) {
         run.status = 'failed'
@@ -440,9 +699,15 @@ export const useMessageStore = defineStore('message', {
       }
       const conversationId = this.conversationOf(data.task_id)
       if (conversationId) {
+        // 批0 循环提示：消息本身已带提示（如 demo/上游）则不重复追加
+        const hint =
+          data.message.includes('建议别再硬修')
+            ? null
+            : loopHintForError(conversationId, data.message)
+        const text = hint ? `${data.message}\n\n💡 ${hint}` : data.message
         void this.push(
           conversationId,
-          makeMessage(conversationId, 'status', data.message, {
+          makeMessage(conversationId, 'status', text, {
             status: 'error',
             statusKey: 'taskError',
             errorKey: 'unknown',

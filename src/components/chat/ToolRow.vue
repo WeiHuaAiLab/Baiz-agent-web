@@ -4,12 +4,15 @@ import { computed, ref } from 'vue'
 import type { ChatMessage } from '../../models'
 import { useWorkingTreeStore } from '../../stores/workingTree'
 import { diffStats } from '../../utils/diff'
+import { translateTool } from '../../utils/commandTranslator'
 import Icon from '../common/Icon.vue'
 
 const props = defineProps<{ message: ChatMessage }>()
 const working = useWorkingTreeStore()
 const open = ref(false)
 const running = computed(() => props.message.meta?.success === undefined)
+// 批0 命令翻译：工具调用行的人话说明
+const toolHuman = computed(() => translateTool(props.message.meta?.toolName ?? '', props.message.meta?.success))
 
 const filePath = computed(() => {
   const args = props.message.meta?.argsPreview
@@ -47,6 +50,10 @@ function openFile() {
       <span v-if="refStats" class="file-ref-stats">
         +{{ refStats.added }} −{{ refStats.removed }}
       </span>
+    </div>
+    <div v-if="toolHuman" class="xp-tool-human">
+      <span class="xp-subtitle-tag">人话</span>
+      <span>{{ toolHuman }}</span>
     </div>
     <pre v-if="open && message.meta?.argsPreview" class="tool-args">{{
       message.meta.argsPreview

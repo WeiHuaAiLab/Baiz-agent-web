@@ -30,6 +30,8 @@ const elapsedText = computed(() =>
   elapsedMs.value ? formatDuration(elapsedMs.value) : '',
 )
 const running = computed(() => run.value?.status === 'running')
+// 批0 人话字幕：本次运行里所有工具调用的白话翻译（按时间顺序）
+const subtitles = computed(() => run.value?.subtitles ?? [])
 
 async function copy() {
   try {
@@ -177,6 +179,18 @@ function goSettings() {
           {{ t('chat.toolResult') }} {{ item.preview }}
         </template>
         <template v-else>{{ t('chat.thinking') }}</template>
+      </div>
+    </div>
+
+    <!-- 批0 人话字幕：工具调用全翻译成小白能看懂的一句话 -->
+    <div v-if="subtitles.length" class="xp-subtitles">
+      <div
+        v-for="(sub, i) in subtitles"
+        :key="i"
+        class="xp-subtitle"
+      >
+        <span class="xp-subtitle-tag">人话</span>
+        <span class="xp-subtitle-text">{{ sub.text }}</span>
       </div>
     </div>
 

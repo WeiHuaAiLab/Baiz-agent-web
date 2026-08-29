@@ -102,6 +102,13 @@ describe('ChatView 消息流渲染', () => {
     // 项目选择器位于输入框加号左侧
     expect(wrapper.find('.composer-picker-wrap').exists()).toBe(true)
 
+    // 空白输入提交 → 阻止创建，仍在创建模式
+    const taskCountBefore = workspace.tasks.length
+    await wrapper.find('.create-center .composer').trigger('submit')
+    await new Promise((resolve) => setTimeout(resolve, 100))
+    expect(workspace.tasks.length).toBe(taskCountBefore)
+    expect(ui.createMode).toBe('task')
+
     await wrapper.find('.create-center textarea').setValue('整理客户名单')
     await wrapper.vm.$nextTick()
     await wrapper.find('.create-center .composer').trigger('submit')

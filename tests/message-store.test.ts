@@ -195,3 +195,71 @@ describe('message store 事件组装', () => {
     expect(Object.keys(messages.runs).length).toBe(50)
   })
 })
+
+describe('消息排队镜像（Codex 双输入模式）', () => {
+  beforeEach(() => {
+    setActivePinia(createPinia())
+  })
+
+  it('忙时会话入队：位置连续、启动帧摘除、取消移除', async () => {
+    const messages = useMessageStore()
+    const conversationId = 'c-queue'
+    messages.ensureRun('t-running', conversationId)
+    const running = messages.runs['t-running']
+    if (running) running.status = 'running'
+
+    // 乐观入队两条
+    messages.pushPending(conversationId, {
+      taskId: 't-1',
+      text: '第一条',
+      position: 1,
+      queuedAt: Date.now(),
+    })
+    messages.pushPending(conversationId, {
+      taskId: 't-2',
+      text: '第二条',
+      position: 2,
+      queuedAt: Date.now(),
+    })
+    expect(messages.pendingFor(conversationId).map((item) => item.position)).toEqual([1, 2])
+    expect(messages.nextQueuePosition(conversationId)).toBe(3)
+
+    // 启动帧到来 → 摘除 + 剩余条目位置重排
+    messages.ensureRun('t-1', conversationId)
+    const queued = messages.runs['t-1']
+    if (queued) queued.status = 'queued'
+    messages.markRunActive('t-1')
+    expect(messages.runs['t-1']?.status).toBe('running')
+    expect(messages.pendingFor(conversationId).map((item) => item.taskId)).toEqual(['t-2'])
+    expect(messages.pendingFor(conversationId)[0]?.position).toBe(1)
+
+    // 取消：本地同步摘除 + run 转 cancelled（后端调用失败也不阻塞）
+    messages.ensureRun('t-2', conversationId)
+    const queued2 = messages.runs['t-2']
+    if (queued2) queued2.status = 'queued'
+    await messages.cancelQueued(conversationId, 't-2')
+    expect(messages.pendingFor(conversationId)).toHaveLength(0)
+    expect(messages.runs['t-2']?.status).toBe('cancelled')
+  })
+
+  it('SSE 首帧（token/task.updated）把 queued 转 running 并摘除镜像', () => {
+    const messages = useMessageStore()
+    const approvals = useApprovalStore()
+    const taskId = 't-queued-1'
+    const conversationId = 'c-queue-2'
+    messages.ensureRun(taskId, conversationId)
+    const run = messages.runs[taskId]
+    if (run) run.status = 'queued'
+    messages.pushPending(conversationId, {
+      taskId,
+      text: '排队消息',
+      position: 1,
+      queuedAt: Date.now(),
+    })
+
+    routeFrame({ event: 'token', data: { task_id: taskId, token: '你' } }, messages, approvals)
+
+    expect(messages.runs[taskId]?.status).toBe('running')
+    expect(messages.pendingFor(conversationId)).toHaveLength(0)
+  })
+})

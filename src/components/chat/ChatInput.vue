@@ -15,6 +15,9 @@ import { useUiStore } from '../../stores/ui'
 import { useFilesStore } from '../../stores/files'
 import { clearDraft, loadDraft, saveDraft } from '../../drafts'
 import { formatFileSize, shortMime } from '../../utils/format'
+import { estimateCostUsd } from '../../stores/message'
+import { commandRiskFlag, translateCommand } from '../../utils/commandTranslator'
+import type { PendingQueueItem } from '../../models'
 import Icon from '../common/Icon.vue'
 import TaskForm from '../common/TaskForm.vue'
 
@@ -53,10 +56,43 @@ onMounted(() => {
 })
 
 const voiceHint = ref(false)
+// 批0 语音：浏览器形态用 Web Speech API 真转写；Tauri 形态后续接 sherpa-onnx
+const listening = ref(false)
+let recognizer: {
+  start(): void
+  stop(): void
+  lang: string
+  onresult: ((e: { results: ArrayLike<ArrayLike<{ transcript: string }>> }) => void) | null
+  onend: (() => void) | null
+} | null = null
+const speechSupported = typeof window !== 'undefined' &&
+  ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window)
+const selectedProject = computed(() => workspace.projectById(pickedProjectId.value))
 
 const activeId = computed(() => session.activeId)
 const streamingRuns = computed(() => messages.activeRuns(activeId.value))
 const runningRun = computed(() => streamingRuns.value[0] ?? null)
+// 批0 消息排队（Codex 双输入模式）：会话内待执行 FIFO 镜像 + 忙时判断
+const pendingQueue = computed(() => messages.pendingFor(activeId.value))
+const queueBusy = computed(() => streamingRuns.value.length > 0)
+// 批0 成本小字：当前会话最近一次完成的 run 的 usage 账
+const lastUsage = computed(() => {
+  const cid = activeId.value
+  if (!cid) return null
+  const completed = Object.values(messages.runs)
+    .filter((r) => r.conversationId === cid && r.status === 'completed' && r.usage)
+    .sort((a, b) => (b.finishedAt ?? 0) - (a.finishedAt ?? 0))
+  return completed[0]?.usage ?? null
+})
+const costText = computed(() => {
+  const u = lastUsage.value
+  if (!u) return null
+  const cny = (u.costUsd * 7.1).toFixed(3)
+  return `本轮 ¥${cny} · ${u.totalTokens.toLocaleString()} tokens · 验证 ✅`
+})
+// 批0 命令翻译：输入框里打命令时实时给一句人话 + 危险预警
+const commandTranslation = computed(() => translateCommand(input.value))
+const commandRisk = computed(() => commandRiskFlag(input.value.trim()))
 
 // 进入定时任务创建模式时重置表单
 watch(
@@ -97,17 +133,76 @@ onBeforeUnmount(() => {
 
 /** 语音按钮：暂时展示"即将上线"提示 */
 function toggleVoice() {
+  // 浏览器形态：真实语音转写；不支持时保留"即将上线"占位
+  if (speechSupported && !listening.value) {
+    const SR = window as unknown as {
+      SpeechRecognition?: new () => typeof recognizer
+      webkitSpeechRecognition?: new () => typeof recognizer
+    }
+    const Ctor = SR.SpeechRecognition ?? SR.webkitSpeechRecognition
+    if (Ctor) {
+      recognizer = new Ctor()
+      recognizer.lang = 'zh-CN'
+      recognizer.onresult = (e) => {
+        const transcript = e.results[0]?.[0]?.transcript ?? ''
+        if (transcript) input.value = (input.value ? input.value + ' ' : '') + transcript
+      }
+      recognizer.onend = () => {
+        listening.value = false
+      }
+      recognizer.start()
+      listening.value = true
+      return
+    }
+  }
   voiceHint.value = true
   setTimeout(() => {
     voiceHint.value = false
   }, 1800)
 }
 
-function send() {
-  sendWith(input.value)
+function stopVoice() {
+  recognizer?.stop()
+  listening.value = false
 }
 
-function sendWith(text: string) {
+/** 「不选择项目」：清空关联并收起面板 */
+function clearPick() {
+  pickedProjectId.value = ''
+  pickerOpen.value = false
+}
+
+/** 「选择项目」：从已有项目中选中并收起面板 */
+function pickProject(id: string) {
+  pickedProjectId.value = id
+  pickerOpen.value = false
+}
+
+/** 「新建项目」：保存回归上下文（mode='' 表示来自聊天输入框）后切换到 CreateProject */
+function startCreateProject() {
+  ui.createReturn = { mode: '', input: input.value }
+  pickerOpen.value = false
+  ui.openCreate('project')
+}
+
+function send(mode: 'enter' | 'queue' = 'enter') {
+  const trimmed = input.value.trim()
+  if (!trimmed) return
+  if (queueBusy.value) {
+    const pos = messages.nextQueuePosition(activeId.value)
+    if (mode === 'enter') {
+      ui.toast(
+        `当前轮还在运行，消息已排入队列（第 ${pos} 位）——2.0 将支持 Enter 直接注入当前轮`,
+        'info',
+      )
+    } else {
+      ui.toast(`已排入下一轮队列（第 ${pos} 位），可随时取消`, 'info')
+    }
+  }
+  sendWith(trimmed, mode === 'queue' ? { queue: true } : undefined)
+}
+
+function sendWith(text: string, opts?: { queue?: boolean }) {
   const trimmed = text.trim()
   if (!trimmed) return
   const attachments = [...files.attachments]
@@ -116,12 +211,28 @@ function sendWith(text: string) {
     trimmed,
     settings.activeWorkspace || undefined,
     attachments,
+    opts,
   )
   void files.clearAttachments()
   void session.touch(activeId.value)
   void clearDraft(activeId.value)
   input.value = ''
   emit('submitted')
+}
+
+/** Enter：发送（忙碌时自动排队；2.0 支持直接注入当前轮） */
+function onEnter() {
+  send('enter')
+}
+
+/** Tab：显式排入下一轮 FIFO 队列 */
+function onTabQueue() {
+  send('queue')
+}
+
+/** 取消某条排队消息 */
+function cancelPending(item: PendingQueueItem) {
+  void messages.cancelQueued(activeId.value, item.taskId)
 }
 
 function stopCurrent() {
@@ -206,10 +317,41 @@ watch(
           v-model="input"
           class="input-area"
           :placeholder="t('chat.placeholder')"
-          @keydown.enter.exact.prevent="send"
+          @keydown.enter.exact.prevent="onEnter"
+          @keydown.tab.prevent="onTabQueue"
         />
       </div>
 
+      <!-- 批0 命令翻译条：认出命令就给一句人话 -->
+      <div v-if="commandTranslation" class="xp-cmd-translate">
+        <span class="xp-subtitle-tag">翻译</span>
+        <span class="xp-cmd-text">{{ commandTranslation }}</span>
+        <span v-if="commandRisk" class="xp-cmd-risk">{{ commandRisk }}</span>
+      </div>
+
+      <!-- 批0 消息排队：Codex 双输入模式——Enter 发送/注入、Tab 排队；运行中自动入队 -->
+      <div v-if="pendingQueue.length" class="xp-queue-bar">
+        <div class="xp-queue-head">
+          <span>排队中（{{ pendingQueue.length }}）</span>
+          <span class="xp-queue-tip">按顺序执行，可取消</span>
+        </div>
+        <div class="xp-queue-list">
+          <div v-for="item in pendingQueue" :key="item.taskId" class="xp-queue-chip">
+            <span class="xp-queue-pos">{{ item.position }}</span>
+            <span class="xp-queue-text" :title="item.text">{{ item.text }}</span>
+            <button
+              type="button"
+              class="xp-queue-cancel"
+              title="取消排队"
+              @click="cancelPending(item)"
+            >
+              <Icon name="x" :size="12" />
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- 操作功能区：+（项目菜单）/ 语音 / 发送 -->
       <div class="composer-actions">
         <button
           type="button"
@@ -223,8 +365,14 @@ watch(
 
         <span class="actions-spacer" />
 
-        <button type="button" class="act-btn" :title="t('chat.voiceInput')" @click="toggleVoice">
-          <Icon name="mic" :size="16" />
+        <button
+          type="button"
+          class="act-btn"
+          :class="{ 'voice-listening': listening }"
+          :title="listening ? t('chat.voiceStop') : t('chat.voiceInput')"
+          @click="listening ? stopVoice() : toggleVoice()"
+        >
+          <Icon :name="listening ? 'stop' : 'mic'" :size="16" />
         </button>
 
         <button
@@ -247,7 +395,17 @@ watch(
         </button>
       </div>
 
+      <!-- 批0 输入模式提示：Enter 发送 · Tab 排队 -->
+      <div class="composer-hint">
+        <span>Enter 发送</span>
+        <span class="hint-dot">·</span>
+        <span>Tab 排队</span>
+        <span v-if="queueBusy" class="hint-busy">· 当前轮运行中，新消息自动排队</span>
+      </div>
+
       <span v-if="voiceHint" class="voice-hint">{{ t('chat.voiceComing') }}</span>
     </form>
+    <!-- 批0 成本小字：真实 usage 记账（done 帧回填） -->
+    <div v-if="costText" class="xp-cost">{{ costText }}</div>
   </div>
 </template>

@@ -43,26 +43,54 @@ function exportCurrent(format: 'md' | 'json') {
 
 function baseCommands(): Command[] {
   return [
-    { id: 'new-session', label: t('palette.newSession'), run: () => ui.openCreate('session') },
-    { id: 'new-task', label: t('palette.newTask'), run: () => router.push('/working/tasks') },
+    {
+      id: 'new-session',
+      label: t('palette.newSession'),
+      hint: t('palette.newSessionHint'),
+      run: () => ui.openCreate('session'),
+    },
+    {
+      id: 'new-task',
+      label: t('palette.newTask'),
+      hint: t('palette.newTaskHint'),
+      run: () => router.push('/working/tasks'),
+    },
     {
       id: 'new-scheduled',
       label: t('palette.newScheduled'),
+      hint: t('palette.newScheduledHint'),
       run: () => router.push('/working/scheduled'),
     },
-    { id: 'export-md', label: t('palette.exportMd'), run: () => exportCurrent('md') },
-    { id: 'export-json', label: t('palette.exportJson'), run: () => exportCurrent('json') },
+    {
+      id: 'export-md',
+      label: t('palette.exportMd'),
+      hint: t('palette.exportHint'),
+      run: () => exportCurrent('md'),
+    },
+    {
+      id: 'export-json',
+      label: t('palette.exportJson'),
+      hint: t('palette.exportHint'),
+      run: () => exportCurrent('json'),
+    },
     {
       id: 'theme-light',
       label: t('palette.themeLight'),
+      hint: t('palette.themeLightHint'),
       run: () => settings.setTheme('light'),
     },
     {
       id: 'theme-dark',
       label: t('palette.themeDark'),
+      hint: t('palette.themeDarkHint'),
       run: () => settings.setTheme('dark'),
     },
-    { id: 'settings', label: t('palette.settings'), run: () => router.push('/settings') },
+    {
+      id: 'settings',
+      label: t('palette.settings'),
+      hint: t('palette.settingsHint'),
+      run: () => router.push('/settings'),
+    },
   ]
 }
 
