@@ -5,6 +5,7 @@ import { getClient } from '../client/singleton'
 import type { AttachmentItem } from './files'
 import { mapRpcError } from '../utils/errors'
 import { useUiStore } from './ui'
+import { useSettingsStore } from './settings'
 import { useWorkingTreeStore } from './workingTree'
 import type {
   ChatMessage,
@@ -265,6 +266,9 @@ export const useMessageStore = defineStore('message', {
           conversation_id: conversationId,
           client_task_id: clientTaskId,
           ...(workspace ? { workspace } : {}),
+          // MSG-2341（A-4 升格）：设置面所选模型透传 chat.send 载荷——
+          // 状态栏（ChatHeader model-chip）同取 settings.model，显示与发送对卯
+          model: useSettingsStore().model,
         })
         if (result.task_id && result.task_id !== clientTaskId) {
           const run = this.runs[clientTaskId]

@@ -41,6 +41,9 @@ export interface ChatSendParams {
   conversation_id?: string
   client_task_id?: string
   mode?: string
+  /** MSG-2341（A-4 升格）：设置面所选模型透传——daemon DEBT-229 件1 已落
+   * （Option<String> 直进 build_chat_request 真消费；None 兜底 default_model） */
+  model?: string
 }
 
 export interface ChatSendResult {

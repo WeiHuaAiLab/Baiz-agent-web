@@ -3,7 +3,16 @@ import { createPinia, setActivePinia } from 'pinia'
 import { routeFrame } from '../src/client/eventRouter'
 import { useApprovalStore } from '../src/stores/approval'
 import { useMessageStore } from '../src/stores/message'
+import { useSettingsStore } from '../src/stores/settings'
+import { getClient } from '../src/client/singleton'
 import { buildDemoFrames } from '../src/demo/script'
+
+// MSG-2341 红证：getClient 保真 vi.fn——默认走真（老测不破），红证测
+// mockImplementation 拦 chatSend 捕获载荷
+vi.mock('../src/client/singleton', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('../src/client/singleton')>()
+  return { ...actual, getClient: vi.fn(actual.getClient) }
+})
 
 describe('message store 事件组装', () => {
   beforeEach(() => {
@@ -193,5 +202,42 @@ describe('message store 事件组装', () => {
     }
     messages.trimRuns()
     expect(Object.keys(messages.runs).length).toBe(50)
+  })
+})
+
+// MSG-2341 红证：设置面所选模型 → chat.send 载荷 model 键（A-4 前端残面升格）
+describe('chat.send 载荷 model 透传', () => {
+  afterEach(() => {
+    vi.restoreAllMocks()
+    vi.useRealTimers()
+  })
+
+  it('选 qwen → 载荷 model=qwen；切 deepseek 再发 → 载荷 model=deepseek（缺省态恒带键）', async () => {
+    const messages = useMessageStore()
+    const settings = useSettingsStore()
+    const captured: Array<{ model?: string }> = []
+    vi.mocked(getClient).mockImplementation(
+      () =>
+        ({
+          chatSend: async (params: { model?: string }) => {
+            captured.push(params)
+            return { task_id: 't-x', status: 'ok', model: 'deepseek' }
+          },
+        }) as never,
+    )
+
+    // 设置面选 qwen → 载荷带 qwen
+    settings.setModel('qwen')
+    await messages.sendUserMessage('c-model', '你好')
+    expect(captured[0].model).toBe('qwen')
+
+    // 切回 deepseek（设置面默认值）再发 → 载荷随动
+    settings.setModel('deepseek')
+    await messages.sendUserMessage('c-model', '再发')
+    expect(captured[1].model).toBe('deepseek')
+
+    // 恒带键面：两发俱有 model 键（settings.model 恒有默认值——deepseek）
+    expect(captured).toHaveLength(2)
+    expect(captured.every((p) => typeof p.model === 'string')).toBe(true)
   })
 })
