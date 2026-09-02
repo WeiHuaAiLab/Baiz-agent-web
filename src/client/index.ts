@@ -22,6 +22,12 @@ export interface BaizClient {
   connect(): Promise<void>
   handshake(params: AuthHandshakeParams): Promise<AuthHandshakeResult>
   subscribe(params: EventSubscribeParams): Promise<EventSubscribeResult>
+  /**
+   * F4 挡板（MSG-2322）：首连 handshake——短连接 event.subscribe（缺省分支
+   * 返回 latest_seq 即断；tauri 面 proxy_rpc 读 result 行即关，http 面 /rpc），
+   * 供 SseReconnect 取 daemon 当前最新事件 seq 作订阅基线（零重放）。
+   */
+  probeEventSeq(): Promise<number>
   provideKey(key: string): Promise<{ stored: boolean }>
   chatSend(params: ChatSendParams): Promise<ChatSendResult>
   chatQueueCancel(params: ChatQueueCancelParams): Promise<ChatQueueCancelResult>
@@ -47,6 +53,12 @@ export function createClient(transport: RpcTransport): BaizClient {
           .then(() => ({ subscribed: true, latest_seq: 0, oldest_seq: 0 }))
       }
       return rpc.call('event.subscribe', params)
+    },
+    // F4：短连接探测 event.subscribe（缺省分支）→ result.latest_seq；
+    // 失败上抛由 SseReconnect.probeLatest 降级收口
+    probeEventSeq: async () => {
+      const result = await rpc.call<EventSubscribeResult>('event.subscribe', { task_id: '*' })
+      return result?.latest_seq ?? 0
     },
     provideKey: (key) => rpc.call('auth.provide_key', { key }),
     authLogin: (params) => rpc.call('auth.login', params),

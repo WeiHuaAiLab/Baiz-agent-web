@@ -11,6 +11,12 @@ export interface ReconnectOptions {
   transport: RpcTransport
   taskId: string
   subscribe(params: EventSubscribeParams): Promise<EventSubscribeResult>
+  /**
+   * F4 挡板（MSG-2322）：首连 handshake——短连接取 daemon 当前最新事件
+   * seq（event.subscribe RPC result.latest_seq；tauri 壳长连面会吞掉
+   * result 行，故 probe 走短连接 RPC）。返回 >0 的 seq 或抛错/0 降级。
+   */
+  probeLatestSeq?: () => Promise<number>
   heartbeatTimeoutMs?: number
   retryDelayMs?: number
   maxRetryDelayMs?: number
@@ -20,6 +26,12 @@ export interface ReconnectOptions {
 
 export class SseReconnect {
   private latestSeq = 0
+  /** F4：最近一次成功订阅携带的 last_event_id（弃帧基线——id<=base 的重放帧不达路由） */
+  private consumeBase = 0
+  /** F4：handshake 探得的 daemon 最新 seq（首连/resync 后订阅携带） */
+  private probeSeq = 0
+  /** F4：经弃帧过滤后的事件消费者（main.ts 路由注册于此，替代直连 transport） */
+  private readonly dispatchHandlers = new Set<(frame: SseFrame) => void>()
   private watchdog: ReturnType<typeof setTimeout> | null = null
   private retryTimer: ReturnType<typeof setTimeout> | null = null
   private attempts = 0
@@ -44,6 +56,17 @@ export class SseReconnect {
     this.unsubscribeDisconnect =
       this.options.transport.onDisconnect?.(() => this.scheduleReconnect()) ?? (() => {})
     return this.connectOnce()
+  }
+
+  /**
+   * F4：注册经弃帧过滤的事件消费者（替代 transport 直连——弃帧面唯一入口）。
+   * 长期有效，不受 stop()/start() 生命周期影响。
+   */
+  onDispatch(handler: (frame: SseFrame) => void): () => void {
+    this.dispatchHandlers.add(handler)
+    return () => {
+      this.dispatchHandlers.delete(handler)
+    }
   }
 
   stop(): void {
@@ -81,9 +104,30 @@ export class SseReconnect {
   }
 
   private async subscribeOnce(): Promise<void> {
+    // F4 挡板（MSG-2322）：首连/resync 后 latestSeq=0——先 handshake 探取
+    // daemon 最新 seq，订阅带 last_event_id（daemon 分支2 last_written=latest
+    // → 零重放）。daemon 实况缺省 last_event_id 即全环重放（conn.rs
+    // unwrap_or(0)——注释与实现不符面账照批二族），故必须显式携带。
+    if (this.latestSeq === 0) await this.probeLatest()
+    const base = this.latestSeq > 0 ? this.latestSeq : this.probeSeq
     const params: EventSubscribeParams = { task_id: this.options.taskId }
-    if (this.latestSeq > 0) params.last_event_id = this.latestSeq
+    if (base > 0) params.last_event_id = base
+    this.consumeBase = base
     await this.options.subscribe(params)
+  }
+
+  /** F4 handshake：短连接取 daemon 最新事件 seq；失败降级（0）不阻断订阅 */
+  private async probeLatest(): Promise<void> {
+    if (!this.options.probeLatestSeq) return
+    try {
+      const seq = await this.options.probeLatestSeq()
+      this.probeSeq = Number.isFinite(seq) && seq > 0 ? Math.floor(seq) : 0
+    } catch {
+      // 降级：probe 失败不带 last_event_id 直接订阅（首连订阅不可断——宁重勿断；
+      // 重放帧实害由批二族 daemon 缺省语义修向收口，此处尽力而为）
+      if (this.attempts === 0) console.warn('[baiz] latest_seq 探测失败——首连订阅降级')
+      this.probeSeq = 0
+    }
   }
 
   private async handleResync(error: RpcError): Promise<void> {
@@ -126,6 +170,24 @@ export class SseReconnect {
     if (frame.id !== undefined) this.latestSeq = Math.max(this.latestSeq, frame.id)
     // 任意帧都证明链路存活（含数据帧），避免高速输出中途误判超时
     this.armWatchdog()
+    // F4 弃帧：id<=订阅基线（consumeBase）的帧系重放/重复残帧——daemon
+    // 连接层尊重 last_event_id 时不会出现（补帧恒 >base）；出现即行为不符
+    // 或乱序竞态——弃于路由外，勿当新事件处理（重放审批卡/旧 run 实害）
+    if (this.isStaleReplay(frame)) return
+    this.dispatchHandlers.forEach((handler) => {
+      try {
+        handler(frame)
+      } catch (error) {
+        // 消费者（store 路由）异常不牵连断线管理——留痕后继续
+        console.warn('[baiz] frame dispatch 异常', error)
+      }
+    })
+  }
+
+  private isStaleReplay(frame: SseFrame): boolean {
+    if (frame.id === undefined) return false
+    if (this.consumeBase <= 0) return false
+    return frame.id <= this.consumeBase
   }
 
   private armWatchdog(): void {

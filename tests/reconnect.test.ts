@@ -142,4 +142,74 @@ describe('SseReconnect', () => {
     expect(calls).toHaveLength(2)
     reconnect.stop()
   })
+
+  it('F4 首连 handshake：probe 取 daemon 最新 seq，订阅带 last_event_id（零重放）', async () => {
+    vi.useFakeTimers()
+    const transport = createMockTransport()
+    const calls: EventSubscribeParams[] = []
+    const reconnect = new SseReconnect({
+      transport,
+      taskId: '*',
+      subscribe: makeSubscribe(calls),
+      probeLatestSeq: async () => 50,
+      heartbeatTimeoutMs: 1000,
+      retryDelayMs: 10,
+    })
+
+    await reconnect.start()
+    expect(calls[0]).toEqual({ task_id: '*', last_event_id: 50 })
+    reconnect.stop()
+  })
+
+  it('F4 probe 失败降级：首连订阅不带 last_event_id（宁重勿断）', async () => {
+    const transport = createMockTransport()
+    const calls: EventSubscribeParams[] = []
+    const reconnect = new SseReconnect({
+      transport,
+      taskId: '*',
+      subscribe: makeSubscribe(calls),
+      probeLatestSeq: async () => {
+        throw new Error('no daemon')
+      },
+    })
+
+    await reconnect.start()
+    expect(calls[0]).toEqual({ task_id: '*' })
+    reconnect.stop()
+  })
+
+  it('F4 弃帧：续订基线后 id<=基线的重放帧不达路由、新帧照放', async () => {
+    vi.useFakeTimers()
+    const transport = createMockTransport()
+    const calls: EventSubscribeParams[] = []
+    const dispatched: Array<{ id?: number; event: string }> = []
+    const reconnect = new SseReconnect({
+      transport,
+      taskId: '*',
+      subscribe: makeSubscribe(calls),
+      heartbeatTimeoutMs: 1000,
+      retryDelayMs: 10,
+    })
+    reconnect.onDispatch((frame) => dispatched.push(frame))
+    await reconnect.start()
+
+    // 首连收帧 id=5（实时帧）→ 放行；续订基线随之 =5
+    transport.emit({ id: 5, event: 'token', data: { task_id: 't', token: 'a' }, raw: '' })
+    expect(dispatched.map((f) => f.id)).toEqual([5])
+
+    // 看门狗超时 → 重连续订 last_event_id=5（基线 5）
+    await vi.advanceTimersByTimeAsync(1500)
+    expect(calls[1]).toMatchObject({ task_id: '*', last_event_id: 5 })
+
+    // daemon 行为不符面：重放残帧 id<=5 弃于路由外；新帧 6 放行
+    transport.emit({ id: 3, event: 'token', data: { task_id: 't', token: '旧' }, raw: '' })
+    transport.emit({ id: 6, event: 'token', data: { task_id: 't', token: '新' }, raw: '' })
+    expect(dispatched.map((f) => f.id)).toEqual([5, 6])
+
+    // 进度记账：弃帧不拉低 latestSeq、新帧 6 计入——下次续订带 6
+    await vi.advanceTimersByTimeAsync(1500)
+    expect(calls[2]).toMatchObject({ task_id: '*', last_event_id: 6 })
+
+    reconnect.stop()
+  })
 })

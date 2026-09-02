@@ -62,15 +62,17 @@ const approvals = useApprovalStore(pinia)
 const settings = useSettingsStore(pinia)
 settings.setDemoMode(transport.kind === 'mock')
 
-client.onEvent((frame) => routeFrame(frame, messages, approvals))
-
-// 创建断线自动重连管理器
+// F4 挡板（MSG-2322）：帧统一经 SseReconnect 弃帧面转发路由——重放残帧
+// （id<=订阅基线）不达 routeFrame（勿重复处理旧帧）；mock 演示径亦同路。
 const reconnect = new SseReconnect({
   transport,
   taskId: '*',
   subscribe: (params) => client.subscribe(params),
+  // 首连 handshake：短连接探测 daemon 最新 seq（mock 演示无此端不注入）
+  ...(transport.kind === 'mock' ? {} : { probeLatestSeq: () => client.probeEventSeq() }),
   onStateChange: (state) => settings.setConnection(state),
 })
+reconnect.onDispatch((frame) => routeFrame(frame, messages, approvals))
 
 // SSE 流断线自动续、不丢事件
 void reconnect.start().catch((error) => console.warn('[baiz] reconnect failed:', error))
