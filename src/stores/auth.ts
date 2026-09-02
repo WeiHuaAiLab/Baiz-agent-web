@@ -42,6 +42,11 @@ export const useAuthStore = defineStore("auth", {
       this.error = "";
       try {
         const client = createDefaultClient();
+        // MSG-2330 丙面根因修（试刀 2327 钉死）：独立 client 未 connect 即
+        // request——tauri transport !real 即抛「transport not connected」，
+        // invoke 前即败（零 daemon 触达）；login 前先 connect 建 real＋
+        // listen（mock/http 径幂等；RPC 九点既通面零触）
+        await client.connect();
         const result = await client.authLogin({ email, password });
         this.sessionToken = result.session_token;
         this.userId = result.user_id;

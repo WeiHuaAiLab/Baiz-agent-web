@@ -2,6 +2,16 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { createPinia, setActivePinia } from 'pinia';
 import { useAuthStore } from '../src/stores/auth';
+import { createClient } from '../src/client';
+import { createMockTransport } from '../src/client/transports/mock';
+import * as factory from '../src/client/factory';
+
+// MSG-2330 红证：createDefaultClient 保真 vi.fn——默认走真（老测不破），
+// 新测 mockImplementationOnce 拦一次注入双端 mock 真链
+vi.mock('../src/client/factory', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('../src/client/factory')>();
+  return { ...actual, createDefaultClient: vi.fn(actual.createDefaultClient) };
+});
 
 describe('auth store', () => {
   beforeEach(() => {
@@ -62,5 +72,39 @@ describe('auth store', () => {
   it('提示词照堂钉勿自撰', () => {
     const hint = '请使用 https://kb.ruiac.net/ 的账号登录';
     expect(hint).toContain('https://kb.ruiac.net/');
+  });
+
+  it('MSG-2330 红证：未 connect 态 login 自动 connect 后 request 行成（双端 mock）', async () => {
+    const auth = useAuthStore();
+    // 双端 mock：transport 端（真 mock 传输）＋应答端（handle 应答 auth.login）
+    const t = createMockTransport({
+      handle: (req) =>
+        req.method === 'auth.login'
+          ? { result: { session_token: 'tok-2330', user_id: 'u-1', provider: 'weknora' } }
+          : null,
+    });
+    let connectCalls = 0;
+    const origConnect = t.connect.bind(t);
+    t.connect = async () => {
+      connectCalls += 1;
+      await origConnect();
+    };
+    // 真链：createClient + mock transport（中间 RPC 层全真）
+    vi.mocked(factory.createDefaultClient).mockImplementationOnce(() => createClient(t));
+
+    // 前置：transport 未被 connect（未 connect 态）
+    expect(connectCalls).toBe(0);
+    const ok = await auth.login('a@b.c', 'pw-2330');
+    expect(ok).toBe(true);
+    expect(auth.sessionToken).toBe('tok-2330');
+    expect(auth.userId).toBe('u-1');
+    // 自动 connect 面：login 内部 connect 先行
+    expect(connectCalls).toBeGreaterThanOrEqual(1);
+    // request 行成面：auth.login 达 transport 且载荷完整
+    const loginReq = t.requests.find((r) => r.method === 'auth.login');
+    expect(loginReq).toBeTruthy();
+    expect((loginReq?.params as { email?: string })?.email).toBe('a@b.c');
+    // 败面零泄面仍在：登出后错误词不泄口令
+    expect(auth.error).toBe('');
   });
 });
