@@ -38,7 +38,11 @@ function doExport(format: 'md' | 'json') {
       <div class="chat-title">
         <span class="conv-title">{{ session.active?.title ?? t('app.title') }}</span>
         <span class="model-chip">
-          {{ settings.model === 'qwen' ? t('chat.modelLocal') : t('chat.modelCloud') }}
+          {{
+            settings.model === 'deepseek-v4-flash'
+              ? t('chat.modelFlash')
+              : t('chat.modelPro')
+          }}
         </span>
         <span v-if="settings.demoMode" class="demo-chip">{{ t('chat.demoMode') }}</span>
         <span v-if="streamingRuns.length > 0" class="status">{{ t('status.connecting') }}</span>

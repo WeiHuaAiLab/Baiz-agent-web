@@ -205,14 +205,14 @@ describe('message store 事件组装', () => {
   })
 })
 
-// MSG-2341 红证：设置面所选模型 → chat.send 载荷 model 键（A-4 前端残面升格）
+// MSG-2341/2358 红证：设置面所选模型 → chat.send 载荷 model 键（枚举换正后双名）
 describe('chat.send 载荷 model 透传', () => {
   afterEach(() => {
     vi.restoreAllMocks()
     vi.useRealTimers()
   })
 
-  it('选 qwen → 载荷 model=qwen；切 deepseek 再发 → 载荷 model=deepseek（缺省态恒带键）', async () => {
+  it('选 v4-flash → 载荷 model=deepseek-v4-flash；切 v4-pro 再发 → 载荷随动（缺省态恒带键）', async () => {
     const messages = useMessageStore()
     const settings = useSettingsStore()
     const captured: Array<{ model?: string }> = []
@@ -221,22 +221,22 @@ describe('chat.send 载荷 model 透传', () => {
         ({
           chatSend: async (params: { model?: string }) => {
             captured.push(params)
-            return { task_id: 't-x', status: 'ok', model: 'deepseek' }
+            return { task_id: 't-x', status: 'ok', model: 'deepseek-v4-pro' }
           },
         }) as never,
     )
 
-    // 设置面选 qwen → 载荷带 qwen
-    settings.setModel('qwen')
+    // MSG-2358 红证①：选 v4-flash → 载荷带 deepseek-v4-flash
+    settings.setModel('deepseek-v4-flash')
     await messages.sendUserMessage('c-model', '你好')
-    expect(captured[0].model).toBe('qwen')
+    expect(captured[0].model).toBe('deepseek-v4-flash')
 
-    // 切回 deepseek（设置面默认值）再发 → 载荷随动
-    settings.setModel('deepseek')
+    // 切回 v4-pro（设置面默认值）再发 → 载荷随动
+    settings.setModel('deepseek-v4-pro')
     await messages.sendUserMessage('c-model', '再发')
-    expect(captured[1].model).toBe('deepseek')
+    expect(captured[1].model).toBe('deepseek-v4-pro')
 
-    // 恒带键面：两发俱有 model 键（settings.model 恒有默认值——deepseek）
+    // 恒带键面：两发俱有 model 键（settings.model 恒有默认值——v4-pro）
     expect(captured).toHaveLength(2)
     expect(captured.every((p) => typeof p.model === 'string')).toBe(true)
   })

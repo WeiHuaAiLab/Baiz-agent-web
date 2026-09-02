@@ -16,9 +16,9 @@ const activeId = computed(() => session.activeId)
 const modelText = computed(() =>
   settings.demoMode
     ? t('status.demo')
-    : settings.model === 'qwen'
-      ? t('chat.modelLocal')
-      : t('chat.modelCloud'),
+    : settings.model === 'deepseek-v4-flash'
+      ? t('chat.modelFlash')
+      : t('chat.modelPro'),
 )
 
 const connectionText = computed(() => {

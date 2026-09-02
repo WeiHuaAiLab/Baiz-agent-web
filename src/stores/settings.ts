@@ -4,7 +4,18 @@ import { defineStore } from 'pinia'
 export type Locale = 'zh-CN' | 'en-US'
 export type Theme = 'light' | 'dark'
 export type ConnectionState = 'idle' | 'connecting' | 'connected' | 'reconnecting' | 'resync'
-export type ModelPref = 'deepseek' | 'qwen'
+// MSG-2358 枚举换正：deepseek 系双名（qwen 假面下架——daemon 侧已归一）；
+// vision-exp 尾系实验件勿入枚举（1.0 勿宣称实验面）
+export type ModelPref = 'deepseek-v4-pro' | 'deepseek-v4-flash'
+
+/** MSG-2358 旧值迁移闸：localStorage 存量旧值（deepseek/qwen/任意串）系
+ * 枚举外值——回落默认 v4-pro（一役双销——S 2351 P3 强转注记并治） */
+function readModelPref(): ModelPref {
+  const raw = readLocal('baiz.model', 'deepseek-v4-pro')
+  return raw === 'deepseek-v4-pro' || raw === 'deepseek-v4-flash'
+    ? raw
+    : 'deepseek-v4-pro'
+}
 export type MemoryScope = 'session' | 'recent' | 'all'
 
 function readLocal(key: string, fallback: string): string {
@@ -36,7 +47,7 @@ export const useSettingsStore = defineStore('settings', {
     activeWorkspace: readLocal('baiz.activeWorkspace', ''),
     connection: 'idle' as ConnectionState,
     demoMode: false,
-    model: readLocal('baiz.model', 'deepseek') as ModelPref,
+    model: readModelPref(),
     username: readLocal('baiz.username', '本地用户'),
     memoryEnabled: readLocal('baiz.memoryEnabled', '1') === '1',
     memoryScope: readLocal('baiz.memoryScope', 'recent') as MemoryScope,
