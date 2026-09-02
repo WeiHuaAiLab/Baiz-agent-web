@@ -58,14 +58,6 @@ export default {
     thinking: '思考',
     toolCall: '调用工具',
     toolResult: '工具结果',
-    queue: {
-      title: '条排队中',
-      more: '队列操作',
-      add: '加入队列',
-      runNow: '立即执行',
-      edit: '编辑',
-      remove: '从队列移除',
-    },
   },
   files: {
     title: '文件',

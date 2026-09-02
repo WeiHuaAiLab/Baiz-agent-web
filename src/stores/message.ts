@@ -9,7 +9,6 @@ import { useWorkingTreeStore } from './workingTree'
 import type {
   ChatMessage,
   MessageMeta,
-  PendingQueueItem,
   RunState,
   SubtitleItem,
   UsageCost,
@@ -199,8 +198,6 @@ export const useMessageStore = defineStore('message', {
     callToMessage: {} as Record<string, string>,
     requestToMessage: {} as Record<string, string>,
     requestToConversation: {} as Record<string, string>,
-    /** 批0 消息排队：会话 id → 待执行 FIFO 镜像（后端 chat.queue 权威；首帧启动摘除） */
-    pendingQueues: {} as Record<string, PendingQueueItem[]>,
   }),
   actions: {
     list(conversationId: string): ChatMessage[] {
@@ -221,59 +218,18 @@ export const useMessageStore = defineStore('message', {
         (run) => run.conversationId === conversationId && run.status === 'running',
       )
     },
-    // ── 批0 消息排队（Codex 双输入模式）：会话级 FIFO 镜像 ──
-    pendingFor(conversationId: string): PendingQueueItem[] {
-      return this.pendingQueues[conversationId] ?? []
-    },
-    pushPending(conversationId: string, item: PendingQueueItem) {
-      if (!this.pendingQueues[conversationId]) this.pendingQueues[conversationId] = []
-      this.pendingQueues[conversationId].push(item)
-      this.renumberPending(conversationId)
-    },
-    removePending(conversationId: string, taskId: string) {
-      const list = this.pendingQueues[conversationId]
-      if (!list) return
-      this.pendingQueues[conversationId] = list.filter((item) => item.taskId !== taskId)
-      this.renumberPending(conversationId)
-    },
-    renumberPending(conversationId: string) {
-      const list = this.pendingQueues[conversationId]
-      if (!list) return
-      list.forEach((item, index) => {
-        item.position = index + 1
-      })
-    },
-    nextQueuePosition(conversationId: string): number {
-      return (this.pendingQueues[conversationId]?.length ?? 0) + 1
-    },
-    /** 排队条目转为运行中：首个 SSE 帧到来时摘除镜像（后端已开始执行） */
+    /** queued→running 翻转守卫：daemon 端 FIFO 启动时 task.updated 首帧可
+     * 报 queued 状态（前端排队体验层已下架，但帧面守卫保留——勿误伤） */
     markRunActive(taskId: string) {
       const run = this.runs[taskId]
       if (!run || run.status !== 'queued') return
       run.status = 'running'
-      this.removePending(run.conversationId, taskId)
-    },
-    async cancelQueued(conversationId: string, taskId: string) {
-      const run = this.runs[taskId]
-      if (run && run.status === 'queued') {
-        run.status = 'cancelled'
-        run.finishedAt = Date.now()
-        run.elapsedMs = run.finishedAt - run.startedAt
-      }
-      // 本地先摘除（乐观）；后端移除失败（旧版/已开始）不阻塞 UI
-      this.removePending(conversationId, taskId)
-      try {
-        await getClient().chatQueueCancel({ conversation_id: conversationId, task_id: taskId })
-      } catch {
-        // 后端旧版不支持 / 条目已开始：SSE 帧会照常落到该 run，本地镜像已摘除即可
-      }
     },
     async sendUserMessage(
       conversationId: string,
       text: string,
       workspace?: string,
       attachments?: AttachmentItem[],
-      opts?: { queue?: boolean },
     ) {
       let effective = text
       if (attachments && attachments.length > 0) {
@@ -295,21 +251,6 @@ export const useMessageStore = defineStore('message', {
       )
       const clientTaskId = `t-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 6)}`
       this.ensureRun(clientTaskId, conversationId)
-      // 批0 消息排队：本会话已有活跃轮次 → 乐观标记 queued 并入镜像
-      // （后端 chat.queue 权威判定；ack 后回填权威位置，SSE 首帧到来摘除）
-      const otherActive = this.activeRuns(conversationId).some(
-        (run) => run.taskId !== clientTaskId,
-      )
-      if (otherActive) {
-        const run = this.runs[clientTaskId]
-        if (run) run.status = 'queued'
-        this.pushPending(conversationId, {
-          taskId: clientTaskId,
-          text,
-          position: this.nextQueuePosition(conversationId),
-          queuedAt: Date.now(),
-        })
-      }
       try {
         // DEBT-284 口径B 预防性钉桩（裁1020）：发送路径禁 per-task
         // subscribe——main.ts 的 SseReconnect 已用 task_id='*'
@@ -324,7 +265,6 @@ export const useMessageStore = defineStore('message', {
           conversation_id: conversationId,
           client_task_id: clientTaskId,
           ...(workspace ? { workspace } : {}),
-          ...(opts?.queue ? { queue: true } : {}),
         })
         if (result.task_id && result.task_id !== clientTaskId) {
           const run = this.runs[clientTaskId]
@@ -333,37 +273,6 @@ export const useMessageStore = defineStore('message', {
             run.taskId = result.task_id
             this.runs[result.task_id] = run
           }
-          // 队列镜像条目同步迁移 taskId
-          const entry = this.pendingQueues[conversationId]?.find(
-            (item) => item.taskId === clientTaskId,
-          )
-          if (entry) entry.taskId = result.task_id
-        }
-        const actualTaskId = result.task_id || clientTaskId
-        if (result.queued) {
-          const run = this.runs[actualTaskId]
-          if (run) run.status = 'queued'
-          if (typeof result.position === 'number') {
-            const entry = this.pendingQueues[conversationId]?.find(
-              (item) => item.taskId === actualTaskId,
-            )
-            if (entry) {
-              entry.position = result.position
-              this.renumberPending(conversationId)
-            } else {
-              this.pushPending(conversationId, {
-                taskId: actualTaskId,
-                text,
-                position: result.position,
-                queuedAt: Date.now(),
-              })
-            }
-          }
-        } else {
-          // 竞态已消解（上一轮恰好结束）：后端直接开跑 → 摘除镜像
-          this.removePending(conversationId, actualTaskId)
-          const run = this.runs[actualTaskId]
-          if (run && run.status === 'queued') run.status = 'running'
         }
       } catch (error) {
         const run = this.runs[clientTaskId]
@@ -373,7 +282,6 @@ export const useMessageStore = defineStore('message', {
           run.finishedAt = Date.now()
           run.elapsedMs = run.finishedAt - run.startedAt
         }
-        this.removePending(conversationId, clientTaskId)
         await this.push(
           conversationId,
           makeMessage(conversationId, 'status', mapped.detail, {
@@ -416,6 +324,18 @@ export const useMessageStore = defineStore('message', {
       this.flushRun(taskId)
       const run = this.runs[taskId]
       if (!run || run.status !== 'running') return
+      // MSG-2318 A-2：停止键接 task.cancel——复用 chatQueueCancel
+      // （index.ts 2311 已映射 task.cancel 真径）；本地清面照留；
+      // 请求失败留痕不扰本地（cancelled 守卫已挡后续帧，daemon 侧自然收束）
+      if (run.conversationId) {
+        void getClient()
+          .chatQueueCancel({ conversation_id: run.conversationId, task_id: taskId })
+          .catch(() =>
+            console.warn(
+              '[baiz] stopRun 取消请求失败——本地已停止，daemon 侧若仍在跑将自然收束',
+            ),
+          )
+      }
       run.status = 'cancelled'
       run.finishedAt = Date.now()
       run.elapsedMs = run.finishedAt - run.startedAt

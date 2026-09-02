@@ -37,14 +37,6 @@ export interface UsageCost {
   costUsd: number
 }
 
-/** 批0 消息排队：会话内待执行 FIFO 条目（Codex 双输入模式——Tab 排队 / 运行中自动入队） */
-export interface PendingQueueItem {
-  taskId: string
-  text: string
-  position: number
-  queuedAt: number
-}
-
 export interface MessageMeta {
   taskId?: string
   callId?: string

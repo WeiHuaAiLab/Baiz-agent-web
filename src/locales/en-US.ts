@@ -58,14 +58,6 @@ export default {
     thinking: 'Thinking',
     toolCall: 'Tool',
     toolResult: 'Result',
-    queue: {
-      title: 'queued',
-      more: 'Queue actions',
-      add: 'Add to queue',
-      runNow: 'Run now',
-      edit: 'Edit',
-      remove: 'Remove from queue',
-    },
   },
   files: {
     title: 'Files',

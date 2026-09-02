@@ -57,6 +57,12 @@ export function routeFrame(frame: SseFrame, messages: MessageStore, approvals: A
     case 'message':
       messages.onRawMessage(data as never)
       break
+    // MSG-2318 A-1：brief.ready 补 case（daemon 13 变体之缺路由——
+    // 载荷 brief_id；store 读面无专 handler 且 on* 族零动，落留痕径
+    // 零丢帧，语义消费候二期）
+    case 'brief.ready':
+      console.debug('[baiz] brief.ready', data)
+      break
     default:
       console.debug('[baiz] unhandled event', frame.event)
   }

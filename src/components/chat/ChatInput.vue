@@ -23,7 +23,6 @@ import {
     commandRiskFlag,
     translateCommand,
 } from "../../utils/commandTranslator";
-import type { PendingQueueItem } from "../../models";
 import Icon from "../common/Icon.vue";
 import TaskForm from "../common/TaskForm.vue";
 
@@ -85,9 +84,6 @@ const speechSupported =
 const activeId = computed(() => session.activeId);
 const streamingRuns = computed(() => messages.activeRuns(activeId.value));
 const runningRun = computed(() => streamingRuns.value[0] ?? null);
-// 批0 消息排队（Codex 双输入模式）：会话内待执行 FIFO 镜像 + 忙时判断
-const pendingQueue = computed(() => messages.pendingFor(activeId.value));
-const queueBusy = computed(() => streamingRuns.value.length > 0);
 // 批0 成本小字：当前会话最近一次完成的 run 的 usage 账
 const lastUsage = computed(() => {
     const cid = activeId.value;
@@ -190,24 +186,13 @@ function stopVoice() {
     listening.value = false;
 }
 
-function send(mode: "enter" | "queue" = "enter") {
+function send() {
     const trimmed = input.value.trim();
     if (!trimmed) return;
-    if (queueBusy.value) {
-        const pos = messages.nextQueuePosition(activeId.value);
-        if (mode === "enter") {
-            ui.toast(
-                `当前轮还在运行，消息已排入队列（第 ${pos} 位）——2.0 将支持 Enter 直接注入当前轮`,
-                "info",
-            );
-        } else {
-            ui.toast(`已排入下一轮队列（第 ${pos} 位），可随时取消`, "info");
-        }
-    }
-    sendWith(trimmed, mode === "queue" ? { queue: true } : undefined);
+    sendWith(trimmed);
 }
 
-function sendWith(text: string, opts?: { queue?: boolean }) {
+function sendWith(text: string) {
     const trimmed = text.trim();
     if (!trimmed) return;
     const attachments = [...files.attachments];
@@ -216,7 +201,6 @@ function sendWith(text: string, opts?: { queue?: boolean }) {
         trimmed,
         settings.activeWorkspace || undefined,
         attachments,
-        opts,
     );
     void files.clearAttachments();
     void session.touch(activeId.value);
@@ -225,33 +209,9 @@ function sendWith(text: string, opts?: { queue?: boolean }) {
     emit("submitted");
 }
 
-/** Enter：发送（忙碌时自动排队；2.0 支持直接注入当前轮） */
+/** Enter：发送 */
 function onEnter() {
-    send("enter");
-}
-
-/** Tab：显式排入下一轮 FIFO 队列 */
-function onTabQueue() {
-    send("queue");
-}
-
-/** 立即执行：从队列移除该项并立刻发送（若当前在跑则 sendUserMessage 自动入队） */
-function runQueuedNow(item: PendingQueueItem) {
-    const text = item.text;
-    void messages.cancelQueued(activeId.value, item.taskId);
-    if (text.trim()) sendWith(text);
-}
-
-/** 编辑：从队列移除该项，把文字回填到输入框供修改 */
-function editQueued(item: PendingQueueItem) {
-    const text = item.text;
-    void messages.cancelQueued(activeId.value, item.taskId);
-    input.value = text;
-}
-
-/** 移除：从队列移除该项（不发送） */
-function removeQueued(item: PendingQueueItem) {
-    void messages.cancelQueued(activeId.value, item.taskId);
+    send();
 }
 
 function stopCurrent() {
@@ -349,7 +309,6 @@ watch(
                     class="input-area"
                     :placeholder="t('chat.placeholder')"
                     @keydown.enter.exact.prevent="onEnter"
-                    @keydown.tab.prevent="onTabQueue"
                 />
             </div>
 
@@ -360,75 +319,6 @@ watch(
                 <span v-if="commandRisk" class="xp-cmd-risk">{{
                     commandRisk
                 }}</span>
-            </div>
-
-            <!-- 批0 消息排队：Codex 双输入模式——Enter 发送/注入、Tab 排队；运行中自动入队 -->
-            <div v-if="pendingQueue.length" class="xp-queue-bar">
-                <div class="xp-queue-head">
-                    <span class="xp-queue-title">
-                        <Icon name="list" :size="13" />
-                        <span
-                            >{{ pendingQueue.length }}
-                            {{ t("chat.queue.title") }}</span
-                        >
-                    </span>
-                    <span class="xp-queue-head-actions">
-                        <button
-                            type="button"
-                            class="xp-queue-icon-btn"
-                            :title="t('chat.queue.more')"
-                            @click.stop
-                        >
-                            <Icon name="more" :size="14" />
-                        </button>
-                        <button
-                            type="button"
-                            class="xp-queue-icon-btn"
-                            :title="t('chat.queue.add')"
-                            @click.stop
-                        >
-                            <Icon name="plus" :size="14" />
-                        </button>
-                    </span>
-                </div>
-                <ul class="xp-queue-list">
-                    <li
-                        v-for="item in pendingQueue"
-                        :key="item.taskId"
-                        class="xp-queue-row"
-                    >
-                        <span class="xp-queue-pos">{{ item.position }}</span>
-                        <span class="xp-queue-text" :title="item.text">{{
-                            item.text
-                        }}</span>
-                        <span class="xp-queue-row-actions">
-                            <button
-                                type="button"
-                                class="xp-queue-icon-btn"
-                                :title="t('chat.queue.runNow')"
-                                @click.stop="runQueuedNow(item)"
-                            >
-                                <Icon name="enter" :size="13" />
-                            </button>
-                            <button
-                                type="button"
-                                class="xp-queue-icon-btn"
-                                :title="t('chat.queue.edit')"
-                                @click.stop="editQueued(item)"
-                            >
-                                <Icon name="pen" :size="13" />
-                            </button>
-                            <button
-                                type="button"
-                                class="xp-queue-icon-btn danger"
-                                :title="t('chat.queue.remove')"
-                                @click.stop="removeQueued(item)"
-                            >
-                                <Icon name="trash" :size="13" />
-                            </button>
-                        </span>
-                    </li>
-                </ul>
             </div>
 
             <!-- 操作功能区：+（项目菜单）/ 语音 / 发送 -->
@@ -477,14 +367,8 @@ watch(
                 </button>
             </div>
 
-            <!-- 批0 输入模式提示：Enter 发送 · Tab 排队 -->
             <div class="composer-hint">
                 <span>Enter 发送</span>
-                <span class="hint-dot">·</span>
-                <span>Tab 排队</span>
-                <span v-if="queueBusy" class="hint-busy"
-                    >· 当前轮运行中，新消息自动排队</span
-                >
             </div>
 
             <span v-if="voiceHint" class="voice-hint">{{
