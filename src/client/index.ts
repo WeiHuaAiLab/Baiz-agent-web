@@ -5,6 +5,8 @@ import type { SseFrame } from './sse'
 import type {
   A2aStatusResult,
   AuthHandshakeParams,
+  AuthLoginParams,
+  AuthLoginResult,
   AuthHandshakeResult,
   ChatSendParams,
   ChatSendResult,
@@ -25,6 +27,7 @@ export interface BaizClient {
   chatQueueCancel(params: ChatQueueCancelParams): Promise<ChatQueueCancelResult>
   permissionPending(): Promise<{ pending: PendingApproval[] }>
   permissionRespond(params: PermissionRespondParams): Promise<{ resolved: boolean; status: string }>
+  authLogin(params: AuthLoginParams): Promise<AuthLoginResult>
   a2aStatus(): Promise<A2aStatusResult>
   onEvent(handler: (frame: SseFrame) => void): () => void
   close(): void
@@ -46,6 +49,7 @@ export function createClient(transport: RpcTransport): BaizClient {
       return rpc.call('event.subscribe', params)
     },
     provideKey: (key) => rpc.call('auth.provide_key', { key }),
+    authLogin: (params) => rpc.call('auth.login', params),
     chatSend: (params) => rpc.call('chat.send', params),
     chatQueueCancel: (params) => rpc.call('chat.queue_cancel', params),
     permissionPending: () => rpc.call('permission.pending'),

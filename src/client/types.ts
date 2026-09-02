@@ -12,6 +12,18 @@ export interface AuthHandshakeResult {
   server_time: string
 }
 
+// MSG-2287 备胎计划：登录对接（auth.login——daemon 侧 DEBT-398 已落库）
+export interface AuthLoginParams {
+  email: string
+  password: string
+}
+
+export interface AuthLoginResult {
+  session_token: string
+  user_id: string
+  provider: string
+}
+
 export interface EventSubscribeParams {
   task_id: string
   last_event_id?: number
