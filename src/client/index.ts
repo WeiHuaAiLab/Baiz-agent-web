@@ -51,7 +51,9 @@ export function createClient(transport: RpcTransport): BaizClient {
     provideKey: (key) => rpc.call('auth.provide_key', { key }),
     authLogin: (params) => rpc.call('auth.login', params),
     chatSend: (params) => rpc.call('chat.send', params),
-    chatQueueCancel: (params) => rpc.call('chat.queue_cancel', params),
+    // MSG-2311 映射修：daemon 路由表零 chat.queue_cancel、task.cancel
+    // 在案（找茬/试刀双擒）——语义对卯（取消在途任务）改映射
+    chatQueueCancel: (params) => rpc.call('task.cancel', { task_id: params.task_id }),
     permissionPending: () => rpc.call('permission.pending'),
     permissionRespond: (params) => rpc.call('permission.respond', params),
     a2aStatus: () => rpc.call('a2a.status'),

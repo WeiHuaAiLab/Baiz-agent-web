@@ -51,8 +51,16 @@ export const useAuthStore = defineStore("auth", {
           /* storage 不可用仅失持久，不阻断登录态 */
         }
         return true;
-      } catch {
-        this.error = "登录失败，请检查账号密码";
+      } catch (e) {
+        // MSG-2311 吞错面修：真 error 词透出上屏——剥 RPC 前缀得
+        // daemon 安全词（body.message 已通用化）；mock 内部语/口令/
+        // token/密钥类勿上屏回落通用词
+        const raw = e instanceof Error ? e.message : String(e);
+        const detail = raw.replace(/^RPC -?\d+: /, '');
+        this.error =
+          detail && !/mock|password|token|secret|key/i.test(detail)
+            ? detail
+            : '登录失败，请检查账号密码';
         return false;
       } finally {
         this.loading = false;
