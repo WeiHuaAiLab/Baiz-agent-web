@@ -19,6 +19,8 @@ const router = useRouter()
 const messages = useMessageStore()
 
 const showTrace = ref(false)
+// MSG-2413 思考过程折叠块：run.reasoning 累积渲染——WorkBuddy 式可折叠「深度思考」
+const showReasoning = ref(false)
 const copied = ref(false)
 
 const run = computed(() =>
@@ -101,6 +103,21 @@ function goSettings() {
           <Icon name="trash" :size="14" />
         </button>
       </div>
+    </div>
+
+    <!-- MSG-2413 思考过程折叠块：有 reasoning 即现形（流式累积照渲），默认收起 -->
+    <div v-if="run?.reasoning" class="reasoning-block">
+      <button
+        type="button"
+        class="reasoning-head"
+        :class="{ open: showReasoning }"
+        @click="showReasoning = !showReasoning"
+      >
+        <span class="reasoning-dots">⋯</span>
+        <span>{{ t('chat.deepThink') }}</span>
+        <span class="reasoning-toggle">{{ showReasoning ? '▾' : '▸' }}</span>
+      </button>
+      <div v-if="showReasoning" class="reasoning-body">{{ run.reasoning }}</div>
     </div>
 
     <MarkdownView

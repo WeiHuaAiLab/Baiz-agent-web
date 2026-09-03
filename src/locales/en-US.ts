@@ -56,6 +56,7 @@ export default {
     renamePrompt: 'Conversation name',
     noOutput: '(no output)',
     thinking: 'Thinking',
+    deepThink: 'Deep think',
     toolCall: 'Tool',
     toolResult: 'Result',
   },

@@ -5,6 +5,7 @@ import type { ChatMessage } from '../../models'
 import { useWorkingTreeStore } from '../../stores/workingTree'
 import { diffStats } from '../../utils/diff'
 import { translateTool } from '../../utils/commandTranslator'
+import { extractFilePath, extractShellCommand, extractUrl } from '../../utils/traceText'
 import Icon from '../common/Icon.vue'
 
 const props = defineProps<{ message: ChatMessage }>()
@@ -14,17 +15,15 @@ const running = computed(() => props.message.meta?.success === undefined)
 // 批0 命令翻译：工具调用行的人话说明
 const toolHuman = computed(() => translateTool(props.message.meta?.toolName ?? '', props.message.meta?.success))
 
-const filePath = computed(() => {
-  const args = props.message.meta?.argsPreview
-  if (!args) return ''
-  try {
-    const parsed = JSON.parse(args) as { path?: string }
-    return typeof parsed.path === 'string' ? parsed.path : ''
-  } catch {
-    return ''
-  }
-})
-const isFileTool = computed(() => /^(fs\.|code\.)/.test(props.message.meta?.toolName ?? ''))
+// MSG-2413 执行行现形：shell 命令 / 文件路径 / URL——跑了什么、碰了哪些文件逐项现形
+const filePath = computed(() => extractFilePath(props.message.meta?.argsPreview))
+const shellCommand = computed(() => extractShellCommand(props.message.meta?.argsPreview))
+const toolUrl = computed(() => extractUrl(props.message.meta?.argsPreview))
+// 双族归一（架构铁律3：下划线族为规范名）：fs_read/fs_write/code_edit 等
+// 下划线族与点号兼容别名俱收——文件引用现形不漏生产径
+const isFileTool = computed(() =>
+  /^(fs\.|code\.|fs_|code_|read_file)/.test(props.message.meta?.toolName ?? ''),
+)
 const refStats = computed(() => {
   const file = working.files[filePath.value]
   if (!file) return null
@@ -44,6 +43,9 @@ function openFile() {
       <span v-if="message.text" class="tool-preview">{{ message.text }}</span>
       <span class="tool-toggle">{{ open ? '▾' : '▸' }}</span>
     </div>
+    <!-- MSG-2413 执行行：shell 命令 / URL——跑了什么现形（文件路径在下 file-ref 区） -->
+    <code v-if="shellCommand" class="tool-cmd">$ {{ shellCommand }}</code>
+    <code v-else-if="toolUrl" class="tool-cmd">↗ {{ toolUrl }}</code>
     <div v-if="isFileTool && filePath" class="file-ref" @click.stop="openFile">
       <Icon name="copy" :size="12" />
       <span class="file-ref-path">{{ filePath }}</span>

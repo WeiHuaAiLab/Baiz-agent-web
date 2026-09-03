@@ -56,6 +56,7 @@ export default {
     renamePrompt: '会话名称',
     noOutput: '（无输出）',
     thinking: '思考',
+    deepThink: '深度思考',
     toolCall: '调用工具',
     toolResult: '工具结果',
   },
