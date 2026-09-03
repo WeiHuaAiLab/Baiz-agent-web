@@ -1,6 +1,6 @@
 export default {
   app: { title: 'baiz' },
-  nav: { chat: '聊天', workspace: '工作区', tools: '工具', skills: '技能', tasks: '任务', settings: '设置' },
+  nav: { chat: '聊天', workspace: '工作区', tools: '工具', skills: '技能', tasks: '任务', settings: '设置', wechat: '微信消息' },
   chat: {
     placeholder: '输入问题…',
     send: '发送',
@@ -59,6 +59,13 @@ export default {
     deepThink: '深度思考',
     toolCall: '调用工具',
     toolResult: '工具结果',
+  },
+  wechat: {
+    tokenPlaceholder: '验签 token（可选——老板直注）',
+    reloadAll: '重新加载',
+    refreshNew: '刷新',
+    loading: '加载中…',
+    empty: '暂无归档消息',
   },
   files: {
     title: '文件',

@@ -19,6 +19,11 @@ function goSettings() {
   void router.push('/settings')
 }
 
+// MSG-2418 甲：微信归档消息展示页入口
+function goWechat() {
+  void router.push('/wechat')
+}
+
 function openFeedback() {
   showFeedback.value = true
   feedbackSent.value = false
@@ -41,6 +46,10 @@ function sendFeedback() {
       <button type="button" @click="goSettings">
         <Icon name="settings" :size="14" />
         <span>{{ t('nav.settings') }}</span>
+      </button>
+      <button type="button" @click="goWechat">
+        <Icon name="chat" :size="14" />
+        <span>{{ t('nav.wechat') }}</span>
       </button>
       <button type="button" @click="openFeedback">
         <Icon name="feedback" :size="14" />

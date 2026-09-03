@@ -20,6 +20,12 @@ export const router = createRouter({
       component: () => import('../components/settings/SettingsView.vue'),
     },
     {
+      // MSG-2418 甲：微信归档消息展示页（登录闸内——消息内容鉴权面）
+      path: '/wechat',
+      name: 'wechat',
+      component: () => import('../components/wechat/WechatView.vue'),
+    },
+    {
       path: '/working',
       name: 'working',
       component: () => import('../components/working/WorkingView.vue'),
