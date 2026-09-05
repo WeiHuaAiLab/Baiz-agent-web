@@ -1,5 +1,5 @@
 import { RpcError, RPC_ERROR_CODES } from './rpc'
-import type { RpcTransport } from './transport'
+import type { ResyncInfo, RpcTransport } from './transport'
 import type { SseFrame } from './sse'
 import type { EventSubscribeParams, EventSubscribeResult } from './types'
 
@@ -38,6 +38,7 @@ export class SseReconnect {
   private stopped = false
   private unsubscribeEvents: (() => void) | undefined
   private unsubscribeDisconnect: (() => void) | undefined
+  private unsubscribeResync: (() => void) | undefined
   private readonly heartbeatTimeoutMs: number
   private readonly retryDelayMs: number
   private readonly maxRetryDelayMs: number
@@ -55,6 +56,9 @@ export class SseReconnect {
     this.unsubscribeEvents = this.options.transport.onEvent((frame) => this.onFrame(frame))
     this.unsubscribeDisconnect =
       this.options.transport.onDisconnect?.(() => this.scheduleReconnect()) ?? (() => {})
+    // MSG-2604 修面：resync 上达（壳 daemon://resync）→ 自窗头续订（勿丢在飞尾帧）
+    this.unsubscribeResync =
+      this.options.transport.onResync?.((info) => void this.handleResyncInfo(info)) ?? (() => {})
     return this.connectOnce()
   }
 
@@ -78,8 +82,10 @@ export class SseReconnect {
     }
     this.unsubscribeEvents?.()
     this.unsubscribeDisconnect?.()
+    this.unsubscribeResync?.()
     this.unsubscribeEvents = undefined
     this.unsubscribeDisconnect = undefined
+    this.unsubscribeResync = undefined
     this.options.transport.close()
   }
 
@@ -130,22 +136,35 @@ export class SseReconnect {
     }
   }
 
-  private async handleResync(error: RpcError): Promise<void> {
-    const data = (error.data ?? {}) as { oldest_seq?: number; latest_seq?: number }
-    this.latestSeq = 0
-    this.options.onResyncRequired?.({
-      oldest_seq: data.oldest_seq ?? 0,
-      latest_seq: data.latest_seq ?? 0,
-    })
+  /**
+   * MSG-2604 修面二（根因：resync jump-to-latest 永久丢在飞任务尾帧——长
+   * 生成滑出 ring 窗后重连即卡态）：resync 自窗头（oldest_seq）续订——在飞
+   * 任务续帧（窗头..当前）经回放达路由续跑（id>旧订阅基线者非 stale 照达）；
+   * consumeBase 保留旧基线不覆写——窗头..旧基线区间已出环不可追回、若达亦按
+   * stale 弃（勿重复消费）。http 径（RpcError）与壳径（daemon://resync）共用。
+   */
+  private async handleResyncInfo(info: ResyncInfo): Promise<void> {
+    this.options.onResyncRequired?.(info)
     this.setState('resync')
     try {
-      await this.subscribeOnce()
+      const params: EventSubscribeParams = { task_id: this.options.taskId }
+      // daemon events_since(last_event_id)：自窗头回放需 last_event_id=oldest-1
+      if (info.oldest_seq > 0) params.last_event_id = info.oldest_seq - 1
+      await this.options.subscribe(params)
       this.attempts = 0
       this.setState('connected')
       this.armWatchdog()
     } catch {
       this.scheduleReconnect()
     }
+  }
+
+  private async handleResync(error: RpcError): Promise<void> {
+    const data = (error.data ?? {}) as Partial<ResyncInfo>
+    await this.handleResyncInfo({
+      oldest_seq: data.oldest_seq ?? 0,
+      latest_seq: data.latest_seq ?? 0,
+    })
   }
 
   private scheduleReconnect(): void {

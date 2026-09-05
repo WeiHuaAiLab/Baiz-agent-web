@@ -1,7 +1,7 @@
 // Tauri 传输：invoke proxy_rpc + 事件通道 daemon://frame（Rust 壳实现后启用）。
 import { RpcError } from '../rpc'
 import type { RpcRequest } from '../rpc'
-import type { RpcTransport } from '../transport'
+import type { ResyncInfo, RpcTransport } from '../transport'
 import type { SseFrame } from '../sse'
 import { createMockTransport } from './mock'
 import { demoHandle } from '../../demo/script'
@@ -17,8 +17,10 @@ interface TauriInvokeError {
 function createRealTauriTransport(): RpcTransport {
   const handlers = new Set<(frame: SseFrame) => void>()
   const disconnectHandlers = new Set<() => void>()
+  const resyncHandlers = new Set<(info: ResyncInfo) => void>()
   let unlisten: (() => void) | null = null
   let unlistenDisconnect: (() => void) | null = null
+  let unlistenResync: (() => void) | null = null
 
   return {
     kind: 'tauri',
@@ -31,6 +33,11 @@ function createRealTauriTransport(): RpcTransport {
       // 前端即时触发重连（SseReconnect.onDisconnect），不再等 90s 看门狗。
       unlistenDisconnect = await listen<void>('daemon://disconnect', () => {
         disconnectHandlers.forEach((handler) => handler())
+      })
+      // MSG-2604 修面一：订阅基线出窗（resync_required）——壳显式
+      // daemon://resync 上达（oldest/latest）——前端自窗头续订勿丢在飞尾帧
+      unlistenResync = await listen<ResyncInfo>('daemon://resync', (event) => {
+        resyncHandlers.forEach((handler) => handler(event.payload))
       })
       // DEBT-277（裁1015①）：connect 不再空订阅（红1：空 task_id 订阅
       // 必败且败相静默）——订阅由 subscribe(taskId) 按发送轮先行建立
@@ -63,11 +70,19 @@ function createRealTauriTransport(): RpcTransport {
         disconnectHandlers.delete(handler)
       }
     },
+    onResync(handler) {
+      resyncHandlers.add(handler)
+      return () => {
+        resyncHandlers.delete(handler)
+      }
+    },
     close() {
       unlisten?.()
       unlisten = null
       unlistenDisconnect?.()
       unlistenDisconnect = null
+      unlistenResync?.()
+      unlistenResync = null
     },
   }
 }
@@ -76,6 +91,7 @@ function createRealTauriTransport(): RpcTransport {
 export function createTauriTransport(): RpcTransport {
   const handlers = new Set<(frame: SseFrame) => void>()
   const disconnectHandlers = new Set<() => void>()
+  const resyncHandlers = new Set<(info: ResyncInfo) => void>()
   let real: RpcTransport | null = null
   let mode: 'tauri' | 'mock' = 'tauri'
   const mock = createMockTransport({ handle: demoHandle, frameDelayMs: 50 })
@@ -101,6 +117,7 @@ export function createTauriTransport(): RpcTransport {
           const tauri = createRealTauriTransport()
           tauri.onEvent((frame) => handlers.forEach((handler) => handler(frame)))
           tauri.onDisconnect?.(() => disconnectHandlers.forEach((handler) => handler()))
+          tauri.onResync?.((info) => resyncHandlers.forEach((handler) => handler(info)))
           real = tauri
         }
         await real.connect()
@@ -135,6 +152,12 @@ export function createTauriTransport(): RpcTransport {
       disconnectHandlers.add(handler)
       return () => {
         disconnectHandlers.delete(handler)
+      }
+    },
+    onResync(handler) {
+      resyncHandlers.add(handler)
+      return () => {
+        resyncHandlers.delete(handler)
       }
     },
     close() {

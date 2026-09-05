@@ -17,5 +17,13 @@ export interface RpcTransport {
   request(req: RpcRequest): Promise<unknown>
   onEvent(handler: (frame: SseFrame) => void): () => void
   onDisconnect?(handler: () => void): () => void
+  /** MSG-2604 修面：resync_required 上达（订阅基线出窗 daemon 拒续订）——信息供自窗头续订 */
+  onResync?(handler: (info: ResyncInfo) => void): () => void
   close(): void
+}
+
+/** MSG-2604：resync 信息（与 daemon resync_required error.data 同形） */
+export interface ResyncInfo {
+  oldest_seq: number
+  latest_seq: number
 }

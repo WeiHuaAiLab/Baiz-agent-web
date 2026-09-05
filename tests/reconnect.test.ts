@@ -60,7 +60,7 @@ describe('SseReconnect', () => {
     reconnect.stop()
   })
 
-  it('RESYNC_REQUIRED 触发全量重同步（清空 last_event_id）', async () => {
+  it('RESYNC_REQUIRED 触发窗头续订（MSG-2604 换代——勿清空跳最新丢在飞尾帧）', async () => {
     const transport = createMockTransport()
     const calls: EventSubscribeParams[] = []
     let failFirst = true
@@ -91,7 +91,10 @@ describe('SseReconnect', () => {
     await reconnect.start()
     expect(resyncInfo).toEqual({ oldest_seq: 1, latest_seq: 50 })
     expect(calls).toHaveLength(2)
-    expect(calls[1]).toEqual({ task_id: '*' })
+    // 修面二：窗头续订——daemon events_since(last_event_id) 自 oldest 回放
+    // 需 last_event_id=oldest-1=0（全窗回放——在飞尾帧可追；consumeBase
+    // 旧基线保留 stale 弃帧照旧）
+    expect(calls[1]).toEqual({ task_id: '*', last_event_id: 0 })
     expect(states).toContain('resync')
 
     reconnect.stop()
