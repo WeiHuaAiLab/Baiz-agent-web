@@ -43,7 +43,13 @@ export class RpcError extends Error {
   readonly data?: unknown
 
   constructor(body: RpcErrorBody) {
-    super(`RPC ${body.code}: ${body.message}`)
+    // MSG-2581 修①b：invoke 拒错误形（tauri 层）code/message 可缺省——
+    // 兜底可读文案（「RPC undefined」零现钉——2567 修前缺注册时现）
+    super(
+      typeof body.code === 'number' && body.message
+        ? `RPC ${body.code}: ${body.message}`
+        : body.message || 'RPC 调用失败（未知错误）',
+    )
     this.name = 'RpcError'
     this.code = body.code
     this.data = body.data

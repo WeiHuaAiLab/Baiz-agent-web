@@ -104,17 +104,20 @@ async function submitCreateFromComposer() {
   const projectId = pickedProjectId.value || undefined
   if (ui.createMode === 'session') {
     const id = await session.create(text, projectId)
-    // 输入内容直接作为会话的第一条用户消息发送并触发 AI 回复，
-    // 而不是只创建一个空会话。与 ChatInput.sendWith 保持同源逻辑（含附件/工作区）。
+    // MSG-2581 修④：closeCreate 先行（创建确认即时关弹层——跳转不卡）——
+    // 首条消息发送降耦（void 后台化——勿 await 阻塞；与 ChatInput.sendWith
+    // 同源逻辑——发送态由消息流内自现）
+    input.value = ''
+    ui.closeCreate()
     const attachments = [...files.attachments]
-    await messages.sendUserMessage(id, text, settings.activeWorkspace || undefined, attachments)
+    void messages.sendUserMessage(id, text, settings.activeWorkspace || undefined, attachments)
     void files.clearAttachments()
     void session.touch(id)
   } else if (ui.createMode === 'task') {
     workspace.addPlainTask(text, '', projectId)
+    input.value = ''
+    ui.closeCreate()
   }
-  input.value = ''
-  ui.closeCreate()
 }
 </script>
 

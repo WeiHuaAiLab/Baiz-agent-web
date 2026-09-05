@@ -616,6 +616,42 @@ export const useMessageStore = defineStore('message', {
       this.flushRun(data.task_id)
       this.markRunActive(data.task_id)
       const run = this.runs[data.task_id]
+      // MSG-2581 修①a：取消帧识别——主动停止（stopRun 已置 cancelled）后
+      // daemon 自然收束 error 帧（request cancelled）——中性终态已在
+      // stopRun「（已停止）」呈现——勿覆 failed 勿红条勿「任务错误」
+      if (run?.status === 'cancelled') return
+      // 帧面 cancelled 兜底（run 未置但帧明示取消——同中性处理：
+      // assistant 尾补「（已停止）」——非红条）
+      if (/cancelled/i.test(data.message)) {
+        if (run) {
+          run.status = 'cancelled'
+          run.finishedAt = Date.now()
+          run.elapsedMs = run.finishedAt - run.startedAt
+        }
+        const cid = this.conversationOf(data.task_id)
+        if (cid) {
+          const msg = this.byConversation[cid]?.find(
+            (item) => item.meta?.taskId === data.task_id && item.kind === 'assistant',
+          )
+          if (msg) {
+            msg.text = `${msg.text ?? ''}
+
+（已停止）`
+            msg.meta = { ...msg.meta, streaming: false, status: 'cancelled' }
+          } else {
+            void this.push(
+              cid,
+              makeMessage(cid, 'assistant', '（已停止）', {
+                taskId: data.task_id,
+                streaming: false,
+                status: 'cancelled',
+              }),
+            )
+          }
+        }
+        this.trimRuns()
+        return
+      }
       if (run) {
         run.status = 'failed'
         run.finishedAt = Date.now()

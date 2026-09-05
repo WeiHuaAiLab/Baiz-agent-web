@@ -51,7 +51,8 @@ function toggleSearch() {
 
 <template>
   <section class="side-section">
-    <button type="button" class="menu-item" @click="newSession">
+    <!-- MSG-2581 修④：新建钮 aria-label 显式化（可及/自动化定位面） -->
+    <button type="button" class="menu-item" :aria-label="t('chat.newSession')" @click="newSession">
       <Icon name="chat" :size="15" />
       <span>{{ t('chat.newSession') }}</span>
     </button>
