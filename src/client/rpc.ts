@@ -42,17 +42,26 @@ export class RpcError extends Error {
   readonly code: number
   readonly data?: unknown
 
-  constructor(body: RpcErrorBody) {
+  constructor(body: RpcErrorBody | string | null | undefined) {
     // MSG-2581 修①b：invoke 拒错误形（tauri 层）code/message 可缺省——
-    // 兜底可读文案（「RPC undefined」零现钉——2567 修前缺注册时现）
-    super(
-      typeof body.code === 'number' && body.message
-        ? `RPC ${body.code}: ${body.message}`
-        : body.message || 'RPC 调用失败（未知错误）',
-    )
+    // 兜底可读文案（「RPC undefined」零现钉——2567 修前缺注册时现）。
+    // MSG-2609 修面二：壳 Err(String) reject 实底为裸串（tauri 命令错误
+    // 直传）——旧径按对象读则串体 message 落通用兜底——真因（中止/超时/
+    // 拒连）恒不可见「未知错误」——串体直用原文（可辨——勿拼 RPC 前缀
+    // 勿现 undefined 裸串——钉恒勿破）。
+    const obj = typeof body === 'string' ? null : body
+    let message: string
+    if (typeof body === 'string') {
+      message = body
+    } else if (obj && typeof obj.code === 'number' && obj.message) {
+      message = `RPC ${obj.code}: ${obj.message}`
+    } else {
+      message = obj?.message || 'RPC 调用失败（未知错误）'
+    }
+    super(message)
     this.name = 'RpcError'
-    this.code = body.code
-    this.data = body.data
+    this.code = (obj?.code ?? undefined) as number
+    this.data = obj?.data
   }
 }
 

@@ -46,10 +46,12 @@ function createRealTauriTransport(): RpcTransport {
       const { invoke } = await import('@tauri-apps/api/core')
       await invoke('proxy_subscribe', { taskId, lastEventId })
     },
-    async abort() {
-      const { invoke } = await import('@tauri-apps/api/core')
-      await invoke('proxy_abort').catch(() => undefined)
-    },
+    // MSG-2609 修面一：tauri 传输 abort 语义 no-op——壳 proxy_rpc 长 RPC
+    // （chat.send 600s 窗）在途时 reconnect 清场若 invoke proxy_abort 会经
+    // 壳单槽 rpc_abort 误杀长 RPC（假失败——用户见败实成：daemon 照跑至
+    // done——chat-7/8 实证 10053）；真停 run 走 stopRun→task.cancel RPC
+    // 径（勿经此处）；http 传输的 abort 清流语义由 http 实现自理。
+    async abort() {},
     async request(req: RpcRequest) {
       const { invoke } = await import('@tauri-apps/api/core')
       try {
