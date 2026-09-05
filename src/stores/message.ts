@@ -280,6 +280,11 @@ export const useMessageStore = defineStore('message', {
         }
       } catch (error) {
         const run = this.runs[clientTaskId]
+        // MSG-2608 修①收口：用户主动停止（stopRun 已置 cancelled——中性
+        // 终态「（已停止）」已现）——在途 chat.send RPC 随 daemon
+        // task.cancel 收束以错误回——勿覆 cancelled 勿落 sendFailed 红条
+        // （真失败径零波及——run 非 cancelled 照走下方红面）
+        if (run?.status === 'cancelled') return
         const mapped = mapRpcError(error)
         if (run) {
           run.status = 'failed'
