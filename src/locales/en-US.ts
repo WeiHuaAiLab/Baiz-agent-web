@@ -1,6 +1,6 @@
 export default {
   app: { title: 'baiz' },
-  nav: { chat: 'Chat', workspace: 'Workspace', tools: 'Tools', skills: 'Skills', tasks: 'Tasks', settings: 'Settings', wechat: 'WeChat Messages' },
+  nav: { chat: 'Chat', workspace: 'Workspace', tools: 'Tools', skills: 'Skills', tasks: 'Tasks', settings: 'Settings' },
   chat: {
     placeholder: 'Ask anything…',
     send: 'Send',
@@ -60,13 +60,6 @@ export default {
     deepThink: 'Deep think',
     toolCall: 'Tool',
     toolResult: 'Result',
-  },
-  wechat: {
-    tokenPlaceholder: 'WeChat token (optional)',
-    reloadAll: 'Reload',
-    refreshNew: 'Refresh',
-    loading: 'Loading…',
-    empty: 'No archived messages yet',
   },
   files: {
     title: 'Files',

@@ -1,6 +1,7 @@
 <script setup lang="ts">
 // 侧栏底部用户区：头像 + 用户名 + 悬浮菜单（设置/反馈），以及反馈弹窗。
 // 「关于」已并入设置页「关于」Tab（见 SystemCard.vue）。
+// MSG-2670：微信消息入口全件删（按钮/路由/视图/utils/locales——本地 HTML 径替代）。
 import { ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useRouter } from 'vue-router'
@@ -17,11 +18,6 @@ const feedbackSent = ref(false)
 
 function goSettings() {
   void router.push('/settings')
-}
-
-// MSG-2418 甲：微信归档消息展示页入口
-function goWechat() {
-  void router.push('/wechat')
 }
 
 function openFeedback() {
@@ -46,10 +42,6 @@ function sendFeedback() {
       <button type="button" @click="goSettings">
         <Icon name="settings" :size="14" />
         <span>{{ t('nav.settings') }}</span>
-      </button>
-      <button type="button" @click="goWechat">
-        <Icon name="chat" :size="14" />
-        <span>{{ t('nav.wechat') }}</span>
       </button>
       <button type="button" @click="openFeedback">
         <Icon name="feedback" :size="14" />
