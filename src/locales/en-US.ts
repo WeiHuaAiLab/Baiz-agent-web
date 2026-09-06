@@ -1,5 +1,5 @@
 export default {
-  app: { title: 'baiz' },
+  app: { title: 'Baiz Agent' },
   nav: { chat: 'Chat', workspace: 'Workspace', tools: 'Tools', skills: 'Skills', tasks: 'Tasks', settings: 'Settings' },
   chat: {
     placeholder: 'Ask anything…',
@@ -121,7 +121,7 @@ export default {
     taskName: 'Task name',
     namePlaceholder: 'e.g. Daily customer report',
     instruction: 'Instruction',
-    instructionPlaceholder: "Tell baiz what to do, e.g. summarize today's WeChat customers",
+    instructionPlaceholder: "Tell Baiz Agent what to do, e.g. summarize today's WeChat customers",
     executeMode: 'Execution mode',
     modeCloud: 'Cloud',
     modeLocal: 'Local',
@@ -266,7 +266,7 @@ export default {
     clearMemory: 'Clear local memory',
     memoryCleared: 'Local message history cleared',
     memoryFacts: 'Memory',
-    memoryFactsEmpty: 'No memory yet. Facts will accumulate as you talk with baiz',
+    memoryFactsEmpty: 'No memory yet. Facts will accumulate as you talk with Baiz Agent',
     pickDir: 'Choose folder',
   },
   working: {
@@ -342,7 +342,7 @@ export default {
     title: 'Welcome to Baiz Agent',
     sub: 'Three steps to get started',
     step1: 'Click "New session" on the left and enter a name',
-    step2: 'Send a sample task to see baiz at work',
+    step2: 'Send a sample task to see Baiz Agent at work',
     tryDemo: 'Try a sample',
     step3: 'After the task, click the file reference in chat to see the diff',
     skip: 'Skip',

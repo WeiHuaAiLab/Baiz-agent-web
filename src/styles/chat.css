@@ -459,14 +459,19 @@
    与工具条 / 输入框一起被 .create-center 居中布局（flex column + justify-content center），
    Logo 上方留 36px 呼吸，下方 16px 与工具条拉开层次（引导语已移入
    输入框 placeholder，这里不再需要副标题的间距）。 */
+/* MSG-2658：大 LOGO 幅移除后——文字品牌轻占位（居中、字号 24 雅致） */
 .create-brand {
   width: 100%;
   max-width: 720px;
   display: flex;
   flex-direction: column;
   align-items: center;
-  margin-top: 36px;
+  margin-top: 24px;
   margin-bottom: 16px;
+  font-size: 24px;
+  font-weight: 600;
+  color: var(--muted);
+  letter-spacing: 0.5px;
 }
 
 .create-toolbar .option-tabs {

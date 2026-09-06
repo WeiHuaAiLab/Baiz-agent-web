@@ -1,7 +1,7 @@
 <template>
   <div class="login-view">
     <div class="login-card">
-      <h2 class="login-title">baiz 登录</h2>
+      <h2 class="login-title">Baiz Agent 登录</h2>
       <p class="login-hint">请使用 https://kb.ruiac.net/ 的账号登录</p>
       <form class="login-form" @submit.prevent="submit">
         <label class="login-field">

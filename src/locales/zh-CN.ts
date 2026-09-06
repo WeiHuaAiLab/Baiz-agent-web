@@ -1,5 +1,5 @@
 export default {
-  app: { title: 'baiz' },
+  app: { title: 'Baiz Agent' },
   nav: { chat: '聊天', workspace: '工作区', tools: '工具', skills: '技能', tasks: '任务', settings: '设置' },
   chat: {
     placeholder: '输入问题…',
@@ -121,7 +121,7 @@ export default {
     taskName: '任务名称',
     namePlaceholder: '例如：每日客户日报',
     instruction: '任务指令',
-    instructionPlaceholder: '告诉 baiz 要做什么，例如：汇总当天微信客户并生成日报',
+    instructionPlaceholder: '告诉 Baiz Agent 要做什么，例如：汇总当天微信客户并生成日报',
     executeMode: '执行方式',
     modeCloud: '云端',
     modeLocal: '本地',
@@ -266,7 +266,7 @@ export default {
     clearMemory: '清除本地记忆',
     memoryCleared: '已清除本地消息历史',
     memoryFacts: '记忆内容',
-    memoryFactsEmpty: '暂无记忆，与 baiz 对话后会自动沉淀',
+    memoryFactsEmpty: '暂无记忆，与 Baiz Agent 对话后会自动沉淀',
     pickDir: '选择文件夹',
   },
   working: {
@@ -342,7 +342,7 @@ export default {
     title: '欢迎使用 Baiz Agent',
     sub: '三步上手',
     step1: '在左侧点击「新建会话」，输入名称创建',
-    step2: '输入一个示例任务，看看 baiz 怎么干活',
+    step2: '输入一个示例任务，看看 Baiz Agent 怎么干活',
     tryDemo: '试试示例',
     step3: '任务完成后，点击聊天里的文件引用，右侧查看 diff 红绿',
     skip: '跳过',

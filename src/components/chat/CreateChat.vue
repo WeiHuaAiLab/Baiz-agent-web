@@ -12,7 +12,6 @@ import { useUiStore } from '../../stores/ui'
 import { useFilesStore } from '../../stores/files'
 import ComposerBox from './ComposerBox.vue'
 import Icon from '../common/Icon.vue'
-import Logo from '../common/Logo.vue'
 
 const { t } = useI18n()
 const session = useSessionStore()
@@ -123,9 +122,8 @@ async function submitCreateFromComposer() {
 
 <template>
   <div class="create-center">
-    <div class="create-brand">
-      <Logo size="lg" />
-    </div>
+    <!-- MSG-2658 品牌面快修：空态大 LOGO 幅移除——留白，输入框自然居中 -->
+    <p class="create-brand">Baiz Agent</p>
 
     <ComposerBox
       v-model="input"
