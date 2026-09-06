@@ -26,6 +26,8 @@ const onboardingSeen = (() => {
 })()
 
 let toastSeq = 0
+// DEBT-540-C：toast 计时器表（同文案刷新/移除面——模块级单例）
+const toastTimers = new Map<number, ReturnType<typeof setTimeout>>()
 
 export const useUiStore = defineStore('ui', {
   state: () => ({
@@ -66,11 +68,28 @@ export const useUiStore = defineStore('ui', {
       this.createEpoch += 1
     },
     toast(message: string, type: ToastItem['type'] = 'info') {
+      // DEBT-540-C：同文案同形态去重——可见期内已存在同文案卡 → 刷新计时
+      // 单卡（勿连排叠加——他异文案/形态卡不清——各卡独立）
+      const existing = this.toasts.find((t) => t.message === message && t.type === type)
+      if (existing) {
+        const timer = toastTimers.get(existing.id)
+        if (timer) clearTimeout(timer)
+        toastTimers.set(
+          existing.id,
+          setTimeout(() => this.dismissToast(existing.id), 3500),
+        )
+        return
+      }
       const id = ++toastSeq
       this.toasts.push({ id, type, message })
-      setTimeout(() => {
-        this.toasts = this.toasts.filter((item) => item.id !== id)
-      }, 3500)
+      toastTimers.set(
+        id,
+        setTimeout(() => this.dismissToast(id), 3500),
+      )
+    },
+    dismissToast(id: number) {
+      this.toasts = this.toasts.filter((item) => item.id !== id)
+      toastTimers.delete(id)
     },
     openPalette() {
       this.paletteOpen = true

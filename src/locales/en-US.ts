@@ -30,6 +30,7 @@ export default {
     voiceStop: 'Stop listening',
     voiceComing: 'Voice input coming soon (sherpa-onnx)',
     attachFile: 'Attach file',
+    attachUnsupported: 'Attachments unsupported in this shell version',
     stop: 'Stop',
     scrollToLatest: 'Back to latest',
     export: 'Export chat',

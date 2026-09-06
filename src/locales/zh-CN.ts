@@ -30,6 +30,7 @@ export default {
     voiceStop: '停止录入',
     voiceComing: '语音录入即将接入（sherpa-onnx）',
     attachFile: '上传附件',
+    attachUnsupported: '当前版本不支持附件（请更新壳）',
     stop: '停止',
     scrollToLatest: '回到最新',
     export: '导出会话',

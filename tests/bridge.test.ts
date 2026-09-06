@@ -17,3 +17,21 @@ describe('bridge', () => {
     expect(entries[0]?.name).toBe('demo.md')
   })
 })
+
+describe('DEBT-540 附件能力面', () => {
+  it('tauri 形态声明 fs.pickAttachment（A 补链——has 过钮层门禁开）', async () => {
+    const { createTauriBridge } = await import('../src/bridge/tauri')
+    const bridge = createTauriBridge()
+    expect(bridge.has('fs.pickAttachment')).toBe(true)
+    expect(bridge.has('fs.pickDir')).toBe(true)
+  })
+
+  it('mock/web 既有附件链零回退（mock pickAttachment 可调）', async () => {
+    const { createMockBridge } = await import('../src/bridge/mock')
+    const bridge = createMockBridge()
+    expect(bridge.has('fs.pickAttachment')).toBe(true)
+    const picked = await bridge.fs.pickAttachment()
+    expect(picked).toBeTruthy()
+    expect(typeof picked?.name).toBe('string')
+  })
+})

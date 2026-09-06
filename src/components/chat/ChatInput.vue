@@ -16,6 +16,7 @@ import {
 import type { TaskDraft } from "../../stores/workspace";
 import { useUiStore } from "../../stores/ui";
 import { useFilesStore } from "../../stores/files";
+import { getBridge } from "../../bridge";
 import { clearDraft, loadDraft, saveDraft } from "../../drafts";
 import { formatFileSize, shortMime } from "../../utils/format";
 import { estimateCostUsd } from "../../stores/message";
@@ -35,6 +36,9 @@ const settings = useSettingsStore();
 const workspace = useWorkspaceStore();
 const ui = useUiStore();
 const files = useFilesStore();
+// DEBT-540-B：＋号门禁前置——能力门前置钮层（tauri 壳未注册时禁用＋
+// 单条明示——勿点击后连 toast）
+const attachSupported = computed(() => getBridge().has('fs.pickAttachment'));
 
 const input = ref("");
 const taskDraft = ref<TaskDraft>(createEmptyTaskDraft());
@@ -326,8 +330,10 @@ watch(
                 <button
                     type="button"
                     class="act-btn"
-                    :class="{ active: files.attachments.length > 0 }"
-                    :title="t('chat.attachFile')"
+                    :class="{ active: files.attachments.length > 0, disabled: !attachSupported }"
+                    :disabled="!attachSupported"
+                    :title="attachSupported ? t('chat.attachFile') : t('chat.attachUnsupported')"
+                    :aria-label="attachSupported ? t('chat.attachFile') : t('chat.attachUnsupported')"
                     @click="files.attachFromPicker()"
                 >
                     <Icon name="plus" :size="16" />

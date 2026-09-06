@@ -1,4 +1,4 @@
-import type { Bridge, CapabilityName, FileEntry } from './types'
+import type { AttachmentPayload, Bridge, CapabilityName, FileEntry } from './types'
 
 // Tauri 桥接实现：经 Rust 壳 command 转发（fs/剪贴板/通知/对话框）。
 export function createTauriBridge(): Bridge {
@@ -7,7 +7,7 @@ export function createTauriBridge(): Bridge {
   //   proxy_fs_list_drives(): string[]            —— 枚举 Windows 盘符（如 ["C:\\","D:\\"]）
   //   proxy_fs_create_dir(parent, name): string   —— 在 parent 下新建文件夹，返回完整路径
   // 注册后需在此声明 'fs.drives' 与 'fs.createDir'，前端即自动启用"新建空白项目"落盘。
-  const capabilities = new Set<CapabilityName>(['window.control', 'fs.pickDir'])
+  const capabilities = new Set<CapabilityName>(['window.control', 'fs.pickDir', 'fs.pickAttachment'])
   const SAFE_PROTOCOL = /^(https?:|mailto:)/i
 
   return {
@@ -42,6 +42,17 @@ export function createTauriBridge(): Bridge {
           return await invoke<FileEntry[]>('proxy_fs_list_dir', { path: key })
         } catch {
           return []
+        }
+      },
+      // DEBT-540-A：tauri 形态附件选择——Rust 壳 proxy_pick_attachment
+      // （web 形态 pickAttachment 语义镜像：image→dataUrl/文本→content）
+      async pickAttachment() {
+        const { invoke } = await import('@tauri-apps/api/core')
+        try {
+          const out = await invoke<AttachmentPayload | null>('proxy_pick_attachment')
+          return out
+        } catch {
+          return null
         }
       },
     },
