@@ -352,6 +352,7 @@ watch(
                     type="button"
                     class="send-btn stop"
                     :title="t('chat.stop')"
+                    :aria-label="t('chat.stop')"
                     @click="stopCurrent"
                 >
                     <Icon name="stop" :size="15" />
