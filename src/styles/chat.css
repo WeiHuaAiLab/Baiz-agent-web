@@ -294,6 +294,32 @@
   border-top: 1px solid var(--border);
 }
 
+/* MSG-2661 目④：流式 reasoning 增量区（思考过程随帧长——streaming-tail 内） */
+.reasoning-stream {
+  max-width: 640px;
+  margin: 2px 0 6px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  overflow: hidden;
+  font-size: 12px;
+  background: var(--bg-soft, rgba(127, 127, 127, 0.04));
+}
+.reasoning-stream-head {
+  padding: 4px 12px;
+  color: var(--muted);
+  font-weight: 500;
+}
+.reasoning-stream-body {
+  margin: 0;
+  padding: 6px 12px 8px;
+  color: var(--muted);
+  white-space: pre-wrap;
+  word-break: break-word;
+  max-height: 320px;
+  overflow-y: auto;
+  border-top: 1px solid var(--border);
+}
+
 /* MSG-2413 工具执行行（命令/URL） */
 .tool-cmd {
   display: block;

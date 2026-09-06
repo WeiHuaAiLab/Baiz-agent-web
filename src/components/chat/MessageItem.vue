@@ -124,7 +124,12 @@ function goSettings() {
       v-if="message.kind === 'assistant' && (message.text || running)"
       :text="message.text"
     />
-    <p v-else-if="message.kind === 'assistant'" class="no-output">
+    <!-- MSG-2661 目③：content 空而 reasoning 有——思考区即输出面——
+         不再显「（无输出）」（真无输出：无正文无思考无 running——照显） -->
+    <p
+      v-else-if="message.kind === 'assistant' && !run?.reasoning"
+      class="no-output"
+    >
       {{ t('chat.noOutput') }}
     </p>
     <div v-else-if="message.kind === 'user'" class="user-block">

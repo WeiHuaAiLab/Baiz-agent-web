@@ -58,6 +58,7 @@ export default {
     noOutput: '（无输出）',
     thinking: '思考',
     deepThink: '深度思考',
+    reasoningLabel: '思考过程',
     toolCall: '调用工具',
     toolResult: '工具结果',
   },

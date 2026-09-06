@@ -232,6 +232,12 @@ async function onStreamingClick(event: MouseEvent) {
 
     <div v-if="streamingRuns.length" class="streaming-tail" @click="onStreamingClick">
       <div v-for="run in streamingRuns" :key="run.taskId" class="msg assistant streaming-block">
+        <!-- MSG-2661 目④：reasoning 帧流式增量渲染——思考过程随帧长（区标
+             「思考过程」——与正文分离——终态后同源折叠于 MessageItem） -->
+        <div v-if="run.reasoning" class="reasoning-stream">
+          <div class="reasoning-stream-head">⋯ {{ t('chat.reasoningLabel') }}</div>
+          <pre class="reasoning-stream-body">{{ run.reasoning }}</pre>
+        </div>
         <div class="activity-line">
           <span class="activity-dot" />
           {{ activityText(run) }}

@@ -58,6 +58,7 @@ export default {
     noOutput: '(no output)',
     thinking: 'Thinking',
     deepThink: 'Deep think',
+    reasoningLabel: 'Thinking',
     toolCall: 'Tool',
     toolResult: 'Result',
   },
