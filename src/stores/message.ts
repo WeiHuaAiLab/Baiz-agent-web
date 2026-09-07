@@ -231,6 +231,9 @@ export const useMessageStore = defineStore('message', {
       text: string,
       workspace?: string,
       attachments?: AttachmentItem[],
+      // MSG-2722 L3 编程 UI：mode 透传（"programming"→daemon ToolLoop 真件链
+      // 分流——缺省/chat 走旧路向后兼容——ChatSendParams.mode 类型已备）
+      mode?: string,
     ) {
       let effective = text
       if (attachments && attachments.length > 0) {
@@ -269,6 +272,7 @@ export const useMessageStore = defineStore('message', {
           // MSG-2341（A-4 升格）：设置面所选模型透传 chat.send 载荷——
           // 状态栏（ChatHeader model-chip）同取 settings.model，显示与发送对卯
           model: useSettingsStore().model,
+          ...(mode ? { mode } : {}),
         })
         if (result.task_id && result.task_id !== clientTaskId) {
           const run = this.runs[clientTaskId]
@@ -326,6 +330,41 @@ export const useMessageStore = defineStore('message', {
         if (list[i].kind === 'user') {
           await this.sendUserMessage(conversationId, list[i].text)
           return
+        }
+      }
+    },
+    /**
+     * MSG-2722 L3 编程 UI：ToolLoop Blocked 人工回传续跑——桥 daemon
+     * tool_loop.resume（task_id＋note）。编程任务卡（assistant 回执含
+     * Blocked/需人工回传）触发——note 输入经 ChatInput 续跑行提交。
+     * 失败红条（resume 败——任务已收束/权限面——勿静默）。
+     */
+    async resumeRun(taskId: string, note: string) {
+      const run = this.runs[taskId]
+      const conversationId = run?.conversationId
+      try {
+        await getClient().taskResume({ task_id: taskId, note })
+        const now = Date.now()
+        if (run) {
+          run.status = 'running'
+          run.startedAt = now
+        }
+        if (conversationId) {
+          await this.push(
+            conversationId,
+            makeMessage(conversationId, 'user', `（续跑回传）${note}`, { taskId }),
+          )
+        }
+      } catch (error) {
+        const mapped = mapRpcError(error)
+        if (conversationId) {
+          await this.push(
+            conversationId,
+            makeMessage(conversationId, 'status', mapped.detail, {
+              status: 'error',
+              statusKey: 'resumeFailed',
+            }),
+          )
         }
       }
     },

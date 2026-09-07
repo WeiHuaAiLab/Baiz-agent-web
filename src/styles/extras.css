@@ -508,6 +508,42 @@
   background: #1c2b45;
 }
 
+
+/* MSG-2722 L3 编程 UI：编程模式徽标（ChatHeader） */
+.prog-chip {
+  font-size: 11px;
+  color: #7c3aed;
+  background: #f3e8ff;
+  padding: 1px 8px;
+  border-radius: 10px;
+  white-space: nowrap;
+}
+
+/* MSG-2722：Blocked 人工回传续跑行（ChatInput 上方） */
+.resume-bar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 10px;
+  border: 1px solid #f0c674;
+  border-radius: 10px;
+  margin-bottom: 6px;
+  background: #fdf9ec;
+}
+.resume-label {
+  font-size: 12px;
+  color: #b7791f;
+  white-space: nowrap;
+}
+.resume-note {
+  flex: 1;
+  border: none;
+  outline: none;
+  background: transparent;
+  color: var(--text);
+  font-size: 13px;
+}
+
 :root[data-theme='dark'] .demo-chip {
   color: #e5b567;
   background: #3a2f1d;
@@ -576,4 +612,13 @@
   width: 100%;
   padding-left: 21px;
   font-size: 11px;
+}
+
+:root[data-theme='dark'] .prog-chip {
+  color: #c4a5ff;
+  background: #2c2150;
+}
+:root[data-theme='dark'] .resume-bar {
+  border-color: #8a6d2a;
+  background: #2a2413;
 }

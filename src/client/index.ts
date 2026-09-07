@@ -14,6 +14,8 @@ import type {
   ChatQueueCancelResult,
   EventSubscribeParams,
   EventSubscribeResult,
+  TaskResumeParams,
+  TaskResumeResult,
   PendingApproval,
   PermissionRespondParams,
 } from './types'
@@ -31,6 +33,8 @@ export interface BaizClient {
   provideKey(key: string): Promise<{ stored: boolean }>
   chatSend(params: ChatSendParams): Promise<ChatSendResult>
   chatQueueCancel(params: ChatQueueCancelParams): Promise<ChatQueueCancelResult>
+  /** MSG-2722 L3 编程 UI：ToolLoop Blocked 人工回传续跑（daemon tool_loop.resume） */
+  taskResume(params: TaskResumeParams): Promise<TaskResumeResult>
   permissionPending(): Promise<{ pending: PendingApproval[] }>
   permissionRespond(params: PermissionRespondParams): Promise<{ resolved: boolean; status: string }>
   authLogin(params: AuthLoginParams): Promise<AuthLoginResult>
@@ -66,6 +70,9 @@ export function createClient(transport: RpcTransport): BaizClient {
     // MSG-2311 映射修：daemon 路由表零 chat.queue_cancel、task.cancel
     // 在案（找茬/试刀双擒）——语义对卯（取消在途任务）改映射
     chatQueueCancel: (params) => rpc.call('task.cancel', { task_id: params.task_id }),
+    // MSG-2722：Blocked 人工回传续跑（daemon handler tool_loop.resume——
+    // task_id＋note——authorize 走 rpc 层统一 token 注入）
+    taskResume: (params) => rpc.call('tool_loop.resume', { task_id: params.task_id, note: params.note }),
     permissionPending: () => rpc.call('permission.pending'),
     permissionRespond: (params) => rpc.call('permission.respond', params),
     a2aStatus: () => rpc.call('a2a.status'),

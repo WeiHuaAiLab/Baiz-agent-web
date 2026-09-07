@@ -36,6 +36,10 @@ export const useUiStore = defineStore('ui', {
     // （如新建会话页已打开时再次点新建/点项目），以便重置表单或换选项目
     createEpoch: 0,
     toasts: [] as ToastItem[],
+    // MSG-2722 L3 编程 UI：当前会话编程模式（mode=programming——ToolLoop
+    // 真件链触发面）——发送侧消费（ChatInput sendWith）；会话级 UI 态
+    // （切换会话保持——显于 ChatHeader 徽标）
+    programmingMode: false,
     paletteOpen: false,
     showOnboarding: !onboardingSeen,
     pendingPrompt: '',

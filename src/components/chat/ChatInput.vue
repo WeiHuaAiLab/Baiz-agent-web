@@ -205,12 +205,41 @@ function sendWith(text: string) {
         trimmed,
         settings.activeWorkspace || undefined,
         attachments,
+        // MSG-2722：编程模式（ui.programmingMode）→ mode=programming——
+        // daemon ToolLoop 真件链分流（缺省 chat 旧路零变）
+        ui.programmingMode ? "programming" : undefined,
     );
     void files.clearAttachments();
     void session.touch(activeId.value);
     void clearDraft(activeId.value);
     input.value = "";
     emit("submitted");
+}
+
+// ── MSG-2722 L3 编程 UI：Blocked 人工回传续跑行 ──
+// 判据：编程模式会话＋最近任务终态失败/回执含 Blocked（tool_loop 折回
+// 面——1779 裁：Blocked 载 reason 可接续）——显续跑输入行
+const resumeNote = ref("");
+const resumeTarget = computed(() => {
+    if (!ui.programmingMode) return null;
+    const cid = activeId.value;
+    if (!cid) return null;
+    // 本会话最近终态 failed 的 run——续跑目标（Blocked 折回以失败态
+    // 收束于 UI——1779 裁：可人工回传续跑）
+    const failed = Object.values(messages.runs).filter(
+        (r) => r.conversationId === cid && r.status === "failed",
+    );
+    if (failed.length === 0) return null;
+    failed.sort((a, b) => (b.finishedAt ?? 0) - (a.finishedAt ?? 0));
+    return failed[0];
+});
+function submitResume() {
+    const run = resumeTarget.value;
+    if (!run || !resumeNote.value.trim()) return;
+    const taskId = run.taskId;
+    const note = resumeNote.value.trim();
+    resumeNote.value = "";
+    void messages.resumeRun(taskId, note);
 }
 
 /** Enter：发送 */
@@ -269,6 +298,25 @@ watch(
     </div>
 
     <div ref="inputRoot" class="chat-input">
+        <!-- MSG-2722 L3 编程 UI：Blocked/失败任务人工回传续跑行（daemon
+            tool_loop.resume——note 回传文本） -->
+        <form
+            v-if="resumeTarget"
+            class="resume-bar"
+            @submit.prevent="submitResume()"
+        >
+            <span class="resume-label">{{ t("chat.resumeHint") }}</span>
+            <input
+                v-model="resumeNote"
+                class="resume-note"
+                type="text"
+                :placeholder="t('chat.resumePlaceholder')"
+                :aria-label="t('chat.resumePlaceholder')"
+            />
+            <button type="submit" class="send-btn" :disabled="!resumeNote.trim()">
+                <Icon name="refresh" :size="15" />
+            </button>
+        </form>
         <form class="composer composer-block" @submit.prevent="send()">
             <div v-if="files.attachments.length" class="attachment-row">
                 <div
@@ -337,6 +385,19 @@ watch(
                     @click="files.attachFromPicker()"
                 >
                     <Icon name="plus" :size="16" />
+                </button>
+
+                <!-- MSG-2722 L3 编程 UI：编程模式钮（mode=programming——
+                    ToolLoop 真件链——发送侧消费 ui.programmingMode） -->
+                <button
+                    type="button"
+                    class="act-btn"
+                    :class="{ active: ui.programmingMode }"
+                    :title="ui.programmingMode ? t('chat.programModeOn') : t('chat.programModeOff')"
+                    :aria-label="ui.programmingMode ? t('chat.programModeOn') : t('chat.programModeOff')"
+                    @click="ui.programmingMode = !ui.programmingMode"
+                >
+                    <Icon name="tools" :size="16" />
                 </button>
 
                 <span class="actions-spacer" />
