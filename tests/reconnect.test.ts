@@ -215,4 +215,81 @@ describe('SseReconnect', () => {
 
     reconnect.stop()
   })
+
+  it('DEBT-549：短命连（成功后又断）attempts 保留——退避爬升防恒 2.1s 风暴', async () => {
+    vi.useFakeTimers()
+    vi.spyOn(Math, 'random').mockReturnValue(0)
+    const transport = createMockTransport()
+    let subOk = true
+    const calls: EventSubscribeParams[] = []
+    const reconnect = new SseReconnect({
+      transport,
+      taskId: '*',
+      subscribe: async (p) => {
+        calls.push(p)
+        if (!subOk) throw new Error('boom')
+        return { subscribed: true, latest_seq: 1, oldest_seq: 1 }
+      },
+      heartbeatTimeoutMs: 1000,
+      retryDelayMs: 100,
+    })
+
+    await reconnect.start() // 第 1 次订阅成功
+    expect(calls.length).toBe(1)
+
+    // 稳定窗（15s）内连接被断——attempts 不得归零（保留=1）
+    await vi.advanceTimersByTimeAsync(500)
+    transport.emitDisconnect()
+    // attempts=1 → 退避 delay = 100×2^1 = 200ms
+    await vi.advanceTimersByTimeAsync(150)
+    expect(calls.length).toBe(1) // 200ms 未到——未重连
+    await vi.advanceTimersByTimeAsync(100) // 累计 250ms > 200ms
+    expect(calls.length).toBe(2) // 重连（第 2 次订阅）
+
+    // 第 2 次连接成功——仍处新稳定窗内（未满 15s）——attempts 保留（=1）
+    await vi.advanceTimersByTimeAsync(500)
+    transport.emitDisconnect()
+    // attempts=2 → 退避 delay = 100×2^2 = 400ms（若旧行为成功即归零——delay 只 200ms）
+    await vi.advanceTimersByTimeAsync(250)
+    expect(calls.length).toBe(2) // 400ms 未到——attempts 已爬升（未归零）——风暴防护实证
+    await vi.advanceTimersByTimeAsync(200) // 累计 450ms > 400ms
+    expect(calls.length).toBe(3)
+
+    reconnect.stop()
+  })
+
+  it('DEBT-549：稳定窗（15s）满后 attempts 归零——链路确稳退避重置合理', async () => {
+    vi.useFakeTimers()
+    vi.spyOn(Math, 'random').mockReturnValue(0)
+    const transport = createMockTransport()
+    const calls: EventSubscribeParams[] = []
+    const reconnect = new SseReconnect({
+      transport,
+      taskId: '*',
+      subscribe: async (p) => {
+        calls.push(p)
+        return { subscribed: true, latest_seq: 1, oldest_seq: 1 }
+      },
+      heartbeatTimeoutMs: 1000,
+      retryDelayMs: 100,
+    })
+
+    await reconnect.start()
+    expect(calls.length).toBe(1)
+
+    // 稳定连接超 15s（步进带心跳防 watchdog 断连）——attempts 归零
+    for (let i = 0; i < 32; i += 1) {
+      transport.emit({ event: 'heartbeat' })
+      await vi.advanceTimersByTimeAsync(500)
+    }
+    expect(calls.length).toBe(1) // 16s 稳定零重连
+    transport.emitDisconnect()
+    // 归零后 attempts=1 → delay = 100×2 = 200ms（从头退避）
+    await vi.advanceTimersByTimeAsync(150)
+    expect(calls.length).toBe(1)
+    await vi.advanceTimersByTimeAsync(100)
+    expect(calls.length).toBe(2)
+
+    reconnect.stop()
+  })
 })

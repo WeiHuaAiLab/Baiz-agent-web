@@ -14,10 +14,13 @@ export interface MockTransportOptions {
 export interface MockTransport extends RpcTransport {
   requests: RpcRequest[]
   emit(frame: SseFrame): void
+  /** DEBT-549（MSG-2677）红证面：模拟壳 daemon://disconnect（断连重连触发） */
+  emitDisconnect(): void
 }
 
 export function createMockTransport(options: MockTransportOptions = {}): MockTransport {
   const handlers = new Set<(frame: SseFrame) => void>()
+  const disconnectHandlers = new Set<() => void>()
   const requests: RpcRequest[] = []
   const results = options.results ?? {}
   const frames = [...(options.frames ?? [])]
@@ -97,11 +100,21 @@ export function createMockTransport(options: MockTransportOptions = {}): MockTra
         handlers.delete(handler)
       }
     },
+    onDisconnect(handler) {
+      disconnectHandlers.add(handler)
+      return () => {
+        disconnectHandlers.delete(handler)
+      }
+    },
     close() {
       handlers.clear()
+      disconnectHandlers.clear()
     },
     emit(frame) {
       emitFrame(frame)
+    },
+    emitDisconnect() {
+      disconnectHandlers.forEach((handler) => handler())
     },
   }
 

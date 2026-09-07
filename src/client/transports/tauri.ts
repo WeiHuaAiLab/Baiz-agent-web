@@ -22,9 +22,22 @@ function createRealTauriTransport(): RpcTransport {
   let unlistenDisconnect: (() => void) | null = null
   let unlistenResync: (() => void) | null = null
 
+  // DEBT-549（MSG-2677）：connect 先清旧 listen——重连风暴中每次 connect
+  // 均新 listen 而不 unlisten 旧（泄漏累积：帧/事件被 N 份 listen 重复分发
+  // ——disconnect 竞态重复排程＋帧重复消费）。先清后建——零泄漏。
+  function teardownListeners(): void {
+    unlisten?.()
+    unlisten = null
+    unlistenDisconnect?.()
+    unlistenDisconnect = null
+    unlistenResync?.()
+    unlistenResync = null
+  }
+
   return {
     kind: 'tauri',
     async connect() {
+      teardownListeners()
       const { listen } = await import('@tauri-apps/api/event')
       unlisten = await listen<SseFrame>('daemon://frame', (event) => {
         handlers.forEach((handler) => handler(event.payload))
@@ -79,12 +92,7 @@ function createRealTauriTransport(): RpcTransport {
       }
     },
     close() {
-      unlisten?.()
-      unlisten = null
-      unlistenDisconnect?.()
-      unlistenDisconnect = null
-      unlistenResync?.()
-      unlistenResync = null
+      teardownListeners()
     },
   }
 }

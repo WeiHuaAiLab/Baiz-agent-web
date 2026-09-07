@@ -34,6 +34,12 @@ export class SseReconnect {
   private readonly dispatchHandlers = new Set<(frame: SseFrame) => void>()
   private watchdog: ReturnType<typeof setTimeout> | null = null
   private retryTimer: ReturnType<typeof setTimeout> | null = null
+  /** DEBT-549（MSG-2677）：attempts 稳定窗归零计时器——连接成功后不立即
+   * 重置 attempts（风暴中「连成→~2s 断」循环会把退避恒压回 base≈2.1s——
+   * 断连退避永远爬不上去）；连接持续 STABLE_RESET_MS 无断才归零——短命
+   * 连的 attempts 保留累积，指数退避照常爬升防风暴。 */
+  private stableResetTimer: ReturnType<typeof setTimeout> | null = null
+  private static readonly STABLE_RESET_MS = 15_000
   private attempts = 0
   private stopped = false
   private unsubscribeEvents: (() => void) | undefined
@@ -76,6 +82,7 @@ export class SseReconnect {
   stop(): void {
     this.stopped = true
     this.clearWatchdog()
+    this.clearStableReset()
     if (this.retryTimer) {
       clearTimeout(this.retryTimer)
       this.retryTimer = null
@@ -97,7 +104,9 @@ export class SseReconnect {
     try {
       await this.options.transport.connect()
       await this.subscribeOnce()
-      this.attempts = 0
+      // DEBT-549：不立即归零——稳定窗（STABLE_RESET_MS 无断）后归零；
+      // 短命连 attempts 保留累积——退避爬升防 2.1s 恒风暴。
+      this.armStableReset()
       this.setState('connected')
       this.armWatchdog()
     } catch (error) {
@@ -151,7 +160,7 @@ export class SseReconnect {
       // daemon events_since(last_event_id)：自窗头回放需 last_event_id=oldest-1
       if (info.oldest_seq > 0) params.last_event_id = info.oldest_seq - 1
       await this.options.subscribe(params)
-      this.attempts = 0
+      this.armStableReset()
       this.setState('connected')
       this.armWatchdog()
     } catch {
@@ -167,9 +176,28 @@ export class SseReconnect {
     })
   }
 
+  /** DEBT-549：连接稳定窗——STABLE_RESET_MS 无断则 attempts 归零（链路
+   * 确稳——退避重置合理）；期间断连（scheduleReconnect 清此计时器）则
+   * attempts 保留——指数退避继续爬升。 */
+  private armStableReset(): void {
+    if (this.stableResetTimer) clearTimeout(this.stableResetTimer)
+    this.stableResetTimer = setTimeout(() => {
+      this.stableResetTimer = null
+      this.attempts = 0
+    }, SseReconnect.STABLE_RESET_MS)
+  }
+
+  private clearStableReset(): void {
+    if (this.stableResetTimer) {
+      clearTimeout(this.stableResetTimer)
+      this.stableResetTimer = null
+    }
+  }
+
   private scheduleReconnect(): void {
     if (this.stopped || this.retryTimer) return
     this.clearWatchdog()
+    this.clearStableReset()
     this.attempts += 1
     const delay = this.backoffDelay()
     this.retryTimer = setTimeout(() => {
