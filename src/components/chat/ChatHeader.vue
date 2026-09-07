@@ -8,6 +8,7 @@ import { useI18n } from 'vue-i18n'
 import { useSessionStore } from '../../stores/session'
 import { useMessageStore } from '../../stores/message'
 import { useSettingsStore } from '../../stores/settings'
+import { useUiStore } from '../../stores/ui'
 import { downloadText, exportConversation } from '../../utils/export'
 import Icon from '../common/Icon.vue'
 
@@ -15,6 +16,7 @@ const { t } = useI18n()
 const session = useSessionStore()
 const messages = useMessageStore()
 const settings = useSettingsStore()
+const ui = useUiStore();
 
 const exportOpen = ref(false)
 const streamingRuns = computed(() => messages.activeRuns(session.activeId))
@@ -45,6 +47,9 @@ function doExport(format: 'md' | 'json') {
           }}
         </span>
         <span v-if="settings.demoMode" class="demo-chip">{{ t('chat.demoMode') }}</span>
+        <!-- MSG-2722 L3 编程 UI：编程模式徽标（ui.programmingMode——toolchain
+            任务态随动） -->
+        <span v-if="ui.programmingMode" class="prog-chip">{{ t('chat.programModeOn') }}</span>
         <span v-if="streamingRuns.length > 0" class="status">{{ t('status.connecting') }}</span>
         <span
           v-else-if="settings.connection === 'reconnecting' || settings.connection === 'connecting'"

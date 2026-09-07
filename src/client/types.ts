@@ -35,6 +35,18 @@ export interface EventSubscribeResult {
   oldest_seq: number
 }
 
+// MSG-2722 L3 编程 UI：ToolLoop Blocked 人工回传续跑（桥 daemon
+// tool_loop.resume——task_id＋note 人工回传文本）
+export interface TaskResumeParams {
+  task_id: string
+  note: string
+}
+
+export interface TaskResumeResult {
+  resumed: boolean
+  detail?: string
+}
+
 export interface ChatSendParams {
   message: string
   workspace?: string
