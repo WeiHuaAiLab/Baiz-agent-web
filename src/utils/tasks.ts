@@ -1,9 +1,62 @@
 // 定时任务"下次执行"计算与展示。
 import type { TaskDraft, TaskItem } from '../stores/workspace'
 
+/** DEBT-546：draft 送 daemon 的 schedule.create 参数（time "HH:MM"→timeSecs；
+ * unit minute/hour/day→everySecs；once runAt datetime-local→runAtSecs 本地时
+ * epoch 秒——daemon 端 ScheduleSpec 全字段形）。 */
+export interface ScheduleCreateParams {
+  title: string
+  instruction: string
+  mode: TaskDraft['mode']
+  cycle: TaskDraft['cycle']
+  day: number
+  weekday: number
+  timeSecs: number
+  everySecs: number
+  runAtSecs: number
+}
+
 function parseTime(time: string): { h: number; m: number } {
   const [h, m] = (time || '09:00').split(':').map(Number)
   return { h: Number.isFinite(h) ? h : 9, m: Number.isFinite(m) ? m : 0 }
+}
+
+function toSecs(time: string): number {
+  const { h, m } = parseTime(time)
+  return h * 3600 + m * 60
+}
+
+/** draft → schedule.create RPC 参数（once：runAtSecs 本地时 epoch 秒——
+ * datetime-local 值按本地时解析，勿误作 UTC）。 */
+export function toScheduleCreateParams(draft: TaskDraft): ScheduleCreateParams {
+  const unitSecs =
+    draft.unit === 'minute' ? 60 : draft.unit === 'hour' ? 3600 : 86_400
+  let runAtSecs = 0
+  if (draft.cycle === 'once' && draft.runAt) {
+    const local = new Date(draft.runAt)
+    if (!Number.isNaN(local.getTime())) {
+      runAtSecs = Math.floor(local.getTime() / 1000)
+    }
+  }
+  return {
+    title: draft.title,
+    instruction: draft.instruction,
+    mode: draft.mode,
+    cycle: draft.cycle,
+    day: draft.day,
+    weekday: draft.weekday,
+    timeSecs: draft.cycle === 'once' ? 0 : toSecs(draft.time),
+    everySecs: draft.cycle === 'interval' ? Math.max(1, draft.every) * unitSecs : 0,
+    runAtSecs,
+  }
+}
+
+/** once 档展示时间（runAtSecs→本地时 "MM月DD日 HH:mm"——daemon 回显面用） */
+export function formatRunAtSecs(runAtSecs: number): string {
+  if (!runAtSecs) return ''
+  const d = new Date(runAtSecs * 1000)
+  const hm = `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`
+  return `${d.getMonth() + 1}月${d.getDate()}日 ${hm}`
 }
 
 export function nextRunAt(schedule: TaskDraft): Date | null {
@@ -19,6 +72,14 @@ export function nextRunAt(schedule: TaskDraft): Date | null {
   if (schedule.cycle === 'interval') {
     const unitMs = schedule.unit === 'minute' ? 60_000 : schedule.unit === 'hour' ? 3_600_000 : 86_400_000
     return new Date(now.getTime() + Math.max(1, schedule.every) * unitMs)
+  }
+
+  if (schedule.cycle === 'once') {
+    // once：runAt datetime-local 值（本地时）直解——未到即该时刻；已过
+    // 则显过去（执行态由 daemon runs 表回显——此处仅展示）
+    if (!schedule.runAt) return null
+    const at = new Date(schedule.runAt)
+    return Number.isNaN(at.getTime()) ? null : at
   }
 
   if (schedule.cycle === 'daily') {
@@ -74,6 +135,9 @@ export function scheduleText(task: TaskItem, t: (key: string) => string): string
   }
   if (schedule.cycle === 'hourly') {
     return t('tasks.cycleHourly')
+  }
+  if (schedule.cycle === 'once') {
+    return schedule.runAt ? `${t('tasks.cycleOnce')} ${schedule.runAt.replace('T', ' ')}` : t('tasks.cycleOnce')
   }
   const unit =
     schedule.unit === 'minute'

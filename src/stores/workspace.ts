@@ -2,7 +2,7 @@
 import { defineStore } from 'pinia'
 
 export type TaskMode = 'cloud' | 'local'
-export type TaskCycle = 'monthly' | 'weekly' | 'daily' | 'hourly' | 'interval'
+export type TaskCycle = 'monthly' | 'weekly' | 'daily' | 'hourly' | 'interval' | 'once'
 
 export interface TaskDraft {
   title: string
@@ -14,6 +14,9 @@ export interface TaskDraft {
   time: string
   every: number
   unit: 'minute' | 'hour' | 'day'
+  /** DEBT-546 once 档：datetime-local 值（"YYYY-MM-DDTHH:mm"——本地时——
+   * 仅 cycle='once' 时消费；送 daemon 前转 runAtSecs epoch 秒） */
+  runAt?: string
 }
 
 export interface ProjectItem {
@@ -46,6 +49,7 @@ export function createEmptyTaskDraft(): TaskDraft {
     time: '09:00',
     every: 30,
     unit: 'minute',
+    runAt: '',
   }
 }
 

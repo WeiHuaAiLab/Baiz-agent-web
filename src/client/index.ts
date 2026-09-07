@@ -18,6 +18,9 @@ import type {
   TaskResumeResult,
   PendingApproval,
   PermissionRespondParams,
+  ScheduleCreateParams,
+  ScheduleRun,
+  ScheduleTask,
 } from './types'
 
 export interface BaizClient {
@@ -39,6 +42,12 @@ export interface BaizClient {
   permissionRespond(params: PermissionRespondParams): Promise<{ resolved: boolean; status: string }>
   authLogin(params: AuthLoginParams): Promise<AuthLoginResult>
   a2aStatus(): Promise<A2aStatusResult>
+  // DEBT-546 定时任务真链：schedule.* 五方法（daemon 侧调度注册表/RPC 在案）
+  scheduleCreate(params: ScheduleCreateParams): Promise<{ id: string }>
+  scheduleList(): Promise<ScheduleTask[]>
+  scheduleToggle(taskId: string, enabled: boolean): Promise<{ ok: boolean }>
+  scheduleDelete(taskId: string): Promise<{ ok: boolean }>
+  scheduleListRuns(taskId: string, limit?: number): Promise<ScheduleRun[]>
   onEvent(handler: (frame: SseFrame) => void): () => void
   close(): void
 }
@@ -76,6 +85,13 @@ export function createClient(transport: RpcTransport): BaizClient {
     permissionPending: () => rpc.call('permission.pending'),
     permissionRespond: (params) => rpc.call('permission.respond', params),
     a2aStatus: () => rpc.call('a2a.status'),
+    // DEBT-546：daemon schedule.* 五方法（对卯 handler dispatch 同名）
+    scheduleCreate: (params) => rpc.call('schedule.create', params),
+    scheduleList: () => rpc.call('schedule.list'),
+    scheduleToggle: (taskId, enabled) => rpc.call('schedule.toggle', { task_id: taskId, enabled }),
+    scheduleDelete: (taskId) => rpc.call('schedule.delete', { task_id: taskId }),
+    scheduleListRuns: (taskId, limit) =>
+      rpc.call('schedule.list_runs', { task_id: taskId, limit: limit ?? 20 }),
     onEvent: (handler) => transport.onEvent(handler),
     close: () => transport.close(),
   }

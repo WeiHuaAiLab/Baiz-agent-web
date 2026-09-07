@@ -12,7 +12,17 @@ const cycles: { id: TaskCycle; label: string }[] = [
   { id: 'daily', label: t('tasks.cycleDaily') },
   { id: 'hourly', label: t('tasks.cycleHourly') },
   { id: 'interval', label: t('tasks.cycleInterval') },
+  // DEBT-546 once 档：一次性（datetime-local 选时——执行后自动 disabled）
+  { id: 'once', label: t('tasks.cycleOnce') },
 ]
+
+/** once 档最小选时（datetime-local 空值给现在 +1h 整数分默认） */
+function defaultOnceRunAt(): string {
+  const d = new Date(Date.now() + 3_600_000)
+  d.setSeconds(0, 0)
+  const pad = (n: number) => String(n).padStart(2, '0')
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`
+}
 
 const weekdays = [1, 2, 3, 4, 5, 6, 7].map((value) => ({
   value,
@@ -31,6 +41,10 @@ function setMode(mode: TaskMode) {
 
 function setCycle(cycle: TaskCycle) {
   draft.value.cycle = cycle
+  // once 切档：runAt 空则给默认（现在 +1h 整数分）
+  if (cycle === 'once' && !draft.value.runAt) {
+    draft.value.runAt = defaultOnceRunAt()
+  }
 }
 </script>
 
@@ -96,6 +110,12 @@ function setCycle(cycle: TaskCycle) {
       </template>
       <template v-else-if="draft.cycle === 'hourly'">
         <p class="hint">{{ t('tasks.hourlyHint') }}</p>
+      </template>
+      <!-- DEBT-546 once 档：datetime-local 选时（替代 time/day 组——执行后自动关） -->
+      <template v-else-if="draft.cycle === 'once'">
+        <label>{{ t('tasks.runAtLabel') }}</label>
+        <input v-model="draft.runAt" type="datetime-local" />
+        <p class="hint">{{ t('tasks.onceHint') }}</p>
       </template>
       <template v-else>
         <label>{{ t('tasks.everyLabel') }}</label>

@@ -157,3 +157,50 @@ export interface MessageEventData {
   payload: unknown
   timestamp: string
 }
+
+// ── DEBT-546 schedule.* 契约（daemon ScheduleSpec/RunRecord 全字段形）──
+
+/** 调度任务（daemon tasks 行 ↔ schedule.list 回显） */
+export interface ScheduleTask {
+  id: string
+  title: string
+  instruction: string
+  /** 'cloud' | 'local' */
+  mode: string
+  /** 'monthly'|'weekly'|'daily'|'hourly'|'interval'|'once' */
+  cycle: string
+  day: number
+  weekday: number
+  timeSecs: number
+  everySecs: number
+  runAtSecs: number
+  enabled: boolean
+  createdAt: number
+  updatedAt: number
+}
+
+/** schedule.create 入参（前端 draft 转换后——id 可省——daemon 生成） */
+export interface ScheduleCreateParams {
+  id?: string
+  title: string
+  instruction: string
+  mode: string
+  cycle: string
+  day: number
+  weekday: number
+  timeSecs: number
+  everySecs: number
+  runAtSecs: number
+  enabled?: boolean
+}
+
+/** 执行记录（runs 行 ↔ schedule.list_runs 回显） */
+export interface ScheduleRun {
+  id: number
+  task_id: string
+  triggered_at: number
+  /** 'success'|'error'|'skipped'|'once_done' */
+  status: string
+  summary: string
+  error: string
+}
