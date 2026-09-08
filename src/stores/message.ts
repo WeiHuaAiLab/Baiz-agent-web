@@ -4,6 +4,7 @@ import { db } from '../db'
 import { getClient } from '../client/singleton'
 import type { AttachmentItem } from './files'
 import { mapRpcError } from '../utils/errors'
+import { formatFileSize } from '../utils/format'
 import { useUiStore } from './ui'
 import { useSettingsStore } from './settings'
 import { useWorkingTreeStore } from './workingTree'
@@ -238,10 +239,23 @@ export const useMessageStore = defineStore('message', {
       let effective = text
       if (attachments && attachments.length > 0) {
         const blocks = attachments.map((attachment) => {
-          // content 为可选：图片 / 二进制文件本期不读内容（只有元信息），
-          // 此时只带文件名；文本附件才拼接前 4000 字符
+          // DEBT-542A（MSG-2861）：附件元信息块——名/mime/尺寸人话齐——
+          // 模型有可答面不空回（旧形态仅文件名块，dataUrl/content 与
+          // 模型入参脱钩）。图 dataUrl 在握但现模型文本档不读图内容——
+          // 诚实文案明示（勿假装看图——视觉档未启勿造能）；文本附件
+          // 照旧拼前 4000 字符（0 膨胀——元信息不入正文 token 爆）
+          const meta = [attachment.mimeType, formatFileSize(attachment.size)]
+            .filter(Boolean)
+            .join(' · ')
+          const suffix = meta ? `（${meta}）` : ''
+          if (attachment.kind === 'image') {
+            return (
+              `\n\n\`\`\`\n[图片：${attachment.name}${suffix}]\n` +
+              `图已随消息附呈会话；当前模型为文本档不读图内容——需看图请直接查看会话中的图片\n\`\`\``
+            )
+          }
           const body = attachment.content?.slice(0, 4000)
-          return `\n\n\`\`\`\n[附件：${attachment.name}]${body ? `\n${body}` : ''}\n\`\`\``
+          return `\n\n\`\`\`\n[附件：${attachment.name}${suffix}]${body ? `\n${body}` : ''}\n\`\`\``
         })
         effective = `${text}${blocks.join('')}`
       }

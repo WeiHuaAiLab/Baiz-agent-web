@@ -241,3 +241,83 @@ describe('chat.send 载荷 model 透传', () => {
     expect(captured.every((p) => typeof p.model === 'string')).toBe(true)
   })
 })
+
+// DEBT-542A（MSG-2861）：附件元信息块——名/mime/尺寸人话齐——模型有
+// 可答面不空回；图诚实文案（文本档不读图——勿假装看图）；dataUrl/
+// 内容零入正文（防 base64 膨胀 token）
+describe('DEBT-542A 附件元信息块', () => {
+  afterEach(() => {
+    vi.restoreAllMocks()
+    vi.useRealTimers()
+  })
+
+  function captureChatSend(): Array<{ message?: string }> {
+    const captured: Array<{ message?: string }> = []
+    vi.mocked(getClient).mockImplementation(
+      () =>
+        ({
+          chatSend: async (params: { message?: string }) => {
+            captured.push(params)
+            return { task_id: 't-a', status: 'ok' }
+          },
+        }) as never,
+    )
+    return captured
+  }
+
+  it('图附件 → 元信息块（mime·尺寸）＋诚实文案，dataUrl 零入正文', async () => {
+    const messages = useMessageStore()
+    const captured = captureChatSend()
+    await messages.sendUserMessage('c-img', '看图', undefined, [
+      {
+        id: 'a1',
+        kind: 'image',
+        name: 'photo.png',
+        mimeType: 'image/png',
+        size: 524288, // 512.0 KB
+        dataUrl: 'data:image/png;base64,AAAA',
+      },
+    ])
+    const sent = captured[0].message ?? ''
+    expect(sent).toContain('[图片：photo.png（image/png · 512.0 KB）]')
+    expect(sent).toContain('不读图内容')
+    expect(sent).toContain('查看会话中的图片')
+    // 诚实面：dataUrl/base64 零入正文（防 token 膨胀）
+    expect(sent).not.toContain('base64,AAAA')
+    expect(sent).not.toContain('data:image')
+  })
+
+  it('文件附件 → 元信息块（mime·尺寸）＋文本 body 照拼', async () => {
+    const messages = useMessageStore()
+    const captured = captureChatSend()
+    await messages.sendUserMessage('c-file', '读这个', undefined, [
+      {
+        id: 'a2',
+        kind: 'file',
+        name: 'notes.txt',
+        mimeType: 'text/plain',
+        size: 1536, // 1.5 KB
+        content: '第一行\n第二行',
+      },
+    ])
+    const sent = captured[0].message ?? ''
+    expect(sent).toContain('[附件：notes.txt（text/plain · 1.50 KB）]')
+    expect(sent).toContain('第一行\n第二行')
+  })
+
+  it('混合附件＋空 mime 兜底——元信息零缺失零炸', async () => {
+    const messages = useMessageStore()
+    const captured = captureChatSend()
+    await messages.sendUserMessage('c-mix', '两个一起', undefined, [
+      { id: 'a3', kind: 'image', name: 'a.png', mimeType: '', size: 0 },
+      { id: 'a4', kind: 'file', name: 'data.bin', mimeType: '', size: 42 },
+    ])
+    const sent = captured[0].message ?? ''
+    // 空 mime → 尺寸兜底照出；零 size → 0 B
+    expect(sent).toContain('[图片：a.png（0 B）]')
+    expect(sent).toContain('[附件：data.bin（42 B）]')
+    // 两附件块并存（image 诚实文案只现于图块）
+    expect(sent).toContain('不读图内容')
+    expect(sent.indexOf('[图片：') < sent.indexOf('[附件：')).toBe(true)
+  })
+})
