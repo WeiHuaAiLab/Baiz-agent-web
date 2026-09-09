@@ -92,6 +92,13 @@ export function createWebBridge(): Bridge {
           const cleanup = () => input.remove()
           const finish = async (file: File) => {
             cleanup()
+            // MSG-2893 DEBT-597 目④：8MB 护栏 web 形态对齐（壳 MAX_ATTACH
+            // _BYTES 8MiB——web 无——超限拒（错误告知——勿静默截）
+            if (file.size > 8 * 1024 * 1024) {
+              resolve(null)
+              window.alert('附件过大（> 8MB 上限）——请选更小文件')
+              return
+            }
             const isImage = file.type.startsWith('image/')
             // 二进制（图片、压缩包等）内容由后端在发送时读取，本期不读
             const isText =

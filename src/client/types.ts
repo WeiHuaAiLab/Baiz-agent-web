@@ -56,6 +56,10 @@ export interface ChatSendParams {
   /** MSG-2341（A-4 升格）：设置面所选模型透传——daemon DEBT-229 件1 已落
    * （Option<String> 直进 build_chat_request 真消费；None 兜底 default_model） */
   model?: string
+  /** MSG-2893 DEBT-597 目①：图片附件直送——image dataUrl 入 daemon
+   *  image_data_url（图文混合轮 user_with_image——视觉档模型可读——
+   *  勿只本地缩略图） */
+  image_data_url?: string
 }
 
 export interface ChatSendResult {

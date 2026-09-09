@@ -254,7 +254,13 @@ export const useMessageStore = defineStore('message', {
               `图已随消息附呈会话；当前模型为文本档不读图内容——需看图请直接查看会话中的图片\n\`\`\``
             )
           }
-          const body = attachment.content?.slice(0, 4000)
+          // MSG-2893 DEBT-597 目②：超限截断携「已截断」告知（勿静默吞
+          // ——与壳 read_text_with_fallback 同口径——模型知为何只此段）
+          const raw = attachment.content ?? ''
+          const truncated = raw.length > 4000
+          const body = truncated
+            ? `${raw.slice(0, 4000)}…（附件内容超限已截断——如需全文请缩小文件范围）`
+            : raw
           return `\n\n\`\`\`\n[附件：${attachment.name}${suffix}]${body ? `\n${body}` : ''}\n\`\`\``
         })
         effective = `${text}${blocks.join('')}`
@@ -278,6 +284,7 @@ export const useMessageStore = defineStore('message', {
         // 按帧 task_id 过滤后全量推送。
         // 注记（勘盘轻红修订）：e77fecd 基面无实删面——「每次发送都
         // subscribe」系预防性口径，非既存缺陷修复。
+        const firstImage = attachments?.find((a) => a.kind === 'image' && a.dataUrl)
         const result = await getClient().chatSend({
           message: effective,
           conversation_id: conversationId,
@@ -287,6 +294,9 @@ export const useMessageStore = defineStore('message', {
           // 状态栏（ChatHeader model-chip）同取 settings.model，显示与发送对卯
           model: useSettingsStore().model,
           ...(mode ? { mode } : {}),
+          // MSG-2893 DEBT-597 目①：首图 dataUrl 直送（daemon image_data_
+          // url——图文混合轮——视觉档模型可读——勿只本地缩略图）
+          ...(firstImage?.dataUrl ? { image_data_url: firstImage.dataUrl } : {}),
         })
         if (result.task_id && result.task_id !== clientTaskId) {
           const run = this.runs[clientTaskId]
