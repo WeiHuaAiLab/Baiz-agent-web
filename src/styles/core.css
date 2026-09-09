@@ -1075,6 +1075,11 @@ button {
   font-size: 12px;
 }
 
+/* MSG-2870 DEBT-592：run 卡死诚实报断显色（断态警示——勿与常态混） */
+.status.warn {
+  color: #c0392b;
+}
+
 /* 消息滚动区：flex 占位（输入框上方）；内部虚拟滚动容器填满作为唯一滚动层，
    原生滚动条始终隐藏（不占空间、内容永不跳动）；
    悬浮滚动条由外层 OverlayScrollArea（target=滚动容器）绘制，轨道覆盖整个 chat 区域 */

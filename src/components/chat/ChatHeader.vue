@@ -20,6 +20,13 @@ const ui = useUiStore();
 
 const exportOpen = ref(false)
 const streamingRuns = computed(() => messages.activeRuns(session.activeId))
+// MSG-2870 DEBT-592：连链稳判定——connected/resync（订阅在——run 终帧
+// 可达——思考中文案成立）；reconnecting/connecting/idle（订阅断重建中
+// ——run 终帧缺源——卡死诚实报断面）
+const connStable = computed(
+  () =>
+    settings.connection === 'connected' || settings.connection === 'resync',
+)
 
 function doExport(format: 'md' | 'json') {
   const conversation = session.active
@@ -50,7 +57,17 @@ function doExport(format: 'md' | 'json') {
         <!-- MSG-2722 L3 编程 UI：编程模式徽标（ui.programmingMode——toolchain
             任务态随动） -->
         <span v-if="ui.programmingMode" class="prog-chip">{{ t('chat.programModeOn') }}</span>
-        <span v-if="streamingRuns.length > 0" class="status">{{ t('status.connecting') }}</span>
+        <!-- MSG-2870 DEBT-592 分槽（勘案 🔴 即改）：streaming 勿借
+             connecting 槽——run 在飞且连链稳 → 「思考中…」（chat.
+             activityThinking——573 文案并目）；run 在飞但连链断（订阅断
+             重建——终帧缺源）→ 诚实报断可重试（勿思考中永卡——
+             chat.runInterrupted）；真连链态（无 run）→ 重连中 -->
+        <span v-if="streamingRuns.length > 0 && connStable" class="status">{{
+          t('chat.activityThinking')
+        }}</span>
+        <span v-else-if="streamingRuns.length > 0 && !connStable" class="status warn">{{
+          t('chat.runInterrupted')
+        }}</span>
         <span
           v-else-if="settings.connection === 'reconnecting' || settings.connection === 'connecting'"
           class="status"

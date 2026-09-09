@@ -56,6 +56,7 @@ export default {
     activityThinking: 'Thinking…',
     activityTool: 'Calling',
     activityToolDone: 'Done',
+    runInterrupted: 'Connection lost, please retry',
     activityGenerating: 'Generating…',
     running: 'Running…',
     renamePrompt: 'Conversation name',

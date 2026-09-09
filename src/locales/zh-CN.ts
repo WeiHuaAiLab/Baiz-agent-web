@@ -56,6 +56,7 @@ export default {
     activityThinking: '思考中…',
     activityTool: '正在调用',
     activityToolDone: '已完成',
+    runInterrupted: '连接已断，请重试',
     activityGenerating: '生成中…',
     running: '运行中…',
     renamePrompt: '会话名称',
