@@ -8,6 +8,7 @@ import { formatFileSize } from '../utils/format'
 import { useUiStore } from './ui'
 import { useSettingsStore } from './settings'
 import { useWorkingTreeStore } from './workingTree'
+import { useAuthStore } from './auth'
 import type {
   ChatMessage,
   MessageMeta,
@@ -285,9 +286,14 @@ export const useMessageStore = defineStore('message', {
         // 注记（勘盘轻红修订）：e77fecd 基面无实删面——「每次发送都
         // subscribe」系预防性口径，非既存缺陷修复。
         const firstImage = attachments?.find((a) => a.kind === 'image' && a.dataUrl)
+        // MSG-2922 门槛4②：登录态透传——session_token 随行（daemon 以其经
+        // SessionStore 查证 uid 驱动 owner 隔离；token 仅 sessionStorage 内存
+        // 态、零日志；未登录零键＝单主兼容面零变）
+        const sessionToken = useAuthStore().sessionToken
         const result = await getClient().chatSend({
           message: effective,
           conversation_id: conversationId,
+          ...(sessionToken ? { session_token: sessionToken } : {}),
           client_task_id: clientTaskId,
           ...(workspace ? { workspace } : {}),
           // MSG-2341（A-4 升格）：设置面所选模型透传 chat.send 载荷——

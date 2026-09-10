@@ -4,6 +4,7 @@ import { routeFrame } from '../src/client/eventRouter'
 import { useApprovalStore } from '../src/stores/approval'
 import { useMessageStore } from '../src/stores/message'
 import { useSettingsStore } from '../src/stores/settings'
+import { useAuthStore } from '../src/stores/auth'
 import { getClient } from '../src/client/singleton'
 import { buildDemoFrames } from '../src/demo/script'
 
@@ -319,5 +320,50 @@ describe('DEBT-542A 附件元信息块', () => {
     // 两附件块并存（image 诚实文案只现于图块）
     expect(sent).toContain('不读图内容')
     expect(sent.indexOf('[图片：') < sent.indexOf('[附件：')).toBe(true)
+  })
+})
+
+// MSG-2922 门槛4② 红证：登录态 owner 透传——session_token 随 chat.send
+// 载荷随行（登录态→请求面 owner 随行实证，勿文字承诺）；未登录/登出零键
+// （旧客户端/单主兼容面零变）。daemon 以其经 SessionStore 查证 uid 驱动
+// owner 隔离（daemon 侧红证在 sse::chat_send::memory_engine::tests）。
+describe('chat.send 载荷 session_token 透传（登录态 owner 随行）', () => {
+  beforeEach(() => {
+    setActivePinia(createPinia())
+  })
+  afterEach(() => {
+    vi.restoreAllMocks()
+    vi.useRealTimers()
+    sessionStorage.clear()
+  })
+
+  it('未登录零键 → 登录随行 → 登出回落零键（三态实证）', async () => {
+    const messages = useMessageStore()
+    const auth = useAuthStore()
+    const captured: Array<{ session_token?: string }> = []
+    vi.mocked(getClient).mockImplementation(
+      () =>
+        ({
+          chatSend: async (params: { session_token?: string }) => {
+            captured.push(params)
+            return { task_id: 't-tok', status: 'ok', model: 'deepseek-v4-pro' }
+          },
+        }) as never,
+    )
+
+    // ① 未登录：零键（单主兼容面零变）
+    await messages.sendUserMessage('c-tok', '未登录发一句')
+    expect(captured[0]?.session_token).toBeUndefined()
+
+    // ② 登录态（内存态注入——登录流程另有 auth.test.ts 专测）：随行
+    auth.sessionToken = 'tok-live-1'
+    await messages.sendUserMessage('c-tok', '登录后再发一句')
+    expect(captured[1]?.session_token).toBe('tok-live-1')
+
+    // ③ 登出：零键回落（token 零残留）
+    auth.logout()
+    await messages.sendUserMessage('c-tok', '登出后再发一句')
+    expect(captured[2]?.session_token).toBeUndefined()
+    expect(captured).toHaveLength(3)
   })
 })
