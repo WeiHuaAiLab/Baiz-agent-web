@@ -208,3 +208,24 @@ export interface ScheduleRun {
   summary: string
   error: string
 }
+
+// MSG-3014 包131：只读文件内容预览（daemon file.preview——授权目录钉死／
+// 服务端截断／原始字节零转码／二进制标记）
+export interface PreviewReadParams {
+  path: string
+  /** 单次读取上限（服务端取 min 硬上限——缺省 256KiB） */
+  max_bytes?: number
+  /** 授权根解析用工作区（缺省走 daemon config） */
+  workspace?: string
+}
+
+export interface PreviewReadResult {
+  /** 原始字节（base64 承载——编码判定在前端） */
+  bytes_b64: string
+  /** 全件字节数（截断明示真值） */
+  size: number
+  /** 服务端已按 max_bytes 截断 */
+  truncated: boolean
+  /** 二进制判别标记（界面据以示「不可预览」） */
+  binary: boolean
+}

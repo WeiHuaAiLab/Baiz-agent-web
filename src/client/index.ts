@@ -18,6 +18,8 @@ import type {
   TaskResumeResult,
   PendingApproval,
   PermissionRespondParams,
+  PreviewReadParams,
+  PreviewReadResult,
   ScheduleCreateParams,
   ScheduleRun,
   ScheduleTask,
@@ -48,6 +50,8 @@ export interface BaizClient {
   scheduleToggle(taskId: string, enabled: boolean): Promise<{ ok: boolean }>
   scheduleDelete(taskId: string): Promise<{ ok: boolean }>
   scheduleListRuns(taskId: string, limit?: number): Promise<ScheduleRun[]>
+  /** MSG-3014 包131：只读文件内容预览（daemon file.preview——授权目录钉死） */
+  previewRead(params: PreviewReadParams): Promise<PreviewReadResult>
   onEvent(handler: (frame: SseFrame) => void): () => void
   close(): void
 }
@@ -92,6 +96,13 @@ export function createClient(transport: RpcTransport): BaizClient {
     scheduleDelete: (taskId) => rpc.call('schedule.delete', { task_id: taskId }),
     scheduleListRuns: (taskId, limit) =>
       rpc.call('schedule.list_runs', { task_id: taskId, limit: limit ?? 20 }),
+    // MSG-3014：daemon file.preview（对卯 handler dispatch 同名）
+    previewRead: (params) =>
+      rpc.call<PreviewReadResult>('file.preview', {
+        path: params.path,
+        ...(params.max_bytes !== undefined ? { max_bytes: params.max_bytes } : {}),
+        ...(params.workspace ? { workspace: params.workspace } : {}),
+      }),
     onEvent: (handler) => transport.onEvent(handler),
     close: () => transport.close(),
   }

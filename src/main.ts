@@ -12,6 +12,8 @@ import { routeFrame } from './client/eventRouter'
 import { useApprovalStore } from './stores/approval'
 import { useMessageStore } from './stores/message'
 import { useSettingsStore } from './stores/settings'
+import { useFilesStore } from './stores/files'
+import { createRpcPreviewLoader } from './utils/filePreview'
 import zhCN from './locales/zh-CN'
 import enUS from './locales/en-US'
 import 'vue-virtual-scroller/dist/vue-virtual-scroller.css'
@@ -56,11 +58,26 @@ window.addEventListener('unhandledrejection', (event) => {
 
 // 获取（首次创建）传输层 + RPC 客户端
 const { client, transport } = getClientSetup()
-// 创建store 
+// 创建store
 const messages = useMessageStore(pinia)
 const approvals = useApprovalStore(pinia)
 const settings = useSettingsStore(pinia)
 settings.setDemoMode(transport.kind === 'mock')
+
+// MSG-3014 包131：文件预览接真——previewLoader 调 daemon file.preview
+// （授权目录钉死／服务端截断／原始字节零转码／二进制标记；R8「预览面装机
+// 零执行」销）。mock 演示径不发 RPC——loader 恒 null 走诚实降级（零网面）。
+const files = useFilesStore(pinia)
+files.setPreviewLoader(
+  createRpcPreviewLoader(async (path, maxBytes) => {
+    if (transport.kind === 'mock') return null
+    try {
+      return await client.previewRead({ path, max_bytes: maxBytes })
+    } catch {
+      return null
+    }
+  }),
+)
 
 // F4 挡板（MSG-2322）：帧统一经 SseReconnect 弃帧面转发路由——重放残帧
 // （id<=订阅基线）不达 routeFrame（勿重复处理旧帧）；mock 演示径亦同路。

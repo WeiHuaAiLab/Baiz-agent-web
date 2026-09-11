@@ -10,9 +10,72 @@ export const HIGHLIGHT_MAX_BYTES = 64 * 1024
 
 export type PreviewKind = 'empty' | 'binary' | 'text'
 
-/** 预览字节读取面（注入）：返回原始字节（编码判定在前端做——勿交已解码串）。
- *  接口形以呈堂对卯为准——本件不定义 wire（另令俟颁）。 */
-export type PreviewLoader = (path: string) => Promise<Uint8Array | null>
+/** MSG-3014 包131：daemon 预览 RPC 载荷（wire 形对卯——MSG-2998 呈堂③建议形
+ *  ＋本令④标记）：原始字节（base64 承载）＋size 全值＋truncated＋binary。 */
+export interface PreviewPayload {
+  bytes: Uint8Array
+  /** 全件字节数（daemon 服务端真值——截断面「已示 X/共 Y」须真值） */
+  totalBytes: number
+  /** 服务端已截断（max_bytes 强制——界面须明示） */
+  truncated: boolean
+  /** daemon 二进制标记（权威——全件判；web sniff 采样 8KB 兜底） */
+  binary: boolean
+}
+
+/** MSG-3014：daemon 预览 RPC 响应形（wire 对卯件——勿擅改字段名）。 */
+export interface PreviewRpcResponse {
+  bytes_b64: string
+  size: number
+  truncated: boolean
+  binary: boolean
+}
+
+/** MSG-3014：RPC 调用面（注入——mock 可测；真装走 client.previewRead）。 */
+export type PreviewRpcCaller = (
+  path: string,
+  maxBytes: number,
+) => Promise<PreviewRpcResponse | null>
+
+/** 预览字节读取面（注入）：返回原始字节（编码判定在前端做——勿交已解码串）
+ *  或 daemon 载荷（带 size/truncated/binary 标记——MSG-3014 接线）。
+ *  接口形以呈堂对卯为准（裸字节面保留——旧测/旧注入零破）。 */
+export type PreviewLoader = (
+  path: string,
+) => Promise<Uint8Array | PreviewPayload | null>
+
+/** base64 → 原始字节（daemon 出参解码；解码失败返回 null——honest 降级）。 */
+export function base64ToBytes(b64: string): Uint8Array | null {
+  try {
+    const bin = atob(b64)
+    const out = new Uint8Array(bin.length)
+    for (let i = 0; i < bin.length; i += 1) out[i] = bin.charCodeAt(i)
+    return out
+  } catch {
+    return null
+  }
+}
+
+/** MSG-3014 接线工厂：daemon RPC → PreviewLoader（接真——装机可执行）。
+ *  败面/null 俱诚实返回 null（界面降级文案）；daemon 标记随载荷透传
+ *  （size/truncated/binary——显示面真值来源）。 */
+export function createRpcPreviewLoader(call: PreviewRpcCaller): PreviewLoader {
+  return async (path: string): Promise<Uint8Array | PreviewPayload | null> => {
+    try {
+      const resp = await call(path, PREVIEW_MAX_BYTES)
+      if (!resp || typeof resp.bytes_b64 !== 'string') return null
+      const bytes = base64ToBytes(resp.bytes_b64)
+      if (bytes === null) return null
+      return {
+        bytes,
+        totalBytes: typeof resp.size === 'number' ? resp.size : bytes.length,
+        truncated: resp.truncated === true,
+        binary: resp.binary === true,
+      }
+    } catch {
+      return null
+    }
+  }
+}
 
 export interface PreviewDecode {
   kind: PreviewKind
@@ -90,13 +153,16 @@ function decodeAtBoundary(
 export function decodePreview(
   bytes: Uint8Array,
   maxBytes: number = PREVIEW_MAX_BYTES,
+  hints?: { totalBytes?: number; truncated?: boolean; binary?: boolean },
 ): PreviewDecode {
-  const totalBytes = bytes.length
-  if (totalBytes === 0) {
-    return make('empty', '', '', false, 0, 0)
+  // MSG-3014：daemon 标记优先（服务端已按 max_bytes 截断——bytes 即示段；
+  // size 系全件真值——「已示 X/共 Y」按真值示；binary 标记权威直采）
+  const totalBytes = hints?.totalBytes ?? bytes.length
+  if (bytes.length === 0) {
+    return make('empty', '', '', false, totalBytes, 0)
   }
-  const truncated = totalBytes > maxBytes
-  const slice = truncated ? bytes.subarray(0, maxBytes) : bytes
+  const truncated = hints?.truncated ?? totalBytes > maxBytes
+  const slice = bytes.length > maxBytes ? bytes.subarray(0, maxBytes) : bytes
   const shownBytes = slice.length
 
   // 1) BOM 优先（显式编码声明——最可靠；截断时同做边界回退）
@@ -122,8 +188,9 @@ export function decodePreview(
     return make('text', text, 'UTF-16BE (BOM)', truncated, totalBytes, shownBytes)
   }
 
-  // 2) 二进制嗅探（无 BOM 文本不含 NUL）
-  if (looksBinary(slice)) {
+  // 2) 二进制：daemon 标记权威（④——全件判）直采；无标记走本地嗅探
+  //    （采样 8KB 兜底——无 BOM 文本不含 NUL）
+  if (hints?.binary === true || looksBinary(slice)) {
     return make('binary', '', '', truncated, totalBytes, shownBytes)
   }
 

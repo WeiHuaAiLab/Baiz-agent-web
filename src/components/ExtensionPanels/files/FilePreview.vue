@@ -50,13 +50,24 @@ async function load(): Promise<void> {
   }
   loading.value = true
   try {
-    const bytes = await loader(props.path)
+    const result = await loader(props.path)
     if (seq !== loadSeq) return
-    if (bytes === null) {
+    if (result === null) {
       errorText.value = t('files.previewFailed')
       return
     }
-    decode.value = decodePreview(bytes)
+    // MSG-3014：daemon 载荷（size/truncated/binary 标记随行）与裸字节面兼容。
+    // 判式走鸭子型（'bytes' in result——勿用 instanceof Uint8Array：
+    // 跨 realm 构造面失准——jsdom TextEncoder 面实证）
+    const isPayload =
+      typeof result === 'object' &&
+      result !== null &&
+      'bytes' in (result as Record<string, unknown>)
+    const bytes = isPayload ? (result as { bytes: Uint8Array }).bytes : (result as Uint8Array)
+    const hints = isPayload
+      ? (result as { totalBytes: number; truncated: boolean; binary: boolean })
+      : undefined
+    decode.value = decodePreview(bytes, undefined, hints)
   } catch (error) {
     if (seq !== loadSeq) return
     errorText.value = error instanceof Error ? error.message : String(error)
