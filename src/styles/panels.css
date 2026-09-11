@@ -172,6 +172,158 @@
   color: var(--text);
 }
 
+/* MSG-2998 修③（DEBT-619）：授权目录文件条目可点开预览 */
+.authorized-file-btn {
+  display: block;
+  width: 100%;
+  padding: 0;
+  border: none;
+  background: none;
+  font: inherit;
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.authorized-file-btn:hover {
+  color: var(--accent, #2f6fed);
+  text-decoration: underline;
+}
+
+.authorized-dir-entry {
+  opacity: 0.85;
+}
+
+/* MSG-2998 修③：预览面（编码标签/截断明示/二进制/凭据遮罩） */
+.file-preview {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  min-height: 0;
+}
+
+.preview-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 10px;
+  border-bottom: 1px solid var(--border);
+  font-size: 12px;
+}
+
+.preview-name {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-family: 'Cascadia Code', Consolas, monospace;
+}
+
+.preview-encoding,
+.preview-size {
+  flex: none;
+  font-size: 10px;
+  padding: 2px 6px;
+  border-radius: 8px;
+  background: var(--code-bg, rgba(127, 127, 127, 0.12));
+  color: var(--muted);
+}
+
+.preview-close {
+  flex: none;
+  border: none;
+  background: none;
+  color: var(--muted);
+  cursor: pointer;
+  padding: 2px 4px;
+}
+
+.preview-close:hover {
+  color: var(--text);
+}
+
+.preview-truncated {
+  padding: 5px 10px;
+  font-size: 11px;
+  color: #8a6d1a;
+  background: rgba(214, 168, 40, 0.12);
+  border-bottom: 1px solid var(--border);
+}
+
+.preview-status {
+  padding: 14px 12px;
+  font-size: 12px;
+  color: var(--muted);
+}
+
+.preview-status.error {
+  color: #c0392b;
+}
+
+.preview-code {
+  margin: 0;
+  padding: 8px 12px;
+  overflow: auto;
+  flex: 1;
+  min-height: 0;
+  font-family: 'Cascadia Code', Consolas, monospace;
+  font-size: 12px;
+  line-height: 1.5;
+  white-space: pre;
+}
+
+.preview-code code {
+  background: none;
+  padding: 0;
+}
+
+/* 凭据件遮罩（安全钉：默认遮罩——二次确认方示） */
+.preview-mask {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  padding: 28px 16px;
+  text-align: center;
+}
+
+.mask-icon {
+  font-size: 22px;
+}
+
+.mask-title {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text);
+}
+
+.mask-desc {
+  margin: 0;
+  font-size: 11px;
+  color: var(--muted);
+  max-width: 260px;
+}
+
+.mask-reveal {
+  margin-top: 6px;
+  padding: 5px 12px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--code-bg, rgba(127, 127, 127, 0.08));
+  color: var(--text);
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.mask-reveal:hover {
+  border-color: var(--accent, #2f6fed);
+  color: var(--accent, #2f6fed);
+}
+
 /* 设置页：滚动区占满 100% 宽（滚动条贴最右侧、全宽），内容由 .settings-inner 限宽居中 */
 .settings-view {
   height: 100%;

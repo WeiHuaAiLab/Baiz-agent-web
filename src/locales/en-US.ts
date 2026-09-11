@@ -66,6 +66,9 @@ export default {
     reasoningLabel: 'Thinking',
     toolCall: 'Tool',
     toolResult: 'Result',
+    // MSG-2998 修②（DEBT-544 part 2）：three-way split block labels
+    blockCommands: 'Commands',
+    blockResults: 'Results',
   },
   files: {
     title: 'Files',
@@ -81,6 +84,16 @@ export default {
     changesReverted: 'Changes reverted',
     authorizedDirs: 'Authorized directories',
     authorized: 'Authorized',
+    // MSG-2998 修③（DEBT-619）：file preview (web)
+    previewLoading: 'Loading…',
+    previewUnavailable: 'Preview content API not connected yet',
+    previewFailed: 'Failed to load preview',
+    previewTruncated: 'Truncated: showing first {shown} (of {total})',
+    previewBinary: 'Binary file — no preview',
+    previewEmpty: 'Empty file',
+    credentialMaskTitle: 'This file may contain credentials',
+    credentialMaskDesc: 'Content is masked by default. Confirm to reveal.',
+    credentialReveal: 'Reveal content',
   },
   workspace: { empty: 'No authorized directories', active: 'Active', manage: 'Manage in settings' },
   sidebar: {

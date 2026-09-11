@@ -66,6 +66,9 @@ export default {
     reasoningLabel: '思考过程',
     toolCall: '调用工具',
     toolResult: '工具结果',
+    // MSG-2998 修②（DEBT-544 目二）：三分离归组区标
+    blockCommands: '执行命令',
+    blockResults: '执行结果',
   },
   files: {
     title: '文件',
@@ -81,6 +84,16 @@ export default {
     changesReverted: '已回滚',
     authorizedDirs: '已授权目录',
     authorized: '已授权',
+    // MSG-2998 修③（DEBT-619）：文件预览 web 面
+    previewLoading: '读取中…',
+    previewUnavailable: '预览内容接口未接入（俟另令颁）',
+    previewFailed: '预览读取失败',
+    previewTruncated: '已截断：显示前 {shown}（共 {total}）',
+    previewBinary: '二进制文件——不可预览',
+    previewEmpty: '空文件',
+    credentialMaskTitle: '此文件可能包含凭据',
+    credentialMaskDesc: '为避免泄露，内容默认遮罩——确认后方可查看。',
+    credentialReveal: '确认查看内容',
   },
   workspace: { empty: '暂无授权目录', active: '当前', manage: '在设置中管理' },
   sidebar: {

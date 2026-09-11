@@ -8,6 +8,7 @@ import { buildTree } from '../../utils/tree'
 import type { TreeNode } from '../../utils/tree'
 import { computeLineDiff, diffStats } from '../../utils/diff'
 import FileTreeItem from './files/FileTreeItem.vue'
+import FilePreview from './files/FilePreview.vue'
 import Icon from '../common/Icon.vue'
 import { useUiStore } from '../../stores/ui'
 import type { FileEntry } from '../../bridge'
@@ -31,6 +32,20 @@ const pathOpen = ref(false)
 const authorizedOpen = ref<Record<string, boolean>>({})
 const authorizedEntries = ref<Record<string, FileEntry[]>>({})
 const otherFiles = computed(() => working.list.filter((file) => file.path !== active.value?.path))
+// MSG-2998 修③（DEBT-619）：目录树点件 → 预览（抽屉内预览面；接口未接入时诚实降级）
+const previewPath = ref('')
+const previewName = ref('')
+
+function openPreview(path: string, name: string) {
+  previewPath.value = path
+  previewName.value = name || basename(path)
+  pathOpen.value = false
+}
+
+function closePreview() {
+  previewPath.value = ''
+  previewName.value = ''
+}
 
 function dirname(path: string): string {
   const index = path.lastIndexOf('/')
@@ -90,7 +105,15 @@ async function toggleAuthorized(key: string) {
       </div>
     </header>
     <div class="files-body">
-      <template v-if="active">
+      <!-- MSG-2998 修③：预览面（目录树点件进入）——接口未接入时降级文案由组件内诚实呈现 -->
+      <FilePreview
+        v-if="previewPath"
+        :path="previewPath"
+        :name="previewName"
+        :loader="files.previewLoader ?? undefined"
+        @close="closePreview"
+      />
+      <template v-else-if="active">
         <div class="code-viewer">
           <div class="viewer-head">
             <div class="viewer-path-wrap">
@@ -154,7 +177,16 @@ async function toggleAuthorized(key: string) {
             </div>
             <ul v-if="authorizedOpen[key]" class="authorized-files">
               <li v-for="entry in authorizedEntries[key] ?? []" :key="entry.path">
-                {{ entry.isDir ? '▸ ' : '' }}{{ entry.name }}
+                <!-- MSG-2998 修③：目录条目仍为列项（单层列面）；文件条目可点开预览 -->
+                <span v-if="entry.isDir" class="authorized-dir-entry">▸ {{ entry.name }}</span>
+                <button
+                  v-else
+                  type="button"
+                  class="authorized-file-btn"
+                  @click="openPreview(entry.path, entry.name)"
+                >
+                  {{ entry.name }}
+                </button>
               </li>
             </ul>
           </div>

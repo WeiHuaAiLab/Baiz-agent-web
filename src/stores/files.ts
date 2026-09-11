@@ -2,6 +2,7 @@
 import { defineStore } from 'pinia'
 import { getBridge } from '../bridge'
 import type { FileEntry } from '../bridge'
+import type { PreviewLoader } from '../utils/filePreview'
 import { useUiStore } from './ui'
 
 export interface AttachmentItem {
@@ -28,6 +29,10 @@ export const useFilesStore = defineStore('files', {
     loading: false,
     attachments: [] as AttachmentItem[],
     pickedDirs: {} as Record<string, { name: string; path: string }>,
+    /** MSG-2998 修③（DEBT-619）：预览字节读取面（注入）——预览内容接口
+     *  属 daemon 侧只读 RPC（另令俟颁），本令只做前端组件与交互、勿擅定
+     *  wire；未注入时预览面板诚实降级。 */
+    previewLoader: null as PreviewLoader | null,
   }),
   getters: {
     createDirSupported(state): boolean {
@@ -129,6 +134,10 @@ export const useFilesStore = defineStore('files', {
     bindDir(path: string, name: string) {
       if (!path || this.pickedDirs[path]) return
       this.pickedDirs[path] = { name: name || path.split(/[\\/]/).pop() || path, path }
+    },
+    /** 注入预览读取面（接线候另令——本令只立形与交互） */
+    setPreviewLoader(loader: PreviewLoader | null) {
+      this.previewLoader = loader
     },
     removeAttachment(id: string) {
       this.attachments = this.attachments.filter((item) => item.id !== id)
