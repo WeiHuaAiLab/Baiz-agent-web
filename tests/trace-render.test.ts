@@ -1,7 +1,7 @@
 // MSG-2413 红证：思考过程折叠块＋工具执行行现形——mock 帧/组件态→现形断言
 import { beforeEach, describe, expect, it } from 'vitest'
 import { createPinia, setActivePinia } from 'pinia'
-import { shallowMount } from '@vue/test-utils'
+import { mount, shallowMount } from '@vue/test-utils'
 import { createI18n } from 'vue-i18n'
 import { routeFrame } from '../src/client/eventRouter'
 import { useApprovalStore } from '../src/stores/approval'
@@ -64,7 +64,10 @@ describe('MSG-2413 思考/执行渲染面', () => {
       text: '已完成',
       trace: [],
     }
-    const wrapper = shallowMount(MessageItem, {
+    // MSG-2998 修②：思考折叠块归组入 RunBlocks 子组件（三分离重构）——
+    // shallowMount 会 stub 子组件致断言面不可达，改 mount 实渲；
+    // 断言零放宽（类名/文案/交互与修前同）。
+    const wrapper = mount(MessageItem, {
       props: { message: messages.byConversation[conversationId][0] },
       global: { plugins: [i18n, router] },
     })

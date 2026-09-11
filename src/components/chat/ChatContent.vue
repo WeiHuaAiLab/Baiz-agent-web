@@ -12,6 +12,7 @@ import { useUiStore } from '../../stores/ui'
 import { getBridge } from '../../bridge'
 import type { ChatMessage, RunState } from '../../models'
 import MessageItem from './MessageItem.vue'
+import RunBlocks from './RunBlocks.vue'
 import StreamingMarkdownView from '../markdown/StreamingMarkdownView.vue'
 
 const { t } = useI18n()
@@ -232,12 +233,9 @@ async function onStreamingClick(event: MouseEvent) {
 
     <div v-if="streamingRuns.length" class="streaming-tail" @click="onStreamingClick">
       <div v-for="run in streamingRuns" :key="run.taskId" class="msg assistant streaming-block">
-        <!-- MSG-2661 目④：reasoning 帧流式增量渲染——思考过程随帧长（区标
-             「思考过程」——与正文分离——终态后同源折叠于 MessageItem） -->
-        <div v-if="run.reasoning" class="reasoning-stream">
-          <div class="reasoning-stream-head">⋯ {{ t('chat.reasoningLabel') }}</div>
-          <pre class="reasoning-stream-body">{{ run.reasoning }}</pre>
-        </div>
+        <!-- MSG-2998 修②（DEBT-544 目二）：三分离归组——思考/执行命令/
+             执行结果各自成区（流式态与终态同构，RunBlocks 两态一源） -->
+        <RunBlocks :run="run" streaming />
         <div class="activity-line">
           <span class="activity-dot" />
           {{ activityText(run) }}

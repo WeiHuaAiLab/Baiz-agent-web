@@ -320,6 +320,94 @@
   border-top: 1px solid var(--border);
 }
 
+/* MSG-2998 修②（DEBT-544 目二）：三分离归组——思考/执行命令/执行结果
+   三区各自成块、互不混入（流式与终态同构） */
+.run-blocks {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin: 6px 0;
+}
+
+.run-block {
+  max-width: 640px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  overflow: hidden;
+  font-size: 12px;
+}
+
+/* 与既有折叠块/流式块共存：块间距交给 .run-blocks gap，勿叠 margin */
+.run-blocks .run-block {
+  margin: 0;
+}
+
+.run-block .block-head {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 10px;
+  background: var(--code-bg, rgba(0, 0, 0, 0.04));
+  color: var(--muted);
+  font-weight: 500;
+}
+
+.run-block .block-icon {
+  color: var(--accent, #2f6fed);
+  font-weight: 700;
+}
+
+.run-block .block-count {
+  margin-left: auto;
+  color: var(--muted);
+  opacity: 0.75;
+}
+
+.run-block .block-list {
+  margin: 0;
+  padding: 6px 12px;
+  list-style: none;
+  border-top: 1px solid var(--border);
+  max-height: 240px;
+  overflow-y: auto;
+}
+
+.run-block .cmd-item,
+.run-block .result-item {
+  display: flex;
+  gap: 8px;
+  padding: 2px 0;
+  align-items: baseline;
+}
+
+.run-block .cmd-tool {
+  font-family: 'Cascadia Code', Consolas, monospace;
+  color: var(--accent, #2f6fed);
+  white-space: nowrap;
+}
+
+.run-block .cmd-args {
+  font-family: 'Cascadia Code', Consolas, monospace;
+  color: var(--muted);
+  white-space: pre-wrap;
+  word-break: break-all;
+}
+
+.run-block .result-flag {
+  color: #2e9e5b;
+  white-space: nowrap;
+}
+
+.run-block .result-item.failed .result-flag {
+  color: #c0392b;
+}
+
+.run-block .result-preview {
+  color: var(--muted);
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
 /* MSG-2413 工具执行行（命令/URL） */
 .tool-cmd {
   display: block;

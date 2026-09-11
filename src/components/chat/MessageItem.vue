@@ -10,6 +10,7 @@ import { formatFileSize, shortMime } from '../../utils/format'
 import MarkdownView from '../markdown/MarkdownView.vue'
 import ToolRow from './ToolRow.vue'
 import ApprovalCard from './ApprovalCard.vue'
+import RunBlocks from './RunBlocks.vue'
 import Icon from '../common/Icon.vue'
 import type { ChatMessage } from '../../models'
 
@@ -18,9 +19,6 @@ const { t } = useI18n()
 const router = useRouter()
 const messages = useMessageStore()
 
-const showTrace = ref(false)
-// MSG-2413 思考过程折叠块：run.reasoning 累积渲染——WorkBuddy 式可折叠「深度思考」
-const showReasoning = ref(false)
 const copied = ref(false)
 
 const run = computed(() =>
@@ -73,16 +71,10 @@ function goSettings() {
       <span v-if="elapsedMs !== undefined && !hasRun" class="elapsed static">
         ⏱ {{ t('chat.elapsed') }} {{ elapsedText }}
       </span>
-      <button
-        v-else-if="hasRun"
-        type="button"
-        class="elapsed"
-        :class="{ open: showTrace }"
-        @click="showTrace = !showTrace"
-      >
+      <span v-else-if="hasRun" class="elapsed static">
         <template v-if="running">{{ t('chat.running') }}</template>
-        <template v-else>⏱ {{ t('chat.elapsed') }} {{ elapsedText }} ›</template>
-      </button>
+        <template v-else>⏱ {{ t('chat.elapsed') }} {{ elapsedText }}</template>
+      </span>
       <div class="msg-actions">
         <button type="button" class="icon-btn" :title="t('common.copy')" @click="copy">
           <Icon :name="copied ? 'check' : 'copy'" :size="15" />
@@ -105,20 +97,12 @@ function goSettings() {
       </div>
     </div>
 
-    <!-- MSG-2413 思考过程折叠块：有 reasoning 即现形（流式累积照渲），默认收起 -->
-    <div v-if="run?.reasoning" class="reasoning-block">
-      <button
-        type="button"
-        class="reasoning-head"
-        :class="{ open: showReasoning }"
-        @click="showReasoning = !showReasoning"
-      >
-        <span class="reasoning-dots">⋯</span>
-        <span>{{ t('chat.deepThink') }}</span>
-        <span class="reasoning-toggle">{{ showReasoning ? '▾' : '▸' }}</span>
-      </button>
-      <div v-if="showReasoning" class="reasoning-body">{{ run.reasoning }}</div>
-    </div>
+    <!-- MSG-2998 修②（DEBT-544 目二）：三分离归组——思考（reasoning／
+         折叠，MSG-2413 交互保留）＋执行命令（tool.call）＋执行结果
+         （tool.result）各自成区、互不混入；与流式态同构（RunBlocks 两态）。
+         归属钉：三区系 assistant 呈现面——tool_call/approval 条目继续走
+         各自组件（ToolRow/ApprovalCard），勿重复渲染致混排。 -->
+    <RunBlocks v-if="message.kind === 'assistant' && run" :run="run" />
 
     <MarkdownView
       v-if="message.kind === 'assistant' && (message.text || running)"
@@ -185,23 +169,6 @@ function goSettings() {
       >
         {{ t('errors.goSettings') }}
       </button>
-    </div>
-
-    <div v-if="showTrace && run" class="trace-panel">
-      <div v-if="run.reasoning" class="trace-reasoning">
-        <span>{{ t('chat.thinking') }}</span>
-        {{ run.reasoning }}
-      </div>
-      <div v-for="(item, i) in run.trace" :key="i" class="trace-item" :class="item.kind">
-        <template v-if="item.kind === 'tool.call'">
-          {{ t('chat.toolCall') }} {{ item.toolName }}
-          <span v-if="item.argsPreview" class="trace-args">{{ item.argsPreview }}</span>
-        </template>
-        <template v-else-if="item.kind === 'tool.result'">
-          {{ t('chat.toolResult') }} {{ item.preview }}
-        </template>
-        <template v-else>{{ t('chat.thinking') }}</template>
-      </div>
     </div>
 
     <!-- 批0 人话字幕：工具调用全翻译成小白能看懂的一句话 -->
