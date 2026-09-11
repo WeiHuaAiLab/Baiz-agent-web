@@ -64,6 +64,25 @@ function make(
 }
 
 /**
+ * MSG-3001 R1 修口·案二（截断点回退字符边界）：为指定编码试减尾部至多
+ * maxBack 字节，取最长严格可解前缀——截断劈开多字节字符时回退到合法
+ * 字符边界，勿以「劈开的残字节」误判整体编码。
+ */
+function decodeAtBoundary(
+  slice: Uint8Array,
+  label: string,
+  maxBack: number,
+): string | null {
+  for (let back = 0; back <= maxBack; back += 1) {
+    const end = slice.length - back
+    if (end <= 0) return null
+    const decoded = strictDecode(slice.subarray(0, end), label)
+    if (decoded !== null) return decoded
+  }
+  return null
+}
+
+/**
  * 字节 → 预览解码。顺序：空件 → BOM（UTF-8/UTF-16LE/BE）→ 二进制嗅探 →
  * UTF-8 严格 → GBK 兜底 → UTF-8 宽松（诚实标注）。
  * 截断（> maxBytes）时只解前段并置 truncated（界面明示）。
@@ -80,17 +99,26 @@ export function decodePreview(
   const slice = truncated ? bytes.subarray(0, maxBytes) : bytes
   const shownBytes = slice.length
 
-  // 1) BOM 优先（显式编码声明——最可靠）
+  // 1) BOM 优先（显式编码声明——最可靠；截断时同做边界回退）
   if (slice.length >= 3 && slice[0] === 0xef && slice[1] === 0xbb && slice[2] === 0xbf) {
-    const text = looseDecode(slice.subarray(3), 'utf-8')
+    const body = slice.subarray(3)
+    const text = truncated
+      ? (decodeAtBoundary(body, 'utf-8', 3) ?? looseDecode(body, 'utf-8'))
+      : looseDecode(body, 'utf-8')
     return make('text', text, 'UTF-8 (BOM)', truncated, totalBytes, shownBytes)
   }
   if (slice.length >= 2 && slice[0] === 0xff && slice[1] === 0xfe) {
-    const text = looseDecode(slice.subarray(2), 'utf-16le')
+    const body = slice.subarray(2)
+    const text = truncated
+      ? (decodeAtBoundary(body, 'utf-16le', 1) ?? looseDecode(body, 'utf-16le'))
+      : looseDecode(body, 'utf-16le')
     return make('text', text, 'UTF-16LE (BOM)', truncated, totalBytes, shownBytes)
   }
   if (slice.length >= 2 && slice[0] === 0xfe && slice[1] === 0xff) {
-    const text = looseDecode(slice.subarray(2), 'utf-16be')
+    const body = slice.subarray(2)
+    const text = truncated
+      ? (decodeAtBoundary(body, 'utf-16be', 1) ?? looseDecode(body, 'utf-16be'))
+      : looseDecode(body, 'utf-16be')
     return make('text', text, 'UTF-16BE (BOM)', truncated, totalBytes, shownBytes)
   }
 
@@ -99,19 +127,24 @@ export function decodePreview(
     return make('binary', '', '', truncated, totalBytes, shownBytes)
   }
 
-  // 3) UTF-8 严格
-  const utf8 = strictDecode(slice, 'utf-8')
+  // 3) UTF-8——MSG-3001 R1 修口（案一质量评估＋案二边界回退合一）：
+  //    截断时按边界回退（≤3 字节）找最长严格可解前缀——仅尾部残字节者
+  //    （回退后严格全解）= UTF-8 被截断，即判 UTF-8；勿因劈开的残字节
+  //    落下方 GBK 阶梯（GBK 宽容编码恰可解 → 整屏 mojibake 误标 GBK——
+  //    R1 根因）。真非 UTF-8 流在流中段即非法，回退救不回 → 正确下落。
+  const utf8 = truncated ? decodeAtBoundary(slice, 'utf-8', 3) : strictDecode(slice, 'utf-8')
   if (utf8 !== null) {
     return make('text', utf8, 'UTF-8', truncated, totalBytes, shownBytes)
   }
 
-  // 4) GBK 兜底（中文旧档常用；Node/浏览器 TextDecoder 均支持）
-  const gbk = strictDecode(slice, 'gbk')
+  // 4) GBK 兜底（中文旧档常用；Node/浏览器 TextDecoder 均支持）——截断时
+  //    同样边界回退 ≤1 字节（GBK 双字节字符劈开面；勿落宽松全替换符）
+  const gbk = truncated ? decodeAtBoundary(slice, 'gbk', 1) : strictDecode(slice, 'gbk')
   if (gbk !== null) {
     return make('text', gbk, 'GBK', truncated, totalBytes, shownBytes)
   }
 
-  // 5) 宽松 UTF-8（截断切多字节字符等——诚实降级，界面按 UTF-8 展示）
+  // 5) 宽松 UTF-8（诚实降级，界面按 UTF-8 展示）
   const loose = looseDecode(slice, 'utf-8')
   return make('text', loose, 'UTF-8（宽松兜底）', truncated, totalBytes, shownBytes)
 }
@@ -204,7 +237,10 @@ export function formatBytes(size: number): string {
   return `${(size / 1024 / 1024 / 1024).toFixed(2)} GB`
 }
 
-/** 凭据敏感件判定（安全钉：遮罩/二次确认方示——只判名，不读内容） */
+/** 凭据敏感件判定（安全钉：遮罩/二次确认方示——只判名，不读内容）。
+ *  MSG-3001 ③ 补族（试刀窗补遗 P1 谱）：.git-credentials/.pypirc/.envrc/
+ *  .docker/config.json/.kube/config/terraform.tfstate；并修误遮——
+ *  id_rsa.pub 族**公钥**移出遮罩（私钥仍遮）。 */
 const CREDENTIAL_PATTERNS: RegExp[] = [
   /(^|[\\/])\.env(\.[^\\/]*)?$/i,
   /\.(pem|key|pfx|p12|jks|keystore|ppk)$/i,
@@ -214,8 +250,18 @@ const CREDENTIAL_PATTERNS: RegExp[] = [
   /(^|[\\/])\.aws([\\/]|$)/i,
   /(^|[\\/])daemon\.token$/i,
   /(^|[\\/])\.ssh([\\/]|$)/i,
+  // MSG-3001 ③ 补族
+  /(^|[\\/])\.git-credentials$/i,
+  /(^|[\\/])\.pypirc$/i,
+  /(^|[\\/])\.envrc$/i,
+  /(^|[\\/])\.docker[\\/]config\.json$/i,
+  /(^|[\\/])\.kube[\\/]config$/i,
+  /(^|[\\/])terraform\.tfstate(\.backup)?$/i,
 ]
 
 export function isCredentialFile(path: string): boolean {
+  // MSG-3001 ③：公钥（*.pub）即公开物——先排除（勿因 .ssh/ 目录级模式等误遮，
+  // 深审反例：/home/u/.ssh/id_rsa.pub 被吞）
+  if (/\.pub$/i.test(path)) return false
   return CREDENTIAL_PATTERNS.some((pattern) => pattern.test(path))
 }

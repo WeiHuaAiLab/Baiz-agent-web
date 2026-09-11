@@ -88,6 +88,47 @@ describe('MSG-2998 修③ 预览解码兜底', () => {
   })
 })
 
+describe('MSG-3001 R1 截断编码链（阻断件·相位扫描探针）', () => {
+  it("大件 UTF-8 中文截断劈多字节——不得误标 GBK/乱码（'中'×90000 探针·修前必败）", () => {
+    const bytes = utf8('中'.repeat(90000)) // 270000B·截 262144（262144%3=1 恰劈多字节）
+    expect(bytes.length).toBe(270000)
+    const decoded = decodePreview(bytes)
+    expect(decoded.kind).toBe('text')
+    expect(decoded.truncated).toBe(true)
+    // 修前：严格 UTF-8 败 → GBK 严格（在宽松前）恰可解 → 误标 GBK + 整屏 mojibake
+    expect(decoded.encoding).toBe('UTF-8')
+    expect(decoded.text.startsWith('中')).toBe(true)
+    expect(decoded.text.includes('涓')).toBe(false) // mojibake 特征字（修前现形）
+  })
+
+  it('相位扫描：多个截断相位俱得 UTF-8（勿以单相位侥幸）', () => {
+    // 三相位：余 0/1/2 字节——各造 262144+k 字节的 '中' 流
+    for (const pad of [0, 1, 2]) {
+      const bytes = utf8('中'.repeat(87382) + 'a'.repeat(pad)) // 262146+pad ≥ 上限
+      const decoded = decodePreview(bytes)
+      expect(decoded.encoding, `pad=${pad}`).toBe('UTF-8')
+      expect(decoded.text.startsWith('中'), `pad=${pad}`).toBe(true)
+    }
+  })
+
+  it('镜像：真 GBK 件截断劈双字节——GBK 回退边界（不得全 U+FFFD）', () => {
+    // 前置 1 个 ASCII 字节 → 双字节 GBK 字符起始于奇数位 → 262144 边界恰劈开
+    const bytes = new Uint8Array(PREVIEW_MAX_BYTES + 2)
+    bytes[0] = 0x61 // 'a'
+    for (let i = 1; i < bytes.length; i += 1) bytes[i] = (i - 1) % 2 === 0 ? 0xd6 : 0xd0
+    const decoded = decodePreview(bytes)
+    expect(decoded.kind).toBe('text')
+    expect(decoded.encoding).toBe('GBK')
+    expect(decoded.text.startsWith('a中')).toBe(true)
+    expect(decoded.text.includes('�')).toBe(false) // 修前：宽松 UTF-8 全替换符
+  })
+
+  it('小件探针不回归：UTF-8/GBK 小件仍判准（回归钉）', () => {
+    expect(decodePreview(utf8('你好')).encoding).toBe('UTF-8')
+    expect(decodePreview(new Uint8Array([0xd6, 0xd0, 0xce, 0xc4])).encoding).toBe('GBK')
+  })
+})
+
 describe('MSG-2998 修③ 凭据件判定（安全钉）', () => {
   it('凭据敏感件命中：.env / 密钥 / 私钥 / 凭据名', () => {
     expect(isCredentialFile('/w/.env')).toBe(true)
@@ -102,6 +143,24 @@ describe('MSG-2998 修③ 凭据件判定（安全钉）', () => {
     expect(isCredentialFile('/w/README.md')).toBe(false)
     expect(isCredentialFile('/w/src/main.rs')).toBe(false)
     expect(isCredentialFile('/w/envoy.yaml')).toBe(false)
+  })
+
+  // MSG-3001 ③ 补族（试刀窗补遗 P1 谱）——旧表漏防族
+  it('补族命中：.git-credentials/.pypirc/.envrc/.docker/config.json/.kube/config/terraform.tfstate', () => {
+    expect(isCredentialFile('/w/.git-credentials')).toBe(true)
+    expect(isCredentialFile('/home/u/.pypirc')).toBe(true)
+    expect(isCredentialFile('/w/.envrc')).toBe(true)
+    expect(isCredentialFile('/home/u/.docker/config.json')).toBe(true)
+    expect(isCredentialFile('/home/u/.kube/config')).toBe(true)
+    expect(isCredentialFile('/w/infra/terraform.tfstate')).toBe(true)
+  })
+
+  it('公钥移出遮罩：id_rsa.pub 族不遮（私钥仍遮）', () => {
+    expect(isCredentialFile('/home/u/.ssh/id_rsa.pub')).toBe(false)
+    expect(isCredentialFile('/home/u/.ssh/id_ed25519.pub')).toBe(false)
+    // 私钥正例不回归
+    expect(isCredentialFile('/home/u/.ssh/id_rsa')).toBe(true)
+    expect(isCredentialFile('/home/u/.ssh/id_ed25519')).toBe(true)
   })
 })
 
@@ -191,7 +250,18 @@ describe('MSG-2998 修③ 预览交互走查', () => {
       global: { plugins: [i18n] },
     })
     await new Promise((resolve) => setTimeout(resolve, 30))
-    expect(wrapper.find('.preview-status').text()).toContain('未接入')
+    expect(wrapper.find('.preview-status').text()).toContain('暂不支持')
+  })
+
+  // MSG-3001 ④ 内部过程语出厂面清：降级文案须用户向——过程语（俟/另令/堂/勘）零现
+  it('④ 降级文案出厂面清：无内部过程语', async () => {
+    const wrapper = mount(FilePreview, {
+      props: { path: '/w/a.txt', name: 'a.txt' },
+      global: { plugins: [i18n] },
+    })
+    await new Promise((resolve) => setTimeout(resolve, 30))
+    const text = wrapper.find('.preview-status').text()
+    expect(text).not.toMatch(/俟|另令|呈堂|候裁|勘|堂|役/)
   })
 
   it('快速切件：过期回包不得覆盖新件（代际守卫——乱序竞态）', async () => {

@@ -86,7 +86,7 @@ export default {
     authorized: '已授权',
     // MSG-2998 修③（DEBT-619）：文件预览 web 面
     previewLoading: '读取中…',
-    previewUnavailable: '预览内容接口未接入（俟另令颁）',
+    previewUnavailable: '该文件暂不支持预览',
     previewFailed: '预览读取失败',
     previewTruncated: '已截断：显示前 {shown}（共 {total}）',
     previewBinary: '二进制文件——不可预览',

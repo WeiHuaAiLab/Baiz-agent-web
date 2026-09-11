@@ -86,7 +86,7 @@ export default {
     authorized: 'Authorized',
     // MSG-2998 修③（DEBT-619）：file preview (web)
     previewLoading: 'Loading…',
-    previewUnavailable: 'Preview content API not connected yet',
+    previewUnavailable: 'Preview is not available for this file yet',
     previewFailed: 'Failed to load preview',
     previewTruncated: 'Truncated: showing first {shown} (of {total})',
     previewBinary: 'Binary file — no preview',
