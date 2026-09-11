@@ -30,6 +30,16 @@ const elapsedText = computed(() =>
   elapsedMs.value ? formatDuration(elapsedMs.value) : '',
 )
 const running = computed(() => run.value?.status === 'running')
+/** MSG-3001 ②：三区显示门——assistant 消息或**失败径 status 消息**（run 同显）；
+ *  窄化门（assistant-only）会丢失败 run 的思考/trace（旧件 kind-agnostic 可渲）；
+ *  空 run（无思考无 trace）不渲（勿出空区）。 */
+const showRunBlocks = computed(() => {
+  const current = run.value
+  if (!current) return false
+  if (current.reasoning === '' && current.trace.length === 0) return false
+  if (props.message.kind === 'assistant') return true
+  return props.message.kind === 'status' && props.message.meta?.status === 'error'
+})
 // 批0 人话字幕：本次运行里所有工具调用的白话翻译（按时间顺序）
 const subtitles = computed(() => run.value?.subtitles ?? [])
 
@@ -102,7 +112,7 @@ function goSettings() {
          （tool.result）各自成区、互不混入；与流式态同构（RunBlocks 两态）。
          归属钉：三区系 assistant 呈现面——tool_call/approval 条目继续走
          各自组件（ToolRow/ApprovalCard），勿重复渲染致混排。 -->
-    <RunBlocks v-if="message.kind === 'assistant' && run" :run="run" />
+    <RunBlocks v-if="showRunBlocks" :run="run" />
 
     <MarkdownView
       v-if="message.kind === 'assistant' && (message.text || running)"

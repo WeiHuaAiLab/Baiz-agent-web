@@ -31,6 +31,22 @@ const calls = computed<TraceItem[]>(() =>
 const results = computed<TraceItem[]>(() =>
   props.run.trace.filter((item) => item.kind === 'tool.result'),
 )
+
+// MSG-3001 ⑤（解双渲重）：命令/结果区默认收起——同一 trace 数据在消息流
+// 已有 ToolRow 条目承载（pre-change 有折叠门闸，always-on 重复为新）；
+// 点击展开 run 级总览（按需现形，勿与条目面并陈）。
+const commandsOpen = ref(false)
+const resultsOpen = ref(false)
+
+/** MSG-3001 ⑪：结果行按 callId 归属工具名——并行/乱序回包不误配
+ *  （勿按 filter 序错配） */
+function toolNameOf(callId?: string): string {
+  if (!callId) return ''
+  return (
+    props.run.trace.find((item) => item.kind === 'tool.call' && item.callId === callId)
+      ?.toolName ?? ''
+  )
+}
 </script>
 
 <template>
@@ -58,14 +74,20 @@ const results = computed<TraceItem[]>(() =>
       </section>
     </template>
 
-    <!-- 区二：执行命令（tool.call） -->
+    <!-- 区二：执行命令（tool.call）——默认收起（解双渲重），点击展开总览 -->
     <section v-if="calls.length" class="run-block commands">
-      <div class="block-head">
+      <button
+        type="button"
+        class="block-head"
+        :class="{ open: commandsOpen }"
+        @click="commandsOpen = !commandsOpen"
+      >
         <span class="block-icon">⌘</span>
         <span class="block-title">{{ t('chat.blockCommands') }}</span>
         <span class="block-count">×{{ calls.length }}</span>
-      </div>
-      <ul class="block-list">
+        <span class="block-toggle">{{ commandsOpen ? '▾' : '▸' }}</span>
+      </button>
+      <ul v-show="commandsOpen" class="block-list">
         <li v-for="(item, i) in calls" :key="item.callId ?? i" class="cmd-item">
           <span class="cmd-tool">{{ item.toolName }}</span>
           <span v-if="item.argsPreview" class="cmd-args">{{ item.argsPreview }}</span>
@@ -73,14 +95,20 @@ const results = computed<TraceItem[]>(() =>
       </ul>
     </section>
 
-    <!-- 区三：执行结果（tool.result） -->
+    <!-- 区三：执行结果（tool.result）——默认收起（解双渲重），点击展开总览 -->
     <section v-if="results.length" class="run-block results">
-      <div class="block-head">
+      <button
+        type="button"
+        class="block-head"
+        :class="{ open: resultsOpen }"
+        @click="resultsOpen = !resultsOpen"
+      >
         <span class="block-icon">▤</span>
         <span class="block-title">{{ t('chat.blockResults') }}</span>
         <span class="block-count">×{{ results.length }}</span>
-      </div>
-      <ul class="block-list">
+        <span class="block-toggle">{{ resultsOpen ? '▾' : '▸' }}</span>
+      </button>
+      <ul v-show="resultsOpen" class="block-list">
         <li
           v-for="(item, i) in results"
           :key="item.callId ?? i"
@@ -88,6 +116,9 @@ const results = computed<TraceItem[]>(() =>
           :class="{ ok: item.success === true, failed: item.success === false }"
         >
           <span class="result-flag">{{ item.success === false ? '✗' : '✓' }}</span>
+          <span v-if="toolNameOf(item.callId)" class="result-tool">{{
+            toolNameOf(item.callId)
+          }}</span>
           <span class="result-preview">{{ item.preview }}</span>
         </li>
       </ul>

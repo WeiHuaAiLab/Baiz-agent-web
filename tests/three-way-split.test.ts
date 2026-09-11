@@ -12,6 +12,7 @@ import { useMessageStore } from '../src/stores/message'
 import { useSessionStore } from '../src/stores/session'
 import ChatView from '../src/components/ChatView.vue'
 import MessageItem from '../src/components/chat/MessageItem.vue'
+import RunBlocks from '../src/components/chat/RunBlocks.vue'
 import { router } from '../src/router'
 import zhCN from '../src/locales/zh-CN'
 
@@ -122,6 +123,99 @@ describe('MSG-2998 修② 三分离渲染（流式态）', () => {
     expect(commands.text()).toContain('list_dir')
     expect(commands.text()).not.toContain('目录不存在')
     expect(results.text()).toContain('目录不存在')
+  })
+})
+
+describe('MSG-3001 补修（②⑤⑪ 组件三面）', () => {
+  beforeEach(() => {
+    setActivePinia(createPinia())
+  })
+
+  it('② 失败 run：思考/trace 同显（status 错误条径——窄化门回归修）', async () => {
+    const messages = useMessageStore()
+    const conversationId = 'c-fail'
+    const taskId = 'fail-1'
+    messages.byConversation[conversationId] = [
+      {
+        id: 'm-fail',
+        conversationId,
+        kind: 'status',
+        text: '发送失败：请求失败',
+        createdAt: 1,
+        meta: { statusKey: 'sendFailed', status: 'error', taskId },
+      },
+    ]
+    messages.runs[taskId] = {
+      taskId,
+      conversationId,
+      status: 'failed',
+      startedAt: 1,
+      reasoning: '失败前的思考',
+      text: '',
+      trace: [
+        { kind: 'tool.call', callId: 'cf1', toolName: 'fs_read', argsPreview: '{}', at: 2 },
+      ],
+    }
+    const wrapper = mount(MessageItem, {
+      props: { message: messages.byConversation[conversationId][0] },
+      global: { plugins: [i18n, router] },
+    })
+    // 修前：kind 门窄化（assistant-only）→ 失败径三区俱不渲（旧件 kind-agnostic 可渲）
+    expect(wrapper.find('.run-block.thinking').exists()).toBe(true)
+    expect(wrapper.find('.run-block.commands').exists()).toBe(true)
+  })
+
+  it('⑤ 命令/结果区默认收起（解 ToolRow×RunBlocks 双渲）＋点击展开', async () => {
+    const run = {
+      taskId: 't-fold',
+      conversationId: 'c-fold',
+      status: 'completed',
+      startedAt: 1,
+      reasoning: '',
+      text: '',
+      trace: [
+        { kind: 'tool.call' as const, callId: 'k1', toolName: 'shell_exec', argsPreview: '{"a":1}', at: 1 },
+        { kind: 'tool.result' as const, callId: 'k1', success: true, preview: 'ok', at: 2 },
+      ],
+    }
+    const wrapper = mount(RunBlocks, { props: { run }, global: { plugins: [i18n] } })
+    const cmdList = wrapper.find('.run-block.commands .block-list').element as HTMLElement
+    const resList = wrapper.find('.run-block.results .block-list').element as HTMLElement
+    // 默认收起：不与他面（ToolRow 条目）重复呈现
+    expect(cmdList.style.display).toBe('none')
+    expect(resList.style.display).toBe('none')
+    // 点击展开：总览按需现形
+    await wrapper.find('.run-block.commands .block-head').trigger('click')
+    await new Promise((resolve) => setTimeout(resolve, 10))
+    const opened = wrapper.find('.run-block.commands .block-list').element as HTMLElement
+    expect(opened.style.display).toBe('')
+  })
+
+  it('⑪ 结果行补 toolName/callId——乱序回包不误归属', async () => {
+    const run = {
+      taskId: 't-order',
+      conversationId: 'c-order',
+      status: 'completed',
+      startedAt: 1,
+      reasoning: '',
+      text: '',
+      // 乱序：先 call A、call B，再 result B、result A（并行回包）
+      trace: [
+        { kind: 'tool.call' as const, callId: 'a1', toolName: 'fs_read', argsPreview: '{}', at: 1 },
+        { kind: 'tool.call' as const, callId: 'b1', toolName: 'fs_write', argsPreview: '{}', at: 2 },
+        { kind: 'tool.result' as const, callId: 'b1', success: true, preview: '写入完成', at: 3 },
+        { kind: 'tool.result' as const, callId: 'a1', success: false, preview: '读失败', at: 4 },
+      ],
+    }
+    const wrapper = mount(RunBlocks, { props: { run }, global: { plugins: [i18n] } })
+    await wrapper.find('.run-block.results .block-head').trigger('click')
+    const items = wrapper.findAll('.run-block.results .result-item')
+    expect(items.length).toBe(2)
+    // 归属钉：result(b1) 行须标 fs_write（勿按序错配 fs_read）
+    expect(items[0].text()).toContain('fs_write')
+    expect(items[0].text()).toContain('写入完成')
+    expect(items[1].text()).toContain('fs_read')
+    expect(items[1].text()).toContain('读失败')
   })
 })
 
