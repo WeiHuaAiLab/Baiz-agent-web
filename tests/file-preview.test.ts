@@ -193,4 +193,30 @@ describe('MSG-2998 修③ 预览交互走查', () => {
     await new Promise((resolve) => setTimeout(resolve, 30))
     expect(wrapper.find('.preview-status').text()).toContain('未接入')
   })
+
+  it('快速切件：过期回包不得覆盖新件（代际守卫——乱序竞态）', async () => {
+    let releaseSlow: ((value: Uint8Array | null) => void) | undefined
+    const slow = new Promise<Uint8Array | null>((resolve) => {
+      releaseSlow = resolve
+    })
+    const wrapper = mount(FilePreview, {
+      props: {
+        path: '/w/slow.txt',
+        name: 'slow.txt',
+        loader: (path) =>
+          path.endsWith('slow.txt') ? slow : Promise.resolve(utf8('新件内容')),
+      },
+      global: { plugins: [i18n] },
+    })
+    await new Promise((resolve) => setTimeout(resolve, 10))
+    // 切到另一件（新请求先返回）
+    await wrapper.setProps({ path: '/w/fast.txt', name: 'fast.txt' })
+    await new Promise((resolve) => setTimeout(resolve, 20))
+    expect(wrapper.find('.preview-code').text()).toContain('新件内容')
+    // 旧件回包晚到——不得覆盖
+    releaseSlow?.(utf8('旧件内容'))
+    await new Promise((resolve) => setTimeout(resolve, 20))
+    expect(wrapper.find('.preview-code').text()).toContain('新件内容')
+    expect(wrapper.text()).not.toContain('旧件内容')
+  })
 })

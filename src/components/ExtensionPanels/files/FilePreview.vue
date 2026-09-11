@@ -35,7 +35,11 @@ const revealed = ref(false)
 const credential = computed(() => isCredentialFile(props.path))
 const masked = computed(() => credential.value && !revealed.value)
 
+/** 代际守卫：快速连点/切件时，过期回包不得覆盖新件结果（乱序竞态） */
+let loadSeq = 0
+
 async function load(): Promise<void> {
+  const seq = ++loadSeq
   errorText.value = ''
   decode.value = null
   revealed.value = false
@@ -47,15 +51,17 @@ async function load(): Promise<void> {
   loading.value = true
   try {
     const bytes = await loader(props.path)
+    if (seq !== loadSeq) return
     if (bytes === null) {
       errorText.value = t('files.previewFailed')
       return
     }
     decode.value = decodePreview(bytes)
   } catch (error) {
+    if (seq !== loadSeq) return
     errorText.value = error instanceof Error ? error.message : String(error)
   } finally {
-    loading.value = false
+    if (seq === loadSeq) loading.value = false
   }
 }
 
