@@ -200,7 +200,14 @@ export function languageForPath(path: string): string | null {
   const dot = name.lastIndexOf('.')
   const ext = dot > 0 ? name.slice(dot + 1).toLowerCase() : ''
   if (name.toLowerCase() === 'dockerfile') return 'dockerfile'
-  return EXT_LANGUAGE[ext] ?? null
+  // MSG-3006 R3 守卫：ext 与 Object.prototype 自有键同名时（'constructor'
+  // 全小写恰命中原型链），裸查表 `EXT_LANGUAGE[ext]` 取到的是**原生函数**
+  // ——下游 `hljs.getLanguage(函数)` 在其内部 `.toLowerCase()` 处 THROW
+  // （调用点在 try 外）→ 预览渲染崩。hasOwnProperty 只认自有键：未注册
+  // 扩展名一律诚实降级（null → 纯转义文本）。
+  return Object.prototype.hasOwnProperty.call(EXT_LANGUAGE, ext)
+    ? EXT_LANGUAGE[ext]
+    : null
 }
 
 /**
@@ -212,8 +219,11 @@ export function highlightPreview(text: string, path: string, byteLength: number)
   const escaped = escapeHtml(text)
   if (byteLength > HIGHLIGHT_MAX_BYTES) return escaped
   const lang = languageForPath(path)
-  if (!lang || !hljs.getLanguage(lang)) return escaped
+  if (!lang) return escaped
   try {
+    // MSG-3006 R3 双保险：getLanguage 一并纳入 try——守卫之外的意外 lang 值
+    // （未来表结构变更等）亦只降级不崩（渲染韧性钉）
+    if (!hljs.getLanguage(lang)) return escaped
     return hljs.highlight(text, { language: lang, ignoreIllegals: true }).value
   } catch {
     return escaped
