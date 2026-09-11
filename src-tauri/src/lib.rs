@@ -21,6 +21,7 @@
 //! 不 panic；无 unwrap / 无 unsafe（baiz lint 铁律）。
 
 use serde_json::{json, Value};
+use std::collections::HashMap;
 use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::{Arc, Mutex};
 use tauri::{AppHandle, Emitter, State};
@@ -28,6 +29,117 @@ use tokio::io::{AsyncBufReadExt, AsyncWriteExt, BufReader};
 use tokio::net::TcpStream;
 use tokio::sync::oneshot;
 use tokio::time::Duration;
+
+/// 在途 RPC 的中止登记表（proxy_abort 取消面，裁1015②）。
+///
+/// **MSG-2998 修①（根因定谳在案）**：裁1015② 原径为单槽 `Option<Sender>`
+/// ——任何第二次 `proxy_rpc` 调用开头的槽覆盖会 drop 前一 RPC 的 `tx`：
+/// oneshot 接收端随之立即就绪（`RecvError`），`select!` 的 `_ = abort_rx`
+/// 分支把【槽覆盖】误当【前端主动中止】——在途长 RPC（chat.send 阻塞至
+/// 流终）被误报「RPC 已被前端中止」并 drop 连接（daemon 侧观测 10053）；
+/// 且先完成者的 `*slot = None` 无条件清空会再杀后注册者（双杀）。
+/// 勘实链：审批帧 → eventRouter.refreshRisk → permission.pending 并发 RPC
+/// 即命中此径（daemon 日志 09:47:44.468 pending → .474994 10053 对卯）。
+///
+/// 本登记表改【每 RPC 独立 id 槽】：注册/注销按 id 甄别、互不干扰；
+/// proxy_abort 语义保持「中止全部在途 RPC」（前端 abort() 清场义）。
+pub(crate) struct RpcAbortRegistry {
+    /// 在途 RPC 槽：RPC id → 中止发送端（并发 RPC 各自独立）
+    slots: Mutex<HashMap<u64, oneshot::Sender<()>>>,
+    seq: AtomicU64,
+}
+
+impl Default for RpcAbortRegistry {
+    fn default() -> Self {
+        Self {
+            slots: Mutex::new(HashMap::new()),
+            seq: AtomicU64::new(0),
+        }
+    }
+}
+
+impl RpcAbortRegistry {
+    /// 注册在途 RPC——返回自 id 与中止接收端（只增自己的槽，不动他 RPC）。
+    pub(crate) fn register(&self) -> Result<(u64, oneshot::Receiver<()>), String> {
+        let id = self.seq.fetch_add(1, Ordering::Relaxed);
+        let (tx, rx) = oneshot::channel::<()>();
+        let mut slots = self
+            .slots
+            .lock()
+            .map_err(|e| format!("abort 锁中毒: {e}"))?;
+        slots.insert(id, tx);
+        Ok((id, rx))
+    }
+
+    /// 注销已结束的 RPC——只摘自己的槽（按 id 甄别，勿动他 RPC）。
+    pub(crate) fn complete(&self, id: u64) {
+        if let Ok(mut slots) = self.slots.lock() {
+            let _ = slots.remove(&id);
+        }
+    }
+
+    /// 中止全部在途 RPC（proxy_abort 语义——前端 abort() 清场）。
+    pub(crate) fn abort_all(&self) {
+        if let Ok(mut slots) = self.slots.lock() {
+            for (_, tx) in slots.drain() {
+                let _ = tx.send(());
+            }
+        }
+    }
+}
+
+/// 单次 RPC 往返核心（可测：不依赖 tauri State）——短连接，发一行
+/// JSON-RPC，读一行响应后关闭；600s 放宽超时＋abort 断连面。
+pub(crate) async fn rpc_roundtrip(
+    addr: &str,
+    request: Value,
+    registry: &RpcAbortRegistry,
+) -> Result<Value, String> {
+    let (id, abort_rx) = registry.register()?;
+    let addr = addr.to_string();
+    let io = async move {
+        let mut stream = TcpStream::connect(&addr)
+            .await
+            .map_err(|e| format!("daemon 连接失败（{addr}）: {e}"))?;
+        let mut line =
+            serde_json::to_string(&request).map_err(|e| format!("请求序列化失败: {e}"))?;
+        line.push('\n');
+        stream
+            .write_all(line.as_bytes())
+            .await
+            .map_err(|e| format!("写入失败: {e}"))?;
+        let mut reader = BufReader::new(stream);
+        let mut resp = String::new();
+        let n = reader
+            .read_line(&mut resp)
+            .await
+            .map_err(|e| format!("读取失败: {e}"))?;
+        if n == 0 {
+            return Err("daemon 连接被关闭（空响应）".into());
+        }
+        serde_json::from_str::<Value>(&resp).map_err(|e| {
+            format!(
+                "响应解析失败: {e} | raw: {}",
+                resp.chars().take(200).collect::<String>()
+            )
+        })
+    };
+
+    // 裁1015②：600s 放宽超时＋abort 断连面（前端 abort() 即取消在途 RPC）
+    // Ok(()) = proxy_abort 显式中止；Err(_) = 自身槽被摘（多槽下仅锁中毒
+    // 兜底面）——两者俱 Fail-safe 报中止，勿挂起在途。
+    let result = tokio::select! {
+        r = abort_rx => match r {
+            Ok(()) => Err("RPC 已被前端中止".into()),
+            Err(_) => Err("RPC 已被前端中止".into()),
+        },
+        r = tokio::time::timeout(Duration::from_secs(RPC_TIMEOUT_SECS), io) => {
+            r.map_err(|_| format!("daemon 响应超时（{RPC_TIMEOUT_SECS}s）"))?
+        }
+    };
+    registry.complete(id);
+    result
+}
 
 /// RPC 响应超时——长任务面放宽（裁1015②：chat.send 阻塞至流终，
 /// 600s 覆盖长任务；快速方法亦同限无害）
@@ -65,7 +177,7 @@ struct DaemonState {
     /// 认证 token 缓存（daemon 重启换 token——授权败即刷新重读盘面）
     token: Mutex<Option<String>>,
     /// 在途 RPC 断连面（proxy_abort 取消面，裁1015②）
-    rpc_abort: Mutex<Option<oneshot::Sender<()>>>,
+    rpc_abort: RpcAbortRegistry,
 }
 
 impl DaemonState {
@@ -75,7 +187,7 @@ impl DaemonState {
             sub: Mutex::new(SubState::default()),
             last_event_id: Arc::new(AtomicU64::new(0)),
             token: Mutex::new(None),
-            rpc_abort: Mutex::new(None),
+            rpc_abort: RpcAbortRegistry::default(),
         }
     }
 
@@ -129,52 +241,9 @@ async fn proxy_rpc(state: State<'_, DaemonState>, request: Value) -> Result<Valu
         }
     }
 
-    let (abort_tx, abort_rx) = oneshot::channel::<()>();
-    {
-        let mut slot = state.rpc_abort.lock().map_err(|e| format!("abort 锁中毒: {e}"))?;
-        *slot = Some(abort_tx);
-    }
-
-    let addr = state.addr.clone();
-    let io = async move {
-        let mut stream = TcpStream::connect(&addr)
-            .await
-            .map_err(|e| format!("daemon 连接失败（{addr}）: {e}"))?;
-        let mut line =
-            serde_json::to_string(&request).map_err(|e| format!("请求序列化失败: {e}"))?;
-        line.push('\n');
-        stream
-            .write_all(line.as_bytes())
-            .await
-            .map_err(|e| format!("写入失败: {e}"))?;
-        let mut reader = BufReader::new(stream);
-        let mut resp = String::new();
-        let n = reader
-            .read_line(&mut resp)
-            .await
-            .map_err(|e| format!("读取失败: {e}"))?;
-        if n == 0 {
-            return Err("daemon 连接被关闭（空响应）".into());
-        }
-        serde_json::from_str::<Value>(&resp).map_err(|e| {
-            format!(
-                "响应解析失败: {e} | raw: {}",
-                resp.chars().take(200).collect::<String>()
-            )
-        })
-    };
-
-    // 裁1015②：600s 放宽超时＋abort 断连面（前端 abort() 即取消在途 RPC）
-    let result = tokio::select! {
-        _ = abort_rx => Err("RPC 已被前端中止".into()),
-        r = tokio::time::timeout(Duration::from_secs(RPC_TIMEOUT_SECS), io) => {
-            r.map_err(|_| format!("daemon 响应超时（{RPC_TIMEOUT_SECS}s）"))?
-        }
-    };
-    {
-        let mut slot = state.rpc_abort.lock().map_err(|e| format!("abort 锁中毒: {e}"))?;
-        *slot = None;
-    }
+    // 裁1015②：RPC 往返（600s 放宽超时＋abort 断连面）——核心逻辑提取至
+    // rpc_roundtrip（可测——MSG-2998 红证：并发 RPC 覆盖槽误杀在途长 RPC）
+    let result = rpc_roundtrip(&state.addr, request, &state.rpc_abort).await;
     // UNAUTHORIZED → token 失效（daemon 重启换 token）→ 清缓存待重读
     if let Ok(v) = &result {
         if v.get("error")
@@ -352,10 +421,7 @@ async fn proxy_unsubscribe(state: State<'_, DaemonState>) -> Result<(), String> 
 /// 中止在途 RPC（裁1015② 断连面——前端 abort() 接线）
 #[tauri::command]
 async fn proxy_abort(state: State<'_, DaemonState>) -> Result<(), String> {
-    let mut slot = state.rpc_abort.lock().map_err(|e| format!("abort 锁中毒: {e}"))?;
-    if let Some(tx) = slot.take() {
-        let _ = tx.send(());
-    }
+    state.rpc_abort.abort_all();
     Ok(())
 }
 
@@ -373,5 +439,141 @@ pub fn run() {
     if let Err(e) = builder.run(tauri::generate_context!()) {
         eprintln!("baiz shell 运行失败: {e}");
         std::process::exit(1);
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use tokio::io::AsyncReadExt;
+
+    /// MSG-2998 修① 红证（并发隔离）：在途 RPC 不得被并发第二个 RPC 的
+    /// 注册误杀。现状（单槽覆盖 → 旧 tx drop → 旧 rx 立即就绪）必败；
+    /// 修复（每 RPC 独立 id 槽）通过。
+    #[tokio::test]
+    async fn inflight_rpc_survives_concurrent_register() {
+        let registry = RpcAbortRegistry::default();
+        let (_id1, rx1) = registry.register().expect("注册 1");
+        let (_id2, _rx2) = registry.register().expect("注册 2（并发第二 RPC）");
+        // 40ms 窗内 rx1 不得被触发（被触发 = 在途长 RPC 被误报「RPC 已被前端中止」）
+        assert!(
+            tokio::time::timeout(Duration::from_millis(40), rx1).await.is_err(),
+            "并发第二个 RPC 不得中止在途 RPC（单槽覆盖=误杀根因）"
+        );
+    }
+
+    /// MSG-2998 修① 红证（注销隔离）：complete(id1) 不得清掉 id2 的槽——
+    /// 现状无条件清空会把仍在下一条 RPC 的槽一并抹掉。
+    #[tokio::test]
+    async fn complete_removes_only_own_slot() {
+        let registry = RpcAbortRegistry::default();
+        let (id1, _rx1) = registry.register().expect("注册 1");
+        let (_id2, rx2) = registry.register().expect("注册 2");
+        registry.complete(id1);
+        registry.abort_all();
+        // id2 的在途中止面须完好：abort_all 应送达成 Ok(())（而非通道 Closed）
+        let got = rx2.await.expect("abort_all 应送达仍注册在途的 RPC");
+        let _ = got;
+    }
+
+    /// MSG-2998 修①（proxy_abort 语义保留）：abort_all 中止全部在途 RPC。
+    #[tokio::test]
+    async fn abort_all_aborts_every_inflight() {
+        let registry = RpcAbortRegistry::default();
+        let (_id1, rx1) = registry.register().expect("注册 1");
+        let (_id2, rx2) = registry.register().expect("注册 2");
+        registry.abort_all();
+        assert!(matches!(rx1.await, Ok(())), "在途 1 应被显式中止");
+        assert!(matches!(rx2.await, Ok(())), "在途 2 应被显式中止");
+    }
+
+    /// MSG-2998 修① 红证（端到端）：mock daemon 上——长 RPC 在途 + 并发短
+    /// RPC（等价审批帧触发的 refreshRisk→permission.pending）——长 RPC 必须
+    /// 拿到自身真实响应，不得被误报「RPC 已被前端中止」（现状单槽必败）。
+    #[tokio::test]
+    async fn concurrent_short_rpc_does_not_kill_long_rpc() {
+        let listener = tokio::net::TcpListener::bind("127.0.0.1:0")
+            .await
+            .expect("mock daemon bind");
+        let addr = listener.local_addr().expect("mock addr").to_string();
+        let server = tokio::spawn(async move {
+            loop {
+                let Ok((mut sock, _)) = listener.accept().await else {
+                    break;
+                };
+                tokio::spawn(async move {
+                    // 行帧读取（proxy_rpc 同构：一行 JSON-RPC）
+                    let mut buf = Vec::new();
+                    let mut byte = [0u8; 1];
+                    loop {
+                        match sock.read(&mut byte).await {
+                            Ok(0) | Err(_) => return,
+                            Ok(_) => {
+                                if byte[0] == b'\n' {
+                                    break;
+                                }
+                                buf.push(byte[0]);
+                            }
+                        }
+                    }
+                    let req: Value = serde_json::from_slice(&buf).unwrap_or(Value::Null);
+                    let method = req
+                        .get("method")
+                        .and_then(|m| m.as_str())
+                        .unwrap_or("")
+                        .to_string();
+                    // 长 RPC：250ms 后才回（模拟 chat.send 阻塞至流终）
+                    if method == "long.rpc" {
+                        tokio::time::sleep(Duration::from_millis(250)).await;
+                    }
+                    let resp = json!({
+                        "jsonrpc": "2.0",
+                        "id": req.get("id").cloned().unwrap_or(json!(0)),
+                        "result": { "method": method }
+                    });
+                    let mut line = resp.to_string();
+                    line.push('\n');
+                    let _ = sock.write_all(line.as_bytes()).await;
+                });
+            }
+        });
+
+        let registry = Arc::new(RpcAbortRegistry::default());
+        let long_task = tokio::spawn({
+            let addr = addr.clone();
+            let reg = Arc::clone(&registry);
+            async move {
+                rpc_roundtrip(
+                    &addr,
+                    json!({"jsonrpc": "2.0", "id": 1, "method": "long.rpc"}),
+                    &reg,
+                )
+                .await
+            }
+        });
+        // 长 RPC 在途 80ms 后：并发短 RPC（等价审批帧触发的 permission.pending）
+        tokio::time::sleep(Duration::from_millis(80)).await;
+        let short = rpc_roundtrip(
+            &addr,
+            json!({"jsonrpc": "2.0", "id": 2, "method": "short.rpc"}),
+            &registry,
+        )
+        .await;
+        assert!(short.is_ok(), "短 RPC 应正常完成: {short:?}");
+
+        let long = long_task.await.expect("长 RPC 任务应结束");
+        assert!(
+            long.is_ok(),
+            "长 RPC 不得被并发短 RPC 误杀（现状单槽=误报「RPC 已被前端中止」）: {long:?}"
+        );
+        assert_eq!(
+            long.as_ref()
+                .ok()
+                .and_then(|v| v.pointer("/result/method"))
+                .and_then(|m| m.as_str()),
+            Some("long.rpc"),
+            "长 RPC 应拿到自身真实响应"
+        );
+        server.abort();
     }
 }
