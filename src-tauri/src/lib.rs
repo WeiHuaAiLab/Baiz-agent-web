@@ -86,6 +86,13 @@ impl RpcAbortRegistry {
             }
         }
     }
+
+    /// 在途 RPC 数（红证面——MSG-3001 ⑦：超时径须摘槽勿泄漏）。
+    /// cfg(test) 限定：生产面零消费者（免 --all-targets 口径 dead-code）。
+    #[cfg(test)]
+    pub(crate) fn inflight_len(&self) -> usize {
+        self.slots.lock().map(|slots| slots.len()).unwrap_or(0)
+    }
 }
 
 /// 单次 RPC 往返核心（可测：不依赖 tauri State）——短连接，发一行
@@ -94,6 +101,22 @@ pub(crate) async fn rpc_roundtrip(
     addr: &str,
     request: Value,
     registry: &RpcAbortRegistry,
+) -> Result<Value, String> {
+    rpc_roundtrip_with_timeout(
+        addr,
+        request,
+        registry,
+        Duration::from_secs(RPC_TIMEOUT_SECS),
+    )
+    .await
+}
+
+/// 往返核心（超时参数化——红证可注入短超时验「超时径摘槽」）。
+pub(crate) async fn rpc_roundtrip_with_timeout(
+    addr: &str,
+    request: Value,
+    registry: &RpcAbortRegistry,
+    timeout: Duration,
 ) -> Result<Value, String> {
     let (id, abort_rx) = registry.register()?;
     let addr = addr.to_string();
@@ -125,16 +148,19 @@ pub(crate) async fn rpc_roundtrip(
         })
     };
 
-    // 裁1015②：600s 放宽超时＋abort 断连面（前端 abort() 即取消在途 RPC）
+    // 裁1015②：放宽超时＋abort 断连面（前端 abort() 即取消在途 RPC）
     // Ok(()) = proxy_abort 显式中止；Err(_) = 自身槽被摘（多槽下仅锁中毒
     // 兜底面）——两者俱 Fail-safe 报中止，勿挂起在途。
+    // MSG-3001 ⑦：超时分支勿用 `?` 早退（旧径跳 complete → 每次超时永久
+    // 漏槽·多槽 map 无他清理）——改为产生 Err 值，控制流必经下方摘槽。
     let result = tokio::select! {
         r = abort_rx => match r {
             Ok(()) => Err("RPC 已被前端中止".into()),
             Err(_) => Err("RPC 已被前端中止".into()),
         },
-        r = tokio::time::timeout(Duration::from_secs(RPC_TIMEOUT_SECS), io) => {
-            r.map_err(|_| format!("daemon 响应超时（{RPC_TIMEOUT_SECS}s）"))?
+        r = tokio::time::timeout(timeout, io) => match r {
+            Ok(v) => v,
+            Err(_) => Err(format!("daemon 响应超时（{}s）", timeout.as_secs())),
         }
     };
     registry.complete(id);
@@ -472,8 +498,46 @@ mod tests {
         registry.complete(id1);
         registry.abort_all();
         // id2 的在途中止面须完好：abort_all 应送达成 Ok(())（而非通道 Closed）
-        let got = rx2.await.expect("abort_all 应送达仍注册在途的 RPC");
-        let _ = got;
+        // MSG-3001：E1 口径（--all-targets -D warnings）——单位型 await 直接
+        // 断言式，勿 let 绑定（let_unit_value）
+        rx2.await.expect("abort_all 应送达仍注册在途的 RPC");
+    }
+
+    /// MSG-3001 ⑦ 红证（超时径摘槽）：mock daemon 挂起不回 → 超时报错
+    /// **且槽须摘除**——旧径 `r.map_err(..)?` 早退跳过 complete(id)：
+    /// 每次超时永久漏槽（多槽 map 无他清理；future 被 drop 同漏）。
+    #[tokio::test]
+    async fn timeout_releases_own_slot() {
+        // mock daemon：接受连接但**不回响应**（挂起 → 触发超时）
+        let listener = tokio::net::TcpListener::bind("127.0.0.1:0")
+            .await
+            .expect("mock daemon bind");
+        let addr = listener.local_addr().expect("mock addr").to_string();
+        let server = tokio::spawn(async move {
+            loop {
+                let Ok((sock, _)) = listener.accept().await else {
+                    break;
+                };
+                tokio::spawn(async move {
+                    let _hold = sock; // 持连接不回（挂起）
+                    tokio::time::sleep(Duration::from_secs(5)).await;
+                });
+            }
+        });
+
+        let registry = RpcAbortRegistry::default();
+        let r = rpc_roundtrip_with_timeout(
+            &addr,
+            json!({"jsonrpc": "2.0", "id": 1, "method": "slow.rpc"}),
+            &registry,
+            Duration::from_millis(120),
+        )
+        .await;
+        assert!(r.is_err(), "应超时报错: {r:?}");
+        assert!(r.unwrap_err().contains("超时"), "应为超时错");
+        // 修前：`?` 早退跳过 complete → inflight==1（永久漏槽）；修后 ==0
+        assert_eq!(registry.inflight_len(), 0, "超时后槽应摘除（勿泄漏）");
+        server.abort();
     }
 
     /// MSG-2998 修①（proxy_abort 语义保留）：abort_all 中止全部在途 RPC。
