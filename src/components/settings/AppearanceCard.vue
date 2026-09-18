@@ -59,5 +59,26 @@ function setTheme(value: Theme) {
         </button>
       </div>
     </div>
+    <div class="settings-row">
+      <span class="row-label" :title="t('settings.humanSubtitlesHint')">
+        {{ t('settings.humanSubtitles') }}
+      </span>
+      <div class="seg">
+        <button
+          type="button"
+          :class="{ active: settings.showHuman }"
+          @click="settings.setShowHuman(true)"
+        >
+          {{ t('common.on') }}
+        </button>
+        <button
+          type="button"
+          :class="{ active: !settings.showHuman }"
+          @click="settings.setShowHuman(false)"
+        >
+          {{ t('common.off') }}
+        </button>
+      </div>
+    </div>
   </div>
 </template>

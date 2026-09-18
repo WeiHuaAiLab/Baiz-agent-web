@@ -3,6 +3,7 @@
 import { computed, ref } from 'vue'
 import type { ChatMessage } from '../../models'
 import { useWorkingTreeStore } from '../../stores/workingTree'
+import { useSettingsStore } from '../../stores/settings'
 import { diffStats } from '../../utils/diff'
 import { translateTool } from '../../utils/commandTranslator'
 import { extractFilePath, extractShellCommand, extractUrl } from '../../utils/traceText'
@@ -10,6 +11,7 @@ import Icon from '../common/Icon.vue'
 
 const props = defineProps<{ message: ChatMessage }>()
 const working = useWorkingTreeStore()
+const settings = useSettingsStore()
 const open = ref(false)
 const running = computed(() => props.message.meta?.success === undefined)
 // 批0 命令翻译：工具调用行的人话说明
@@ -53,7 +55,7 @@ function openFile() {
         +{{ refStats.added }} −{{ refStats.removed }}
       </span>
     </div>
-    <div v-if="toolHuman" class="xp-tool-human">
+    <div v-if="settings.showHuman && toolHuman" class="xp-tool-human">
       <span class="xp-subtitle-tag">人话</span>
       <span>{{ toolHuman }}</span>
     </div>

@@ -2,7 +2,7 @@ export default {
   app: { title: 'Baiz Agent' },
   nav: { chat: 'Chat', workspace: 'Workspace', tools: 'Tools', skills: 'Skills', tasks: 'Tasks', settings: 'Settings' },
   chat: {
-    placeholder: 'Ask anything…',
+    placeholder: 'Ask anything — press Enter to send…',
     send: 'Send',
     newSession: 'New session',
     demoHint: 'Skeleton demo · mock transport',
@@ -31,6 +31,8 @@ export default {
     voiceComing: 'Voice input coming soon (sherpa-onnx)',
     attachFile: 'Attach file',
     attachUnsupported: 'Attachments unsupported in this shell version',
+    dropHint: 'Drop to upload images, text files, or any file',
+    dropUnsupported: 'Drag-and-drop upload is unsupported in this shell version',
     stop: 'Stop',
     scrollToLatest: 'Back to latest',
     export: 'Export chat',
@@ -196,6 +198,9 @@ export default {
     appearanceHint: 'Language and theme apply instantly',
     themeLight: 'Light',
     themeDark: 'Dark',
+    humanSubtitles: 'Plain-language captions',
+    humanSubtitlesHint:
+      'Translate tool calls into a plain sentence anyone can understand; hidden by default',
     keyHint: 'Keys are stored by the daemon; never kept in plain text here',
     model: 'Model',
     modelHint: 'Routing is decided by the daemon; this is a preference',
