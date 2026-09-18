@@ -51,6 +51,9 @@ let draftTimer: ReturnType<typeof setTimeout> | null = null;
 // 变量挂在 documentElement 而非 .chat-body：避免元素作用域/时序导致 CSS 拿不到值，
 // CSS 侧还有默认值兜底（见 core.css .chat-body）。
 const inputRoot = ref<HTMLElement>();
+// composer 容器 ref：drag 事件挂在此处（不挂在 .chat-input 整个外层），
+// 让遮罩精确覆盖 composer 本体、不沾染 .chat-input 的 padding/margin。
+const composerRef = ref<HTMLElement>();
 let heightObserver: ResizeObserver | null = null;
 
 onMounted(() => {
@@ -84,6 +87,17 @@ let recognizer: {
 const speechSupported =
     typeof window !== "undefined" &&
     ("webkitSpeechRecognition" in window || "SpeechRecognition" in window);
+
+// IME 输入法状态：选词阶段的 Enter 是「确认候选词」而非「发送消息」，
+// 若不加守卫，输入"你好"按 Enter 选词会意外触发发送。
+// 用 ref 而非 let：模板里 @compositionstart/end 直接赋值会被 Vue
+// 类型推断成 ref，模板自动 unwrap，无须 .value。
+const composing = ref(false);
+
+// 拖拽上传：dragOver 控制遮罩显隐；dragCounter 解决子元素进出闪屏
+// （每进一个子元素触发一次 dragenter、离开触发 dragleave，靠引用计数平衡）
+const dragOver = ref(false);
+let dragCounter = 0;
 
 const activeId = computed(() => session.activeId);
 const streamingRuns = computed(() => messages.activeRuns(activeId.value));
@@ -136,6 +150,10 @@ watch(input, () => {
     const id = activeId.value;
     const text = input.value;
     draftTimer = setTimeout(() => {
+        // 边界守护：会话切换瞬间 input 被清空触发本 watch，
+        // 但此时 activeId 已切到新会话——若不校验，会把空字符串写到
+        // 新会话草稿位、覆盖掉刚刚 loadDraft 恢复的内容
+        if (activeId.value !== id) return;
         if (id) void saveDraft(id, text);
     }, 300);
 });
@@ -174,7 +192,9 @@ function toggleVoice() {
                 recognizer = rec;
                 listening.value = true;
                 return;
-            } catch {
+            } catch (error) {
+                // 麦克风权限被拒/环境不支持等：静默回退到占位提示，但留日志便于排查
+                console.warn('[baiz] speech recognition init failed:', error);
                 recognizer = null;
             }
         }
@@ -196,30 +216,79 @@ function send() {
     sendWith(trimmed);
 }
 
-function sendWith(text: string) {
+/**
+ * 异步发送：
+ * 1) 同步乐观清理（附件/草稿/输入框立刻清，避免连击重复）；
+ * 2) await sendUserMessage → 等 chat.send RPC 受理回执（{task_id, status, model}）；
+ *    失败已被 sendUserMessage 内部 try/catch 兜住为红条 status 消息；
+ * 3) emit("submitted") 由 ChatView 驱动 scrollToBottom，此时 user 消息与可能的
+ *    错误消息都已同步入响应式数组（push 先于 IndexedDB await 同步写入），nextTick
+ *    后 DOM 渲染完成再贴底。
+ * 4) SSE 流式期间 ChatContent 的 startPinLoop（rAF）持续贴底，无需此处再触。
+ */
+async function sendWith(text: string) {
     const trimmed = text.trim();
     if (!trimmed) return;
     const attachments = [...files.attachments];
-    void messages.sendUserMessage(
+    void files.clearAttachments();
+    void session.touch(activeId.value);
+    void clearDraft(activeId.value);
+    input.value = "";
+    await messages.sendUserMessage(
         activeId.value,
         trimmed,
         settings.activeWorkspace || undefined,
         attachments,
     );
-    void files.clearAttachments();
-    void session.touch(activeId.value);
-    void clearDraft(activeId.value);
-    input.value = "";
     emit("submitted");
 }
 
-/** Enter：发送 */
+/** Enter：发送（IME 选词阶段不发送，避免中文输入误触） */
 function onEnter() {
+    if (composing.value) return;
     send();
 }
 
 function stopCurrent() {
     if (runningRun.value) messages.stopRun(runningRun.value.taskId);
+}
+
+// 拖拽上传——仅 ChatInput 区接收；非文件类型（纯文本/URL）直接忽略，
+// 不抢用户「拖文本进输入框」的体验。
+function onDragEnter(e: DragEvent) {
+    // 仅识别文件拖入，避免文本/链接误触发遮罩
+    if (!e.dataTransfer?.types.includes("Files")) return;
+    e.preventDefault();
+    dragCounter++;
+    dragOver.value = true;
+}
+
+function onDragOver(e: DragEvent) {
+    // 必须 preventDefault 否则 drop 不触发；同时声明 dropEffect 让光标显示为「复制」
+    e.preventDefault();
+    if (e.dataTransfer) e.dataTransfer.dropEffect = "copy";
+}
+
+function onDragLeave(e: DragEvent) {
+    // 用 relatedTarget 判「真离开容器」：relatedTarget 不在 composer 子树内才计数
+    const root = composerRef.value;
+    if (root && e.relatedTarget && root.contains(e.relatedTarget as Node)) return;
+    dragCounter = Math.max(0, dragCounter - 1);
+    if (dragCounter === 0) dragOver.value = false;
+}
+
+async function onDrop(e: DragEvent) {
+    e.preventDefault();
+    dragCounter = 0;
+    dragOver.value = false;
+    const list = e.dataTransfer?.files;
+    if (!list || list.length === 0) return;
+    if (!attachSupported.value) {
+        // 与「+」按钮 attachUnsupported 路径对齐：能力缺失时即时 toast
+        ui.toast(t("chat.dropUnsupported"), "error");
+        return;
+    }
+    await files.attachFromFiles(Array.from(list));
 }
 
 async function submitCreate() {
@@ -228,15 +297,18 @@ async function submitCreate() {
     ui.closeCreate();
 }
 
-// pendingPrompt（新手引导"试玩"等）：填入输入框并直接发送
+// pendingPrompt（新手引导"试玩"等）：仅在输入框为空时填入并发送，
+// 避免覆盖用户正在打字的内容——保护用户已输入数据
 watch(
     () => ui.pendingPrompt,
     (prompt) => {
-        if (prompt) {
+        if (!prompt) return;
+        if (input.value === "") {
             input.value = prompt;
             sendWith(prompt);
-            ui.setPendingPrompt("");
         }
+        // 输入框非空时：直接消费掉 prompt，不打扰用户
+        ui.setPendingPrompt("");
     },
 );
 </script>
@@ -269,7 +341,16 @@ watch(
     </div>
 
     <div ref="inputRoot" class="chat-input">
-        <form class="composer composer-block" @submit.prevent="send()">
+        <form
+            ref="composerRef"
+            class="composer composer-block"
+            :class="{ 'is-dragover': dragOver }"
+            @submit.prevent="send()"
+            @dragenter="onDragEnter"
+            @dragover="onDragOver"
+            @dragleave="onDragLeave"
+            @drop="onDrop"
+        >
             <div v-if="files.attachments.length" class="attachment-row">
                 <div
                     v-for="att in files.attachments"
@@ -313,6 +394,8 @@ watch(
                     class="input-area"
                     :placeholder="t('chat.placeholder')"
                     @keydown.enter.exact.prevent="onEnter"
+                    @compositionstart="composing = true"
+                    @compositionend="composing = false"
                 />
             </div>
 
@@ -374,13 +457,17 @@ watch(
                 </button>
             </div>
 
-            <div class="composer-hint">
-                <span>Enter 发送</span>
-            </div>
-
             <span v-if="voiceHint" class="voice-hint">{{
                 t("chat.voiceComing")
             }}</span>
+
+            <!-- 拖拽上传遮罩：仅覆盖 composer 本体（不含 chat-input 的 padding/margin）；
+                 pointer-events: none 让底层 drop 仍能命中容器 -->
+            <div v-if="dragOver" class="drag-overlay" aria-hidden="true">
+                <div class="drag-overlay-text">
+                    {{ t('chat.dropHint') }}
+                </div>
+            </div>
         </form>
         <!-- 批0 成本小字：真实 usage 记账（done 帧回填） -->
         <div v-if="costText" class="xp-cost">{{ costText }}</div>

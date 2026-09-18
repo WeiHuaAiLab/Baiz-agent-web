@@ -252,7 +252,7 @@
 
 /* MSG-2413 思考过程折叠块 */
 .reasoning-block {
-  max-width: 640px;
+  width: 100%;
   margin: 6px 0;
   border: 1px solid var(--border);
   border-radius: 8px;
@@ -296,7 +296,7 @@
 
 /* MSG-2661 目④：流式 reasoning 增量区（思考过程随帧长——streaming-tail 内） */
 .reasoning-stream {
-  max-width: 640px;
+  width: 100%;
   margin: 2px 0 6px;
   border: 1px solid var(--border);
   border-radius: 8px;
@@ -1307,6 +1307,49 @@
   padding: 2px 8px 0;
   font-size: 11px;
   color: var(--muted);
+}
+
+/* 拖拽上传遮罩：
+   - drag 事件挂在 .composer.composer-block（不含 .chat-input 的 padding/margin），
+     所以遮罩只覆盖 composer 本体，精准贴边。
+   - .composer-block 是定位上下文（position: relative），.drag-overlay 用 inset: 0
+     锚定在 composer 范围内。
+   - pointer-events: none 让底层 drop 仍能命中容器（不被遮罩吞事件） */
+.composer.composer-block {
+  position: relative;
+}
+
+.composer-block.is-dragover {
+  outline: 2px dashed var(--accent);
+  outline-offset: 3px;
+}
+
+.drag-overlay {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: color-mix(in oklab, var(--accent) 4%, transparent);
+  border-radius: 16px;
+  pointer-events: none;
+  z-index: 20;
+  animation: drag-overlay-in 120ms ease-out;
+}
+
+.drag-overlay-text {
+  padding: 6px 14px;
+  border-radius: 999px;
+  background: var(--accent);
+  color: var(--accent-contrast);
+  font-size: 13px;
+  font-weight: 500;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.15);
+}
+
+@keyframes drag-overlay-in {
+  from { opacity: 0; transform: scale(0.98); }
+  to { opacity: 1; transform: scale(1); }
 }
 
 .composer-hint .hint-dot {

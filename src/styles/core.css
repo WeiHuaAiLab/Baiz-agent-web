@@ -57,10 +57,12 @@ body {
 }
 
 /* 滚动条统一配色：轨道背景透明（与所在内容区背景一致，视觉上融入内容），
-   滚轴（滑块）用内容区同色系的半透明浅灰；hover 略加深提升可辨性 */
+   滚轴（滑块）默认极淡——不抢内容视觉；hover 聚焦（仍克制）；active 拖动时再加深。
+   三档过渡：default 0.2 → hover 0.45 → active 0.6，对比阶梯清晰但不浮夸。 */
 :root {
-  --scrollbar-thumb: rgba(128, 128, 128, 0.35);
-  --scrollbar-thumb-hover: rgba(128, 128, 128, 0.55);
+  --scrollbar-thumb: rgba(128, 128, 128, 0.2);
+  --scrollbar-thumb-hover: rgba(128, 128, 128, 0.45);
+  --scrollbar-thumb-active: rgba(128, 128, 128, 0.6);
 }
 
 ::-webkit-scrollbar {
@@ -86,6 +88,11 @@ body {
 
 ::-webkit-scrollbar-thumb:hover {
   background: var(--scrollbar-thumb-hover);
+}
+
+::-webkit-scrollbar-thumb:active {
+  /* 拖动中：进一步加深，告知用户「正在响应拖拽」 */
+  background: var(--scrollbar-thumb-active);
 }
 
 /* Firefox */
