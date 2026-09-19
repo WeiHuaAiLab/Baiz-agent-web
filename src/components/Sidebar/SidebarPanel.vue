@@ -9,10 +9,14 @@ import SidebarBrand from './SidebarBrand.vue'
 import SidebarUser from './SidebarUser.vue'
 import ChatPanel from './ChatPanel.vue'
 import WorkspacePanel from './WorkspacePanel.vue'
+import { useApprovalStore } from '../../stores/approval'
+import { useUiStore } from '../../stores/ui'
 
 const { t } = useI18n()
 const route = useRoute()
 const router = useRouter()
+const approvals = useApprovalStore()
+const ui = useUiStore()
 
 // 侧边栏模块由当前路由驱动：/working 开头的路由显示工作区模块，其余（/、/settings…）显示聊天模块
 const activeSection = computed<'chat' | 'work'>(() =>
@@ -51,6 +55,23 @@ function switchSection(section: 'chat' | 'work') {
         <span>{{ t('nav.workspace') }}</span>
       </button>
     </nav>
+
+    <!-- MSG-3172：待办收件箱入口——置于 Tab 行**之下**、内容区**之上** ⇒ 聊天页与
+         工作区页**都常驻可见**（原在底部状态栏，老板指位置不对）。行为/文案/角标不变，
+         点开仍是同一个收件箱面板（`ui.toggleInbox()`）。 -->
+    <button
+      type="button"
+      class="side-inbox"
+      :class="{ 'has-items': approvals.badgeCount > 0 }"
+      :title="t('approval.inboxTitle')"
+      @click="ui.toggleInbox()"
+    >
+      <Icon name="inbox" :size="15" />
+      <span class="side-inbox-label">{{ t('approval.inboxShort') }}</span>
+      <span v-if="approvals.badgeCount > 0" class="side-inbox-badge">
+        {{ approvals.badgeCount }}
+      </span>
+    </button>
 
     <div class="side-scroll">
       <ChatPanel v-if="activeSection === 'chat'" />

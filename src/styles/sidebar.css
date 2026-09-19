@@ -30,6 +30,70 @@
   border-color: var(--border);
 }
 
+/* MSG-3172：待办收件箱入口——置于 Tab 行之下、内容区之上
+   （样式与 .side-tabs button 同族：圆角 8／字号 13／间距 4 倍数；
+    热区 ≥44×44 用 ::after 扩、不撑视觉高度；角标为空不占位） */
+.side-inbox {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0 8px 8px;
+  padding: 8px 12px;
+  border: 1px solid transparent;
+  border-radius: 8px;
+  color: var(--muted);
+  font-size: 13px;
+  transition:
+    background 150ms cubic-bezier(0.4, 0, 0.2, 1),
+    color 150ms cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.side-inbox::after {
+  content: '';
+  position: absolute;
+  inset: -5px -4px;
+}
+
+.side-inbox:hover {
+  background: var(--hover);
+  color: var(--text);
+}
+
+.side-inbox:focus-visible {
+  outline: none;
+  border-color: var(--accent);
+  box-shadow: var(--shadow-focus);
+}
+
+.side-inbox:active {
+  filter: brightness(0.95);
+}
+
+.side-inbox.has-items {
+  background: var(--accent-soft);
+  color: var(--text);
+}
+
+.side-inbox-label {
+  flex: 1;
+  text-align: left;
+}
+
+.side-inbox-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 16px;
+  height: 16px;
+  padding: 0 4px;
+  border-radius: 9999px;
+  background: var(--danger);
+  color: var(--accent-contrast);
+  font-size: 11px;
+  line-height: 1;
+}
+
 .side-section {
   margin-bottom: 8px;
 }
@@ -526,4 +590,3 @@
 .sidebar .user-pop button:hover {
   background: var(--sidebar-hover);
 }
-

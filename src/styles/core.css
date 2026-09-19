@@ -1158,49 +1158,6 @@ button {
   transition: transform 250ms ease;
 }
 
-/* 待办收件箱常驻入口（§C B5）：挨着侧栏开关，z-index 高于扩展面板（20） */
-.inbox-fab {
-  position: absolute;
-  top: 12px;
-  left: 52px;
-  z-index: 30;
-  width: 28px;
-  height: 28px;
-  flex: none;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  border-radius: 8px;
-  color: var(--muted);
-  transition: color 150ms, background 150ms;
-}
-
-.inbox-fab:hover {
-  color: var(--text);
-  background: var(--hover);
-}
-
-.inbox-fab.has-items {
-  color: var(--text);
-}
-
-.inbox-badge {
-  position: absolute;
-  top: -3px;
-  right: -4px;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  min-width: 15px;
-  height: 15px;
-  padding: 0 4px;
-  border-radius: 8px;
-  background: var(--danger);
-  color: var(--accent-contrast);
-  font-size: 11px;
-  line-height: 1;
-}
-
 .status {
   color: var(--muted);
   font-size: 13px;
@@ -1386,43 +1343,8 @@ button {
   color: var(--danger);
 }
 
-/* —— 待办收件箱（前端协作标准 v1.0 §C B5）：常驻入口 ＋ 右侧抽屉 —— */
-.sb-inbox {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  padding: 4px 8px;
-  border-radius: 8px;
-  color: var(--muted);
-  font-size: 13px;
-  /* 状态栏整体为悬浮层（batch.css 内 pointer-events:none）——入口按钮须单独收回指针事件，
-     否则「常驻待办入口」看得见点不动 */
-  pointer-events: auto;
-}
-
-.sb-inbox:hover {
-  color: var(--text);
-  background: var(--hover);
-}
-
-.sb-inbox.has-items {
-  color: var(--text);
-  font-weight: 600;
-}
-
-.sb-badge {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  min-width: 16px;
-  height: 16px;
-  padding: 0 4px;
-  border-radius: 8px;
-  background: var(--danger);
-  color: var(--accent-contrast);
-  font-size: 11px;
-}
-
+/* —— 待办收件箱（前端协作标准 v1.0 §C B5）：右侧抽屉
+     入口按钮已按 MSG-3172 移到左侧栏（sidebar.css 内 .side-inbox）——此处不再放入口 —— */
 .inbox-mask {
   position: fixed;
   inset: 0;

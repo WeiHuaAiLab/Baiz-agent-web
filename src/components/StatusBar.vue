@@ -5,16 +5,11 @@ import { useI18n } from 'vue-i18n'
 import { useSessionStore } from '../stores/session'
 import { useMessageStore } from '../stores/message'
 import { useSettingsStore } from '../stores/settings'
-import { useApprovalStore } from '../stores/approval'
-import { useUiStore } from '../stores/ui'
-import Icon from './common/Icon.vue'
 
 const { t } = useI18n()
 const session = useSessionStore()
 const messages = useMessageStore()
 const settings = useSettingsStore()
-const approvals = useApprovalStore()
-const ui = useUiStore()
 
 const activeId = computed(() => session.activeId)
 
@@ -59,19 +54,7 @@ const workspaceText = computed(() => {
 
 <template>
   <footer class="status-bar">
-    <!-- 标准 v1.0 §C B5：待办入口常驻＋`pending_total` 角标（任何视图都在） -->
-    <button
-      type="button"
-      class="sb-item sb-inbox"
-      :class="{ 'has-items': approvals.badgeCount > 0 }"
-      :title="t('approval.inboxTitle')"
-      @click="ui.toggleInbox()"
-    >
-      <Icon name="inbox" :size="13" />
-      <span>{{ t('approval.inboxShort') }}</span>
-      <span v-if="approvals.badgeCount > 0" class="sb-badge">{{ approvals.badgeCount }}</span>
-    </button>
-    <span class="sb-sep" />
+    <!-- MSG-3172：待办入口已移左侧栏（SidebarPanel）——状态栏不再重复放 -->
     <span class="sb-item sb-model">{{ modelText }}</span>
     <span class="sb-sep" />
     <span class="sb-item sb-conn" :class="connectionClass">
