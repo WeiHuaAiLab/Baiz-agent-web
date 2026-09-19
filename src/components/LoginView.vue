@@ -3,6 +3,9 @@
     <div class="login-card">
       <h2 class="login-title">Baiz Agent 登录</h2>
       <p class="login-hint">请使用 https://kb.ruiac.net/ 的账号登录</p>
+      <!-- DEBT-738（MSG-3148）：演示态**肉眼可辨**——登录页常显「演示模式（未连接）」
+           （演示传输只在 dev 或显式 VITE_BAIZ_DEMO=1 时存在，绝不再生产兜底） -->
+      <p v-if="settings.demoMode" class="login-mode">{{ t('chat.demoMode') }}</p>
       <form class="login-form" @submit.prevent="submit">
         <label class="login-field">
           <span>账号</span>
@@ -16,7 +19,7 @@
         </label>
         <label class="login-field">
           <span>密码</span>
-          <input
+      <input
             v-model="password"
             type="password"
             autocomplete="current-password"
@@ -35,11 +38,15 @@
 
 <script setup lang="ts">
 import { ref } from "vue";
+import { useI18n } from "vue-i18n";
 import { useRouter } from "vue-router";
 import { useAuthStore } from "../stores/auth";
+import { useSettingsStore } from "../stores/settings";
 
+const { t } = useI18n();
 const router = useRouter();
 const auth = useAuthStore();
+const settings = useSettingsStore();
 const email = ref("");
 const password = ref("");
 
@@ -57,28 +64,37 @@ async function submit() {
   align-items: center;
   justify-content: center;
   min-height: 100vh;
-  background: var(--bg, #f5f5f5);
+  background: var(--bg);
 }
 .login-card {
   width: 360px;
   padding: 32px 28px;
   border-radius: 12px;
-  background: var(--surface, #ffffff);
-  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.08);
+  background: var(--surface);
+  box-shadow: var(--shadow-md);
 }
 .login-title {
   margin: 0 0 4px;
-  font-size: 20px;
+  font-size: 22px;
 }
 .login-hint {
-  margin: 0 0 20px;
+  margin: 0 0 4px;
   font-size: 13px;
-  color: var(--muted, #888);
+  color: var(--muted);
+}
+.login-mode {
+  margin: 0 0 20px;
+  align-self: flex-start;
+  padding: 4px 8px;
+  border-radius: 4px;
+  background: var(--warning-soft);
+  color: var(--risk-medium-text);
+  font-size: 11px;
 }
 .login-form {
   display: flex;
   flex-direction: column;
-  gap: 14px;
+  gap: 16px;
 }
 .login-field {
   display: flex;
@@ -87,25 +103,45 @@ async function submit() {
   font-size: 13px;
 }
 .login-field input {
-  padding: 8px 10px;
-  border: 1px solid var(--border, #ddd);
-  border-radius: 6px;
+  min-height: 36px;
+  padding: 8px 12px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--surface);
+  color: var(--text-primary);
+  font-size: 15px;
+}
+.login-field input:focus-visible {
+  outline: none;
+  border-color: var(--accent);
+  box-shadow: var(--shadow-focus);
 }
 .login-error {
   margin: 0;
   font-size: 13px;
-  color: var(--danger, #c0392b);
+  color: var(--danger);
 }
 .login-submit {
-  padding: 10px;
-  border: none;
-  border-radius: 6px;
+  min-height: 36px;
+  padding: 8px 16px;
+  border: 1px solid var(--accent);
+  border-radius: 8px;
   cursor: pointer;
-  background: var(--accent, #2f6fed);
-  color: #fff;
+  background: var(--accent);
+  color: var(--accent-contrast);
+  font-size: 15px;
+  transition:
+    background 150ms cubic-bezier(0.4, 0, 0.2, 1),
+    border-color 150ms cubic-bezier(0.4, 0, 0.2, 1);
+}
+.login-submit:hover:not(:disabled) {
+  background: var(--accent-hover);
+  border-color: var(--accent-hover);
 }
 .login-submit:disabled {
-  opacity: 0.55;
+  background: var(--surface-2);
+  border-color: var(--border);
+  color: var(--text-disabled);
   cursor: not-allowed;
 }
 </style>

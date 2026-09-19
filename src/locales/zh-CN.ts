@@ -11,7 +11,7 @@ export default {
     elapsed: '耗时',
     modelPro: 'DeepSeek V4 Pro',
     modelFlash: 'DeepSeek V4 Flash',
-    demoMode: '演示模式',
+    demoMode: '演示模式（未连接）',
     sceneCustomer: '客户总结',
     sceneRust: 'Rust 编程',
     sceneReport: '研究报告',
@@ -334,7 +334,7 @@ export default {
     disconnectedReconnect: '连接已断开，重连中…',
     sendFailed: '发送失败',
     taskError: '任务错误',
-    demo: '演示模式',
+    demo: '演示模式（未连接）',
     chars: '字符',
   },
   errors: {
@@ -419,6 +419,13 @@ export default {
     rulesTitle: '已记住的规则',
     revoke: '撤销',
     revokeHint: '撤销后，同类操作会重新弹卡确认',
+  },
+  // DEBT-738（MSG-3148）：生产禁兜底 mock ⇒ 传输取不到时挂「无法连接本地服务」页
+  offline: {
+    title: '无法连接本地服务',
+    desc: '未连上 baiz 本地服务（daemon）。请先启动本地服务后重试。',
+    hint: '本构建未开启演示模式——不会再以演示数据放行登录。',
+    retry: '重试',
   },
   common: {
     back: '返回',

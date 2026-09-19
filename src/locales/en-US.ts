@@ -11,7 +11,7 @@ export default {
     elapsed: 'took',
     modelPro: 'DeepSeek V4 Pro',
     modelFlash: 'DeepSeek V4 Flash',
-    demoMode: 'Demo mode',
+    demoMode: 'Demo mode (offline)',
     sceneCustomer: 'Customers',
     sceneRust: 'Rust',
     sceneReport: 'Report',
@@ -335,7 +335,7 @@ export default {
     disconnectedReconnect: 'Disconnected, reconnecting…',
     sendFailed: 'Send failed',
     taskError: 'Task error',
-    demo: 'Demo mode',
+    demo: 'Demo mode (offline)',
     chars: 'chars',
   },
   errors: {
@@ -420,6 +420,13 @@ export default {
     rulesTitle: 'Remembered rules',
     revoke: 'Revoke',
     revokeHint: 'After revoking, the same action asks again',
+  },
+  // DEBT-738 (MSG-3148): no mock fallback in production — offline gate screen
+  offline: {
+    title: 'Cannot reach the local service',
+    desc: 'Not connected to the baiz local service (daemon). Start it and retry.',
+    hint: 'This build has demo mode off — it will not sign you in with demo data.',
+    retry: 'Retry',
   },
   common: {
     back: 'Back',
