@@ -8,6 +8,8 @@
       <p v-if="settings.demoMode" class="login-mode">{{ t('chat.demoMode') }}</p>
       <!-- DEBT-742：会话被 daemon 判失效（-32002）后回到登录页——先说清原因再让人登 -->
       <p v-if="auth.sessionExpired" class="login-expired">{{ t('errors.sessionExpired') }}</p>
+      <!-- DEBT-743：干净机器首登撞 -32010（知识库未配置）⇒ 指路设置页，而非"账号密码错" -->
+      <p v-if="auth.kbNotConfigured" class="login-kb">{{ t('errors.kbNotConfigured') }}</p>
       <form class="login-form" @submit.prevent="submit">
         <label class="login-field">
           <span>账号</span>
@@ -100,6 +102,15 @@ async function submit() {
   border-radius: 4px;
   background: var(--danger-soft);
   color: var(--danger);
+  font-size: 13px;
+}
+.login-kb {
+  margin: 0 0 20px;
+  align-self: flex-start;
+  padding: 4px 8px;
+  border-radius: 4px;
+  background: var(--warning-soft);
+  color: var(--risk-medium-text);
   font-size: 13px;
 }
 .login-form {

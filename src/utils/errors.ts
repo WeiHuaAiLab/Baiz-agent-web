@@ -4,6 +4,8 @@ export type FriendlyErrorKey =
   | 'unauthorized'
   /** DEBT-742：会话失效（-32002 且语义为"会话已失效／服务端重启／身份不可证"） */
   | 'sessionExpired'
+  /** DEBT-743：知识库（WeKnora）未配置——引导去设置页填 base_url＋api_key */
+  | 'kbNotConfigured'
   | 'invalidParams'
   | 'methodNotFound'
   | 'taskNotFound'
@@ -31,6 +33,7 @@ export function mapRpcError(error: unknown): { key: FriendlyErrorKey; detail: st
     if (code === -32002) {
       return { key: isSessionExpiredMessage(raw) ? 'sessionExpired' : 'unauthorized', detail: raw }
     }
+    if (code === -32010) return { key: 'kbNotConfigured', detail: raw }
     if (code === -32602) return { key: 'invalidParams', detail: raw }
     if (code === -32601) return { key: 'methodNotFound', detail: raw }
     if (code === -32001) return { key: 'taskNotFound', detail: raw }

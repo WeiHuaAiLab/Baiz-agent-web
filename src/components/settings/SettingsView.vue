@@ -11,6 +11,7 @@ import MemoryCard from './MemoryCard.vue'
 import WorkspaceCard from './WorkspaceCard.vue'
 import SystemCard from './SystemCard.vue'
 import DemoCard from './DemoCard.vue'
+import KbCard from './KbCard.vue'
 
 type TabKey = 'general' | 'model' | 'mcp' | 'runtime' | 'about'
 
@@ -45,6 +46,8 @@ function selectTab(key: TabKey) {
       <!-- 通用：外观 + 存储设置（授权目录） -->
       <div v-show="activeTab === 'general'" class="settings-panel" role="tabpanel">
         <AppearanceCard />
+        <!-- DEBT-743：连接知识库（base URL ＋ API key，落库不再依赖环境变量） -->
+        <KbCard />
         <WorkspaceCard />
       </div>
 

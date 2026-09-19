@@ -36,6 +36,8 @@ export const RPC_ERROR_CODES = {
   UNAUTHORIZED: -32002,
   TASK_NOT_CANCELLABLE: -32003,
   RESYNC_REQUIRED: -32004,
+  /** DEBT-743：知识库（WeKnora）未配置——缺 base_url／api_key（daemon 侧 1.0.18） */
+  KB_NOT_CONFIGURED: -32010,
 } as const
 
 export class RpcError extends Error {

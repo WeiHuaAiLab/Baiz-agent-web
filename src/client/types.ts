@@ -149,6 +149,35 @@ export interface A2aStatusResult {
   tasks: number
 }
 
+// —— DEBT-743（MSG-3168）：WeKnora（知识库）连接配置 ——
+// 契约预填源＝MSG-3165 §三（daemon 侧 `weknora.get_config`／`set_config`）。
+// 钉：**API key 永不回显**（读接口至多给 `key_set`／`key_fp`）。
+
+export type WeknoraConfigSource = 'env' | 'file' | 'none'
+
+export interface WeknoraConfigResult {
+  base_url: string
+  configured: boolean
+  /** 来源：env（既有部署）／file（DPAPI 加密件）／none */
+  source?: WeknoraConfigSource
+  /** 至多"是否已设"＋指纹——**零明文** */
+  key_set?: boolean
+  key_fp?: string
+}
+
+export interface WeknoraSetConfigParams {
+  base_url: string
+  api_key: string
+  /** 会话令牌（与 chat.send 的 session_token 同法；无则不键） */
+  token?: string
+}
+
+export interface WeknoraSetConfigResult {
+  ok: boolean
+  /** 服务端 `normalize_base_url` 归一后回填（去尾斜杠／剥尾段 /api/v1） */
+  normalized_base_url?: string
+}
+
 export interface TokenData {
   task_id: string
   token: string

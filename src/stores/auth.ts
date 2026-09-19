@@ -25,6 +25,8 @@ export const useAuthStore = defineStore("auth", {
     error: "" as string,
     /** DEBT-742：会话被 daemon 判失效（-32002）后置真——UI 据此提示"请重新登录" */
     sessionExpired: false as boolean,
+    /** DEBT-743：daemon 判"知识库未配置"（-32010）——UI 据此引导去设置页填域名＋Key */
+    kbNotConfigured: false as boolean,
   }),
   getters: {
     loggedIn(state): boolean {
@@ -42,6 +44,7 @@ export const useAuthStore = defineStore("auth", {
     async login(email: string, password: string): Promise<boolean> {
       this.loading = true;
       this.error = "";
+      this.kbNotConfigured = false;
       try {
         const client = createDefaultClient();
         // MSG-2330 丙面根因修（试刀 2327 钉死）：独立 client 未 connect 即
@@ -58,8 +61,15 @@ export const useAuthStore = defineStore("auth", {
           /* storage 不可用仅失持久，不阻断登录态 */
         }
         this.sessionExpired = false;
+        this.kbNotConfigured = false;
         return true;
       } catch (e) {
+        // DEBT-743：知识库未配置（-32010）⇒ 引导去「设置 → 连接知识库」，
+        // **不得**误报"账号密码错"（干净机器首登正是这一型）
+        if ((e as { code?: number } | undefined)?.code === -32010) {
+          this.kbNotConfigured = true;
+          return false;
+        }
         // MSG-2311 吞错面修：真 error 词透出上屏——剥 RPC 前缀得
         // daemon 安全词（body.message 已通用化）；mock 内部语/口令/
         // token/密钥类勿上屏回落通用词
@@ -80,6 +90,7 @@ export const useAuthStore = defineStore("auth", {
       this.userId = "";
       this.error = "";
       this.sessionExpired = false;
+      this.kbNotConfigured = false;
       try {
         sessionStorage.removeItem(TOKEN_KEY);
       } catch {

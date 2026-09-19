@@ -27,6 +27,9 @@ import type {
   ScheduleCreateParams,
   ScheduleRun,
   ScheduleTask,
+  WeknoraConfigResult,
+  WeknoraSetConfigParams,
+  WeknoraSetConfigResult,
 } from './types'
 
 export interface BaizClient {
@@ -67,6 +70,10 @@ export interface BaizClient {
   scheduleListRuns(taskId: string, limit?: number): Promise<ScheduleRun[]>
   /** MSG-3014 包131：只读文件内容预览（daemon file.preview——授权目录钉死） */
   previewRead(params: PreviewReadParams): Promise<PreviewReadResult>
+  /** DEBT-743：读知识库连接配置——**不回显 API key**（契约＝MSG-3165 §三） */
+  weknoraGetConfig(params?: { token?: string }): Promise<WeknoraConfigResult>
+  /** DEBT-743：写知识库连接配置（`api_key` 入参即写、零回显、零落日志） */
+  weknoraSetConfig(params: WeknoraSetConfigParams): Promise<WeknoraSetConfigResult>
   onEvent(handler: (frame: SseFrame) => void): () => void
   close(): void
 }
@@ -132,6 +139,11 @@ export function createClient(transport: RpcTransport): BaizClient {
         ...(params.max_bytes !== undefined ? { max_bytes: params.max_bytes } : {}),
         ...(params.workspace ? { workspace: params.workspace } : {}),
       }),
+    // DEBT-743：daemon 1.0.18 的 weknora.get_config／set_config（对卯 handler dispatch 同名；
+    // 未实装时 daemon 回 -32601 ⇒ 界面显「服务端未就绪」，绝不静默成功）
+    weknoraGetConfig: (params) => rpc.call<WeknoraConfigResult>('weknora.get_config', params ?? {}),
+    weknoraSetConfig: (params) =>
+      rpc.call<WeknoraSetConfigResult>('weknora.set_config', params),
     onEvent: (handler) => transport.onEvent(handler),
     close: () => transport.close(),
   }
