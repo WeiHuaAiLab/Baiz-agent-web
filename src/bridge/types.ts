@@ -4,6 +4,7 @@ export type Runtime = 'tauri' | 'web'
 export type CapabilityName =
   | 'fs.read'
   | 'fs.pick'
+  | 'fs.pickAttachment'
   | 'fs.pickDir'
   | 'fs.drives'
   | 'fs.createDir'

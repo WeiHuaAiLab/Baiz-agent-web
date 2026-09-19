@@ -52,6 +52,8 @@ export const useSettingsStore = defineStore('settings', {
     memoryEnabled: readLocal('baiz.memoryEnabled', '1') === '1',
     memoryScope: readLocal('baiz.memoryScope', 'recent') as MemoryScope,
     autoDistill: readLocal('baiz.autoDistill', '1') === '1',
+    // 人话字幕：把工具调用翻译成白话的展示开关——默认隐藏（设置中可开启）
+    showHuman: readLocal('baiz.showHuman', '0') === '1',
   }),
   actions: {
     setLocale(locale: Locale) {
@@ -107,6 +109,10 @@ export const useSettingsStore = defineStore('settings', {
     setAutoDistill(enabled: boolean) {
       this.autoDistill = enabled
       localStorage.setItem('baiz.autoDistill', enabled ? '1' : '0')
+    },
+    setShowHuman(enabled: boolean) {
+      this.showHuman = enabled
+      localStorage.setItem('baiz.showHuman', enabled ? '1' : '0')
     },
   },
 })

@@ -4,6 +4,7 @@ import { computed, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useRouter } from 'vue-router'
 import { useMessageStore } from '../../stores/message'
+import { useSettingsStore } from '../../stores/settings'
 import { getBridge } from '../../bridge'
 import { formatDuration, formatTime } from '../../utils/time'
 import { formatFileSize, shortMime } from '../../utils/format'
@@ -18,6 +19,7 @@ const props = defineProps<{ message: ChatMessage }>()
 const { t } = useI18n()
 const router = useRouter()
 const messages = useMessageStore()
+const settings = useSettingsStore()
 
 const copied = ref(false)
 
@@ -181,8 +183,25 @@ function goSettings() {
       </button>
     </div>
 
-    <!-- 批0 人话字幕：工具调用全翻译成小白能看懂的一句话 -->
-    <div v-if="subtitles.length" class="xp-subtitles">
+    <div v-if="showTrace && run" class="trace-panel">
+      <div v-if="run.reasoning" class="trace-reasoning">
+        <span>{{ t('chat.thinking') }}</span>
+        {{ run.reasoning }}
+      </div>
+      <div v-for="(item, i) in run.trace" :key="i" class="trace-item" :class="item.kind">
+        <template v-if="item.kind === 'tool.call'">
+          {{ t('chat.toolCall') }} {{ item.toolName }}
+          <span v-if="item.argsPreview" class="trace-args">{{ item.argsPreview }}</span>
+        </template>
+        <template v-else-if="item.kind === 'tool.result'">
+          {{ t('chat.toolResult') }} {{ item.preview }}
+        </template>
+        <template v-else>{{ t('chat.thinking') }}</template>
+      </div>
+    </div>
+
+    <!-- 批0 人话字幕：工具调用全翻译成小白能看懂的一句话（默认隐藏，设置中开启） -->
+    <div v-if="settings.showHuman && subtitles.length" class="xp-subtitles">
       <div
         v-for="(sub, i) in subtitles"
         :key="i"
