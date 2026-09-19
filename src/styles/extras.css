@@ -14,19 +14,19 @@
   background: var(--panel);
   border: 1px solid var(--border);
   border-radius: 16px;
-  padding: 24px 26px;
+  padding: 24px 24px;
   box-shadow: 0 4px 24px rgba(0, 0, 0, 0.08);
 }
 
 .create-card h3 {
-  margin: 0 0 14px;
-  font-size: 16px;
+  margin: 0 0 16px;
+  font-size: 15px;
 }
 
 .create-input {
   width: 100%;
   min-height: 208px;
-  padding: 14px 16px;
+  padding: 16px 16px;
   border: 1px solid var(--border);
   border-radius: 12px;
   font: inherit;
@@ -45,8 +45,8 @@
 .create-actions {
   display: flex;
   justify-content: flex-end;
-  gap: 10px;
-  margin-top: 14px;
+  gap: 12px;
+  margin-top: 16px;
 }
 
 /* 会话行：省略号 + 操作菜单 */
@@ -84,10 +84,10 @@
   visibility: hidden;
   opacity: 0;
   transition:
-    width 0.15s,
-    opacity 0.15s,
-    visibility 0.15s,
-    background 0.15s;
+    width 150ms,
+    opacity 150ms,
+    visibility 150ms,
+    background 150ms;
 }
 
 /* 容器背景：hover 行时浮现，底色与行 hover 背景一致 */
@@ -103,9 +103,9 @@
   color: var(--muted);
   background: transparent;
   border: none;
-  border-radius: 3px;
-  padding: 1px 4px;
-  font-size: 14px;
+  border-radius: 4px;
+  padding: 4px 4px;
+  font-size: 15px;
   line-height: 1;
   white-space: nowrap;
   cursor: pointer;
@@ -123,7 +123,7 @@
 /* 重命名弹窗输入框 */
 .rename-input {
   width: 100%;
-  padding: 10px;
+  padding: 12px;
   border: 1px solid var(--border);
   border-radius: 8px;
   font: inherit;
@@ -144,9 +144,9 @@
   width: 168px;
   background: var(--panel);
   border: 1px solid var(--border);
-  border-radius: 10px;
+  border-radius: 12px;
   box-shadow: 0 6px 20px rgba(0, 0, 0, 0.12);
-  padding: 6px;
+  padding: 8px;
   z-index: 50;
 }
 
@@ -156,8 +156,8 @@
   gap: 8px;
   width: 100%;
   text-align: left;
-  padding: 8px 10px;
-  border-radius: 6px;
+  padding: 8px 12px;
+  border-radius: 8px;
   font-size: 13px;
   color: var(--text);
 }
@@ -167,7 +167,7 @@
 }
 
 .session-menu button.danger {
-  color: #c0392b;
+  color: var(--danger);
 }
 
 .menu-mask {
@@ -179,17 +179,17 @@
 .head-icons {
   display: inline-flex;
   align-items: center;
-  gap: 2px;
+  gap: 4px;
 }
 
 .session-search {
   width: 100%;
-  margin-bottom: 6px;
-  padding: 6px 10px;
+  margin-bottom: 8px;
+  padding: 8px 12px;
   border: 1px solid var(--border);
   border-radius: 8px;
   font: inherit;
-  font-size: 12px;
+  font-size: 13px;
   background: var(--bg);
   color: var(--text);
   outline: none;
@@ -200,7 +200,7 @@
 }
 
 .session-time {
-  font-size: 10px;
+  font-size: 11px;
   color: var(--muted);
   flex: none;
   white-space: nowrap;
@@ -212,7 +212,7 @@
   width: 34px;
   height: 34px;
   flex: none;
-  border-radius: 50%;
+  border-radius: 9999px;
   border: 1px solid var(--border);
   color: var(--muted);
   display: inline-flex;
@@ -233,17 +233,17 @@
   border: 1px solid var(--border);
   border-radius: 8px;
   box-shadow: 0 4px 14px rgba(0, 0, 0, 0.1);
-  padding: 4px 10px;
-  font-size: 12px;
+  padding: 4px 12px;
+  font-size: 13px;
   color: var(--text);
   white-space: nowrap;
   opacity: 0;
   visibility: hidden;
   transform: translateY(2px);
   transition:
-    opacity 0.15s,
-    transform 0.15s,
-    visibility 0.15s;
+    opacity 150ms,
+    transform 150ms,
+    visibility 150ms;
   z-index: 30;
 }
 
@@ -261,12 +261,12 @@
   position: absolute;
   right: 0;
   bottom: calc(100% + 4px);
-  font-size: 12px;
+  font-size: 13px;
   color: var(--muted);
   background: var(--panel);
   border: 1px solid var(--border);
   border-radius: 8px;
-  padding: 4px 10px;
+  padding: 4px 12px;
   box-shadow: 0 4px 14px rgba(0, 0, 0, 0.08);
 }
 
@@ -278,7 +278,7 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  border-radius: 6px;
+  border-radius: 8px;
   color: var(--muted);
   opacity: 0.75;
 }
@@ -299,9 +299,9 @@
 
 .schedule-row select,
 .schedule-row input {
-  padding: 6px 8px;
+  padding: 8px 8px;
   border: 1px solid var(--border);
-  border-radius: 6px;
+  border-radius: 8px;
   font: inherit;
   font-size: 13px;
   background: var(--panel);
@@ -319,7 +319,7 @@
   display: block;
   font-size: 13px;
   color: var(--muted);
-  margin-bottom: 6px;
+  margin-bottom: 8px;
 }
 
 /* 标题/指令类的输入：全宽 + 与 textarea 同样的视觉
@@ -329,7 +329,7 @@
 .plain-task-form .field > input,
 .plain-task-form .field > textarea {
   width: 100%;
-  padding: 8px 10px;
+  padding: 8px 12px;
   border: 1px solid var(--border);
   border-radius: 8px;
   font: inherit;
@@ -356,7 +356,7 @@
 .section-head .with-icon {
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: 8px;
 }
 
 .cycle-seg {
@@ -366,8 +366,8 @@
 .cycle-seg button {
   flex: 1;
   min-width: 72px;
-  padding: 6px 8px;
-  font-size: 12px;
+  padding: 8px 8px;
+  font-size: 13px;
 }
 
 .time-field {
@@ -388,9 +388,9 @@
 .time-field input[type='number'],
 .time-field input[type='time'],
 .time-field select {
-  padding: 6px 8px;
+  padding: 8px 8px;
   border: 1px solid var(--border);
-  border-radius: 6px;
+  border-radius: 8px;
   font: inherit;
   font-size: 13px;
   background: var(--panel);
@@ -399,7 +399,7 @@
 
 .time-field .hint {
   margin: 0;
-  font-size: 12px;
+  font-size: 13px;
   color: var(--muted);
 }
 
@@ -408,13 +408,13 @@
   display: flex;
   align-items: center;
   gap: 8px;
-  padding: 12px 14px 10px;
+  padding: 12px 16px 12px;
   border-bottom: 1px solid var(--border);
   justify-content: center;
 }
 
 .brand-name {
-  font-size: 16px;
+  font-size: 15px;
   font-weight: 700;
   letter-spacing: 1px;
 }
@@ -428,8 +428,8 @@
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 3px;
-  padding: 8px 2px 6px;
+  gap: 4px;
+  padding: 8px 4px 8px;
   font-size: 11px;
 }
 
@@ -457,34 +457,34 @@
 
 .model-chip {
   font-size: 11px;
-  color: #2563eb;
-  background: #e8efff;
-  padding: 1px 8px;
-  border-radius: 10px;
+  color: var(--accent);
+  background: var(--accent-soft);
+  padding: 4px 8px;
+  border-radius: 12px;
   white-space: nowrap;
 }
 
 .demo-chip {
   font-size: 11px;
-  color: #b7791f;
-  background: #fdf3e3;
-  padding: 1px 8px;
-  border-radius: 10px;
+  color: var(--risk-medium-text);
+  background: var(--warning-soft);
+  padding: 4px 8px;
+  border-radius: 12px;
   white-space: nowrap;
 }
 
 .scene-row {
   display: flex;
-  gap: 6px;
+  gap: 8px;
   flex: none;
 }
 
 .scene-btn {
-  font-size: 12px;
+  font-size: 13px;
   color: var(--muted);
   border: 1px solid var(--border);
-  border-radius: 14px;
-  padding: 3px 10px;
+  border-radius: 12px;
+  padding: 4px 12px;
   white-space: nowrap;
 }
 
@@ -504,18 +504,18 @@
 }
 
 :root[data-theme='dark'] .model-chip {
-  color: #6cb2ff;
-  background: #1c2b45;
+  color: var(--accent);
+  background: var(--accent-soft);
 }
 
 
 /* MSG-2722 L3 编程 UI：编程模式徽标（ChatHeader） */
 .prog-chip {
   font-size: 11px;
-  color: #7c3aed;
-  background: #f3e8ff;
-  padding: 1px 8px;
-  border-radius: 10px;
+  color: var(--accent);
+  background: var(--accent-soft);
+  padding: 4px 8px;
+  border-radius: 12px;
   white-space: nowrap;
 }
 
@@ -524,15 +524,15 @@
   display: flex;
   align-items: center;
   gap: 8px;
-  padding: 6px 10px;
-  border: 1px solid #f0c674;
-  border-radius: 10px;
-  margin-bottom: 6px;
-  background: #fdf9ec;
+  padding: 8px 12px;
+  border: 1px solid var(--warning);
+  border-radius: 12px;
+  margin-bottom: 8px;
+  background: var(--warning-soft);
 }
 .resume-label {
-  font-size: 12px;
-  color: #b7791f;
+  font-size: 13px;
+  color: var(--risk-medium-text);
   white-space: nowrap;
 }
 .resume-note {
@@ -545,13 +545,13 @@
 }
 
 :root[data-theme='dark'] .demo-chip {
-  color: #e5b567;
-  background: #3a2f1d;
+  color: var(--risk-medium-text);
+  background: var(--warning-soft);
 }
 
 .no-output {
   color: var(--muted);
-  font-size: 12px;
+  font-size: 13px;
   margin: 0;
 }
 
@@ -559,42 +559,42 @@
 :root[data-theme='dark'] .code-body .hljs-keyword,
 :root[data-theme='dark'] .code-body .hljs-selector-tag,
 :root[data-theme='dark'] .code-body .hljs-literal {
-  color: #c586c0;
+  color: var(--code-kw);
 }
 
 :root[data-theme='dark'] .code-body .hljs-string,
 :root[data-theme='dark'] .code-body .hljs-attr {
-  color: #ce9178;
+  color: var(--code-str);
 }
 
 :root[data-theme='dark'] .code-body .hljs-comment {
-  color: #6a9955;
+  color: var(--code-cmt);
 }
 
 :root[data-theme='dark'] .code-body .hljs-number {
-  color: #b5cea8;
+  color: var(--code-num);
 }
 
 :root[data-theme='dark'] .code-body .hljs-title,
 :root[data-theme='dark'] .code-body .hljs-title.function_ {
-  color: #dcdcaa;
+  color: var(--code-fn);
 }
 
 :root[data-theme='dark'] .code-body .hljs-built_in {
-  color: #4ec9b0;
+  color: var(--code-builtin);
 }
 
 :root[data-theme='dark'] .code-body .hljs-variable {
-  color: #9cdcfe;
+  color: var(--code-var);
 }
 
 /* 会话标题内联编辑（规范 §4.1：不用 window.prompt） */
 .session-rename-input {
   flex: 1;
   min-width: 0;
-  padding: 2px 6px;
+  padding: 4px 8px;
   border: 1px solid var(--muted);
-  border-radius: 6px;
+  border-radius: 8px;
   font: inherit;
   font-size: 13px;
   background: var(--panel);
@@ -604,21 +604,21 @@
 
 /* 定时任务列表：一级菜单下的任务行 */
 .task-list-slim li {
-  padding: 5px 8px 5px 30px;
+  padding: 4px 8px 4px 32px;
   flex-wrap: wrap;
 }
 
 .task-list-slim .task-when {
   width: 100%;
-  padding-left: 21px;
+  padding-left: 20px;
   font-size: 11px;
 }
 
 :root[data-theme='dark'] .prog-chip {
-  color: #c4a5ff;
-  background: #2c2150;
+  color: var(--accent);
+  background: var(--accent-soft);
 }
 :root[data-theme='dark'] .resume-bar {
-  border-color: #8a6d2a;
-  background: #2a2413;
+  border-color: var(--risk-medium-text);
+  background: var(--warning-soft);
 }

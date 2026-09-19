@@ -14,7 +14,7 @@
   align-items: center;
   justify-content: space-between;
   gap: 16px;
-  margin: 0 0 18px;
+  margin: 0 0 16px;
   flex-wrap: nowrap;
 }
 
@@ -32,9 +32,9 @@
 }
 
 .scheduled-subtitle {
-  font-size: 12.5px;
+  font-size: 13px;
   color: var(--muted);
-  margin: 6px 0 0;
+  margin: 8px 0 0;
   line-height: 1.6;
   max-width: 100%;
 }
@@ -57,7 +57,7 @@
   color: var(--muted);
   border: none;
   cursor: pointer;
-  transition: background 0.15s, color 0.15s;
+  transition: background 150ms, color 150ms;
 }
 .scheduled-refresh:hover {
   background: var(--hover);
@@ -69,13 +69,13 @@
 .scheduled-actions .btn-ghost {
   display: inline-flex;
   align-items: center;
-  gap: 5px;
+  gap: 4px;
 }
 
 .scheduled-actions .btn-primary {
   display: inline-flex;
   align-items: center;
-  gap: 5px;
+  gap: 4px;
 }
 
 /* 任务列表区域标题行：左侧标题 + 右侧刷新按钮（两端对齐） */
@@ -84,7 +84,7 @@
   align-items: center;
   justify-content: space-between;
   gap: 8px;
-  margin: 4px 2px 12px;
+  margin: 4px 4px 12px;
 }
 
 .task-section-title {
@@ -99,22 +99,22 @@
    （720px 内容区约 3 列，窗口变窄时自动降为 2 列/1 列） */
 .task-list {
   list-style: none;
-  margin: 0 0 14px;
+  margin: 0 0 16px;
   padding: 0;
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(215px, 1fr));
-  gap: 10px;
+  gap: 12px;
 }
 
 .task-item {
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: 12px;
   background: var(--panel);
   border: 1px solid var(--border);
   border-radius: 12px;
   padding: 16px;
-  transition: border-color 0.15s, box-shadow 0.15s;
+  transition: border-color 150ms, box-shadow 150ms;
   min-height: 120px;
 }
 
@@ -137,7 +137,7 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  padding: 2px;
+  padding: 4px;
   background: none;
   border: none;
   border-radius: 8px;
@@ -147,10 +147,10 @@
 .task-toggle-track {
   width: 34px;
   height: 18px;
-  border-radius: 9px;
+  border-radius: 8px;
   background: var(--border);
   position: relative;
-  transition: background 0.15s;
+  transition: background 150ms;
 }
 
 .task-toggle-knob {
@@ -159,10 +159,10 @@
   left: 2px;
   width: 14px;
   height: 14px;
-  border-radius: 50%;
+  border-radius: 9999px;
   background: var(--panel);
   box-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
-  transition: left 0.15s;
+  transition: left 150ms;
 }
 
 .task-toggle.on .task-toggle-track {
@@ -174,7 +174,7 @@
 }
 
 .task-title {
-  font-size: 14px;
+  font-size: 15px;
   font-weight: 500;
   color: var(--text);
   line-height: 1.4;
@@ -182,7 +182,7 @@
 }
 
 .task-desc {
-  font-size: 12px;
+  font-size: 13px;
   color: var(--muted);
   line-height: 1.55;
   white-space: pre-wrap;
@@ -202,14 +202,14 @@
   gap: 8px;
   margin-top: auto;
   padding-top: 4px;
-  font-size: 12px;
+  font-size: 13px;
   color: var(--muted);
 }
 
 .task-time {
   display: inline-flex;
   align-items: center;
-  gap: 5px;
+  gap: 4px;
   min-width: 0;
   white-space: nowrap;
   overflow: hidden;
@@ -220,14 +220,14 @@
   flex: none;
   color: var(--muted);
   padding: 4px;
-  border-radius: 6px;
+  border-radius: 8px;
   display: inline-flex;
   align-items: center;
   justify-content: center;
 }
 
 .task-del:hover {
-  color: #c0392b;
+  color: var(--danger);
   background: var(--hover);
 }
 
@@ -242,7 +242,7 @@
 .form-field {
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: 8px;
 }
 
 .form-field .row-label {
@@ -253,15 +253,15 @@
 .form-field input,
 .form-field textarea {
   width: 100%;
-  padding: 9px 12px;
+  padding: 8px 12px;
   border: 1px solid var(--border);
-  border-radius: 6px;
+  border-radius: 8px;
   background: var(--panel);
   color: var(--text);
   font: inherit;
-  font-size: 13.5px;
+  font-size: 13px;
   outline: none;
-  transition: border-color 0.15s, box-shadow 0.15s;
+  transition: border-color 150ms, box-shadow 150ms;
 }
 
 .form-field input:hover,
@@ -305,7 +305,7 @@
 
 /* 任务列表为空时占位容器（中心对齐） */
 .task-list-wrap {
-  margin-top: 6px;
+  margin-top: 8px;
 }
 
 /* 扩展插件列表 */
@@ -315,7 +315,7 @@
   padding: 0;
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: 12px;
 }
 
 .extension-item {
@@ -325,7 +325,7 @@
   background: var(--panel);
   border: 1px solid var(--border);
   border-radius: 12px;
-  padding: 14px;
+  padding: 16px;
 }
 
 .ext-icon {
@@ -360,19 +360,19 @@
   font-size: 11px;
   color: var(--muted);
   background: var(--code-bg);
-  border-radius: 10px;
+  border-radius: 12px;
   padding: 0 8px;
 }
 
 .ext-desc {
-  margin: 6px 0 0;
-  font-size: 12px;
+  margin: 8px 0 0;
+  font-size: 13px;
   color: var(--muted);
   line-height: 1.5;
 }
 
 .ext-meta {
-  margin-top: 6px;
+  margin-top: 8px;
   font-size: 11px;
   color: var(--muted);
 }
@@ -382,8 +382,8 @@
   flex: none;
   display: inline-flex;
   align-items: center;
-  gap: 6px;
-  margin-top: 2px;
+  gap: 8px;
+  margin-top: 4px;
 }
 
 .ext-toggle-track {
@@ -392,7 +392,7 @@
   border-radius: 8px;
   background: var(--border);
   position: relative;
-  transition: background 0.15s;
+  transition: background 150ms;
 }
 
 .ext-toggle-knob {
@@ -401,9 +401,9 @@
   left: 2px;
   width: 12px;
   height: 12px;
-  border-radius: 50%;
+  border-radius: 9999px;
   background: var(--panel);
-  transition: left 0.15s;
+  transition: left 150ms;
 }
 
 .ext-toggle.on .ext-toggle-track {
@@ -415,6 +415,6 @@
 }
 
 .ext-toggle-label {
-  font-size: 12px;
+  font-size: 13px;
   color: var(--muted);
 }

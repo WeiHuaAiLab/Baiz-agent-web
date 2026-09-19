@@ -15,15 +15,15 @@
   border: 1px solid var(--border);
   border-radius: 8px;
   overflow: hidden;
-  margin: 6px 0;
+  margin: 8px 0;
   font-family: 'Cascadia Code', Consolas, monospace;
-  font-size: 12px;
+  font-size: 13px;
 }
 .diff-head {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 4px 10px;
+  padding: 4px 12px;
   background: var(--surface-2);
   border-bottom: 1px solid var(--border);
 }
@@ -31,15 +31,15 @@
   display: inline-flex;
   gap: 8px;
 }
-.diff-add-num { color: #16a34a; font-weight: 600; }
-.diff-del-num { color: #dc2626; font-weight: 600; }
+.diff-add-num { color: var(--success); font-weight: 600; }
+.diff-del-num { color: var(--danger); font-weight: 600; }
 .diff-toggle {
   border: none;
   background: none;
   color: var(--link);
   cursor: pointer;
-  font-size: 12px;
-  padding: 2px 4px;
+  font-size: 13px;
+  padding: 4px 4px;
 }
 .diff-toggle:hover { text-decoration: underline; }
 .diff-body { overflow-x: auto; max-height: 420px; overflow-y: auto; }
@@ -54,7 +54,7 @@
   width: 3.2em;
   flex: none;
   text-align: right;
-  padding-right: 6px;
+  padding-right: 8px;
   color: var(--muted);
   user-select: none;
 }
@@ -67,7 +67,7 @@
 .diff-del { background: rgba(220, 38, 38, 0.10); }
 .diff-ctx { color: var(--muted); }
 .diff-more {
-  padding: 6px 12px;
+  padding: 8px 12px;
   color: var(--muted);
   text-align: center;
   background: var(--surface-2);
@@ -88,8 +88,8 @@
   background: none;
   color: var(--link);
   cursor: pointer;
-  font-size: 12px;
-  padding: 2px 0;
+  font-size: 13px;
+  padding: 4px 0;
 }
 .approval-diff-toggle:hover { text-decoration: underline; }
 
@@ -111,7 +111,7 @@
   display: flex;
   align-items: center;
   gap: 8px;
-  padding: 0 14px;
+  padding: 0 16px;
   font-size: 11px;
   color: var(--muted);
   background: transparent;
@@ -134,16 +134,16 @@
 .sb-dot {
   width: 7px;
   height: 7px;
-  border-radius: 50%;
-  background: #9ca3af;
+  border-radius: 9999px;
+  background: var(--text-disabled);
 }
 .sb-conn.connected .sb-dot {
-  background: #22c55e;
+  background: var(--success);
 }
 .sb-conn.connecting .sb-dot,
 .sb-conn.reconnecting .sb-dot {
-  background: #f59e0b;
-  animation: sb-blink 1s infinite;
+  background: var(--warning);
+  /* MSG-3145：脉冲类动态按 DESIGN.md §7「禁止脉冲」撤除（常量点表达运行态） */
 }
 @keyframes sb-blink {
   50% {

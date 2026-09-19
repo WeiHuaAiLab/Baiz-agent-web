@@ -2,7 +2,7 @@
 .header-actions {
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: 8px;
 }
 
 .export-wrap {
@@ -16,9 +16,9 @@
   width: 128px;
   background: var(--panel);
   border: 1px solid var(--border);
-  border-radius: 10px;
+  border-radius: 12px;
   box-shadow: 0 6px 20px rgba(0, 0, 0, 0.12);
-  padding: 6px;
+  padding: 8px;
   z-index: 50;
 }
 
@@ -26,8 +26,8 @@
   display: block;
   width: 100%;
   text-align: left;
-  padding: 7px 10px;
-  border-radius: 6px;
+  padding: 8px 12px;
+  border-radius: 8px;
   font-size: 13px;
   color: var(--text);
 }
@@ -50,14 +50,14 @@
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 10px 12px;
+  padding: 12px 12px;
   border-bottom: 1px solid var(--border);
 }
 
 .files-head-actions {
   display: flex;
   align-items: center;
-  gap: 2px;
+  gap: 4px;
 }
 
 .files-head-actions button {
@@ -66,7 +66,7 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  border-radius: 6px;
+  border-radius: 8px;
   color: var(--muted);
 }
 
@@ -82,9 +82,9 @@
 }
 
 .file-list li {
-  padding: 6px 0;
+  padding: 8px 0;
   font-family: 'Cascadia Code', Consolas, monospace;
-  font-size: 12px;
+  font-size: 13px;
 }
 
 /* 已授权目录（授权而非上传：选择后仅记录权限句柄，可反复读取） */
@@ -97,24 +97,24 @@
   color: var(--muted);
   text-transform: uppercase;
   letter-spacing: 0.04em;
-  padding: 4px 0 6px;
+  padding: 4px 0 8px;
   border-bottom: 1px solid var(--border);
   margin-bottom: 4px;
 }
 
 .authorized-dir {
-  border-radius: 6px;
+  border-radius: 8px;
 }
 
 .authorized-dir-name {
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: 8px;
   width: 100%;
-  padding: 6px 4px;
-  border-radius: 6px;
+  padding: 8px 4px;
+  border-radius: 8px;
   cursor: pointer;
-  font-size: 12px;
+  font-size: 13px;
   color: var(--text);
   text-align: left;
 }
@@ -126,7 +126,7 @@
 .authorized-dir-name svg {
   flex: none;
   color: var(--muted);
-  transition: transform 0.15s;
+  transition: transform 150ms;
 }
 
 .authorized-dir-name svg.open {
@@ -144,22 +144,22 @@
 
 .authorized-badge {
   flex: none;
-  font-size: 10px;
+  font-size: 11px;
   line-height: 1;
-  padding: 3px 6px;
-  border-radius: 10px;
+  padding: 4px 8px;
+  border-radius: 12px;
   background: rgba(30, 126, 52, 0.12);
-  color: #1e7e34;
+  color: var(--success);
 }
 
 .authorized-files {
   list-style: none;
   margin: 0 0 4px;
-  padding: 0 0 0 22px;
+  padding: 0 0 0 24px;
 }
 
 .authorized-files li {
-  padding: 3px 4px;
+  padding: 4px 4px;
   font-family: 'Cascadia Code', Consolas, monospace;
   font-size: 11px;
   color: var(--muted);
@@ -189,7 +189,7 @@
 }
 
 .authorized-file-btn:hover {
-  color: var(--accent, #2f6fed);
+  color: var(--accent, var(--accent));
   text-decoration: underline;
 }
 
@@ -209,9 +209,9 @@
   display: flex;
   align-items: center;
   gap: 8px;
-  padding: 6px 10px;
+  padding: 8px 12px;
   border-bottom: 1px solid var(--border);
-  font-size: 12px;
+  font-size: 13px;
 }
 
 .preview-name {
@@ -226,8 +226,8 @@
 .preview-encoding,
 .preview-size {
   flex: none;
-  font-size: 10px;
-  padding: 2px 6px;
+  font-size: 11px;
+  padding: 4px 8px;
   border-radius: 8px;
   background: var(--code-bg, rgba(127, 127, 127, 0.12));
   color: var(--muted);
@@ -239,7 +239,7 @@
   background: none;
   color: var(--muted);
   cursor: pointer;
-  padding: 2px 4px;
+  padding: 4px 4px;
 }
 
 .preview-close:hover {
@@ -247,21 +247,21 @@
 }
 
 .preview-truncated {
-  padding: 5px 10px;
+  padding: 4px 12px;
   font-size: 11px;
-  color: #8a6d1a;
+  color: var(--risk-medium-text);
   background: rgba(214, 168, 40, 0.12);
   border-bottom: 1px solid var(--border);
 }
 
 .preview-status {
-  padding: 14px 12px;
-  font-size: 12px;
+  padding: 16px 12px;
+  font-size: 13px;
   color: var(--muted);
 }
 
 .preview-status.error {
-  color: #c0392b;
+  color: var(--danger);
 }
 
 .preview-code {
@@ -271,7 +271,7 @@
   flex: 1;
   min-height: 0;
   font-family: 'Cascadia Code', Consolas, monospace;
-  font-size: 12px;
+  font-size: 13px;
   line-height: 1.5;
   white-space: pre;
 }
@@ -286,7 +286,7 @@
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 6px;
+  gap: 8px;
   padding: 28px 16px;
   text-align: center;
 }
@@ -309,19 +309,19 @@
 }
 
 .mask-reveal {
-  margin-top: 6px;
-  padding: 5px 12px;
+  margin-top: 8px;
+  padding: 4px 12px;
   border: 1px solid var(--border);
-  border-radius: 6px;
+  border-radius: 8px;
   background: var(--code-bg, rgba(127, 127, 127, 0.08));
   color: var(--text);
-  font-size: 12px;
+  font-size: 13px;
   cursor: pointer;
 }
 
 .mask-reveal:hover {
-  border-color: var(--accent, #2f6fed);
-  color: var(--accent, #2f6fed);
+  border-color: var(--accent, var(--accent));
+  color: var(--accent, var(--accent));
 }
 
 /* 设置页：滚动区占满 100% 宽（滚动条贴最右侧、全宽），内容由 .settings-inner 限宽居中 */
@@ -346,7 +346,7 @@
 }
 
 .settings-header h1 {
-  font-size: 16px;
+  font-size: 15px;
   margin: 0;
 }
 
@@ -360,9 +360,9 @@
 }
 
 .settings-row select {
-  padding: 6px 8px;
+  padding: 8px 8px;
   border: 1px solid var(--border);
-  border-radius: 6px;
+  border-radius: 8px;
   background: var(--panel);
 }
 

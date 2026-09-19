@@ -685,6 +685,18 @@ export const useMessageStore = defineStore('message', {
         void db.messages.put(cloneForDb(msg))
       }
     },
+    /** 提交档位记账：审批卡已决态一行显「· 本次／本会话／…」（设计规格 §三 success） */
+    noteScope(requestId: string, scope: string) {
+      const messageId = this.requestToMessage[requestId]
+      if (!messageId) return
+      const conversationId = this.requestToConversation[requestId]
+      const list = conversationId ? this.byConversation[conversationId] : undefined
+      const msg = list?.find((item) => item.id === messageId)
+      if (msg?.meta) {
+        msg.meta = { ...msg.meta, scope }
+        void db.messages.put(cloneForDb(msg))
+      }
+    },
     onApprovalResolved(data: { request_id: string; approved: boolean }) {
       const messageId = this.requestToMessage[data.request_id]
       if (messageId) {

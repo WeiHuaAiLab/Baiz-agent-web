@@ -3,8 +3,8 @@
   background: var(--panel);
   border: 1px solid var(--border);
   border-radius: 12px;
-  padding: 16px 18px;
-  margin-bottom: 14px;
+  padding: 16px 16px;
+  margin-bottom: 16px;
 }
 
 .settings-card h2 {
@@ -17,14 +17,14 @@
 
 .section-desc {
   margin: 0 0 12px;
-  font-size: 12px;
+  font-size: 13px;
   color: var(--muted);
 }
 
 .settings-card .settings-row {
   max-width: none;
   border-bottom: 1px solid var(--border);
-  padding: 10px 0;
+  padding: 12px 0;
 }
 
 .settings-card .settings-row:last-child {
@@ -37,11 +37,11 @@
 
 .seg {
   display: flex;
-  gap: 6px;
+  gap: 8px;
 }
 
 .seg button {
-  padding: 5px 14px;
+  padding: 4px 16px;
   border: 1px solid var(--border);
   border-radius: 8px;
   font-size: 13px;
@@ -65,7 +65,7 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 10px 12px;
+  padding: 12px 12px;
   border: 1px solid var(--border);
   border-radius: 8px;
   background: var(--bg);
@@ -78,7 +78,7 @@
 }
 
 .about-version {
-  font-size: 12px;
+  font-size: 13px;
   color: var(--muted);
   font-family: 'Cascadia Code', Consolas, monospace;
 }
@@ -91,46 +91,46 @@
 .model-tag {
   font-size: 11px;
   color: var(--muted);
-  padding: 1px 8px;
-  border-radius: 10px;
+  padding: 4px 8px;
+  border-radius: 12px;
   background: var(--code-bg);
 }
 
 .conn-state {
   display: flex;
   align-items: center;
-  gap: 6px;
-  font-size: 12px;
+  gap: 8px;
+  font-size: 13px;
   color: var(--muted);
 }
 
 .status-dot {
   width: 8px;
   height: 8px;
-  border-radius: 50%;
+  border-radius: 9999px;
   background: var(--muted);
 }
 
 .status-dot.connected {
-  background: #1e7e34;
+  background: var(--success);
 }
 
 .status-dot.connecting,
 .status-dot.reconnecting,
 .status-dot.resync {
-  background: #b7791f;
+  background: var(--risk-medium-text);
 }
 
 .muted-value {
   color: var(--muted);
-  font-size: 12px;
+  font-size: 13px;
   font-family: 'Cascadia Code', Consolas, monospace;
 }
 
 .dir-empty {
   color: var(--muted);
-  font-size: 12px;
-  margin: 10px 0 0;
+  font-size: 13px;
+  margin: 12px 0 0;
 }
 
 .back-btn {
@@ -138,18 +138,18 @@
 }
 
 .btn-ghost.danger {
-  color: #c0392b;
-  border-color: #e5b8b5;
+  color: var(--danger);
+  border-color: var(--danger);
 }
 
 .memory-msg {
-  margin-left: 10px;
-  font-size: 12px;
-  color: #1e7e34;
+  margin-left: 12px;
+  font-size: 13px;
+  color: var(--success);
 }
 
 .memory-facts {
-  margin-top: 14px;
+  margin-top: 16px;
   border-top: 1px solid var(--border);
   padding-top: 12px;
 }
@@ -167,7 +167,7 @@
   font-size: 11px;
   color: var(--muted);
   background: var(--code-bg);
-  border-radius: 10px;
+  border-radius: 12px;
   padding: 0 8px;
 }
 
@@ -181,7 +181,7 @@
   display: flex;
   align-items: center;
   gap: 8px;
-  padding: 7px 8px;
+  padding: 8px 8px;
   border-radius: 8px;
 }
 
@@ -203,17 +203,17 @@
   display: block;
   font-size: 11px;
   color: var(--muted);
-  margin-top: 2px;
+  margin-top: 4px;
 }
 
 .fact-del {
   color: var(--muted);
   flex: none;
-  padding: 2px;
+  padding: 4px;
 }
 
 .fact-del:hover {
-  color: #c0392b;
+  color: var(--danger);
 }
 
 /* 设置页内容容器：顶部预留悬浮按钮（sidebar-toggle-fab）所在高度的空白头部区，
@@ -229,8 +229,8 @@
 .settings-tabs {
   display: flex;
   align-items: center;
-  gap: 2px;
-  margin-bottom: 18px;
+  gap: 4px;
+  margin-bottom: 16px;
   border-bottom: 1px solid var(--border);
 }
 
@@ -239,7 +239,7 @@
   appearance: none;
   background: transparent;
   border: none;
-  padding: 11px 16px;
+  padding: 12px 16px;
   font-size: 13px;
   letter-spacing: 0.01em;
   color: var(--muted);
@@ -263,7 +263,7 @@
   right: 14px;
   bottom: -1px;
   height: 2px;
-  border-radius: 2px;
+  border-radius: 4px;
   background: var(--accent);
 }
 
@@ -288,9 +288,9 @@
   display: flex;
   align-items: center;
   gap: 12px;
-  padding: 10px 12px;
+  padding: 12px 12px;
   border: 1px solid var(--border);
-  border-radius: 10px;
+  border-radius: 12px;
   background: var(--bg);
   margin-bottom: 8px;
 }
@@ -320,7 +320,7 @@
 }
 
 .mcp-desc {
-  font-size: 12px;
+  font-size: 13px;
   color: var(--muted);
   overflow: hidden;
   text-overflow: ellipsis;
@@ -329,31 +329,31 @@
 
 .mcp-tag {
   font-size: 11px;
-  padding: 1px 8px;
-  border-radius: 10px;
+  padding: 4px 8px;
+  border-radius: 12px;
   background: var(--code-bg);
   color: var(--muted);
 }
 
 .mcp-tag.risk-low {
   background: rgba(30, 126, 52, 0.12);
-  color: #1e7e34;
+  color: var(--success);
 }
 
 .mcp-tag.risk-medium {
   background: rgba(183, 121, 31, 0.14);
-  color: #b7791f;
+  color: var(--risk-medium-text);
 }
 
 .mcp-tag.risk-high {
   background: rgba(192, 57, 43, 0.12);
-  color: #c0392b;
+  color: var(--danger);
 }
 
 .mcp-item-actions {
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: 8px;
   flex: none;
 }
 
@@ -364,11 +364,11 @@
   width: 26px;
   height: 26px;
   border: 1px solid var(--border);
-  border-radius: 6px;
+  border-radius: 8px;
   background: var(--panel);
   color: var(--muted);
   cursor: pointer;
-  transition: color 120ms ease, border-color 120ms ease;
+  transition: color 150ms ease, border-color 150ms ease;
 }
 
 .mcp-icon-btn:hover {
@@ -377,8 +377,8 @@
 }
 
 .mcp-icon-btn.danger:hover {
-  color: #c0392b;
-  border-color: #e5b8b5;
+  color: var(--danger);
+  border-color: var(--danger);
 }
 
 .seg.seg-sm {
@@ -386,9 +386,9 @@
 }
 
 .seg.seg-sm button {
-  padding: 3px 9px;
-  font-size: 12px;
-  border-radius: 6px;
+  padding: 4px 8px;
+  font-size: 13px;
+  border-radius: 8px;
 }
 
 /* MCP 头部：标题 + 描述 与 添加按钮 同行，两端对齐、垂直居中 */
@@ -415,7 +415,7 @@
 .mcp-header .btn-ghost {
   display: inline-flex;
   align-items: center;
-  gap: 6px;
+  gap: 8px;
   flex: none;
 }
 
@@ -425,12 +425,12 @@
   max-height: calc(100vh - 48px);
   overflow-y: auto;
   border-radius: 12px;
-  padding: 16px 18px;
+  padding: 16px 16px;
 }
 
 .modal-create-mcp .modal-header h3 {
   margin: 0;
-  font-size: 16px;
+  font-size: 15px;
   font-weight: 500;
 }
 
@@ -445,7 +445,7 @@
   display: flex;
   align-items: center;
   gap: 12px;
-  padding: 9px 0;
+  padding: 8px 0;
   border-bottom: 1px solid var(--border);
 }
 
@@ -464,9 +464,9 @@
 .mcp-field > select {
   flex: 1;
   max-width: 100%;
-  padding: 6px 10px;
+  padding: 8px 12px;
   border: 1px solid var(--border);
-  border-radius: 6px;
+  border-radius: 8px;
   font: inherit;
   background: var(--panel);
   color: var(--text);
@@ -481,20 +481,20 @@
 /* 风险档三联切换：active 时按档位着色 */
 .seg-risk {
   display: flex;
-  gap: 6px;
+  gap: 8px;
   flex: 1;
 }
 
 .seg-risk button {
   flex: 1;
-  padding: 6px 10px;
+  padding: 8px 12px;
   border: 1px solid var(--border);
-  border-radius: 6px;
+  border-radius: 8px;
   font-size: 13px;
   color: var(--muted);
   background: var(--panel);
   cursor: pointer;
-  transition: all 120ms ease;
+  transition: all 150ms ease;
 }
 
 .seg-risk button:hover {
@@ -503,19 +503,19 @@
 
 .seg-risk button.risk-low.active {
   background: rgba(30, 126, 52, 0.14);
-  color: #1e7e34;
+  color: var(--success);
   border-color: rgba(30, 126, 52, 0.35);
 }
 
 .seg-risk button.risk-medium.active {
   background: rgba(183, 121, 31, 0.16);
-  color: #b7791f;
+  color: var(--risk-medium-text);
   border-color: rgba(183, 121, 31, 0.35);
 }
 
 .seg-risk button.risk-high.active {
   background: rgba(192, 57, 43, 0.14);
-  color: #c0392b;
+  color: var(--danger);
   border-color: rgba(192, 57, 43, 0.35);
 }
 
@@ -531,25 +531,25 @@
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 2px;
+  gap: 4px;
   padding: 8px 12px;
   min-width: 84px;
   border: 1px solid var(--border);
   border-radius: 8px;
   background: var(--panel);
   color: var(--muted);
-  font-size: 12px;
+  font-size: 13px;
   cursor: pointer;
-  transition: all 120ms ease;
+  transition: all 150ms ease;
 }
 
 .chip .chip-label {
-  font-size: 12px;
+  font-size: 13px;
   color: var(--text);
 }
 
 .chip .chip-tag {
-  font-size: 10px;
+  font-size: 11px;
   color: var(--muted);
 }
 
@@ -567,7 +567,7 @@
 }
 
 .chip.active.deny .chip-label {
-  color: #c0392b;
+  color: var(--danger);
 }
 
 .mcp-verify-row {
@@ -586,13 +586,13 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 10px;
-  margin-top: 14px;
+  gap: 12px;
+  margin-top: 16px;
 }
 
 .mcp-modal-actions .mcp-editor-hint {
   margin: 0;
-  font-size: 12px;
+  font-size: 13px;
   color: var(--muted);
 }
 

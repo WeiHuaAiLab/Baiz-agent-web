@@ -166,7 +166,11 @@ export const useApprovalStore = defineStore('approval', {
      * 提交审批（§B）：`scope` 缺省＝once（不建规则）；session／project／
      * forever 才落规则。失败＝保留待办可重试＋toast（§C B7 fail-closed）。
      */
-    async respond(requestId: string, approved: boolean, scope?: ApprovalScope) {
+    async respond(
+      requestId: string,
+      approved: boolean,
+      scope?: ApprovalScope,
+    ): Promise<{ ok: boolean; error?: string }> {
       const { client, transport } = getClientSetup()
       const payload: { request_id: string; approved: boolean; scope?: ApprovalScope } = {
         request_id: requestId,
@@ -180,14 +184,19 @@ export const useApprovalStore = defineStore('approval', {
         if (transport.kind === 'mock') {
           // 演示模式：脚本化响应，正常销单
           this.resolve(requestId)
-          return
+          return { ok: true }
         }
-        useUiStore().toast(`审批提交失败：${(error as Error).message}`, 'error')
-        // fail-closed：保留待办条目，允许重试
-        return
+        // 契约 §C B7（fail-closed）：保留待办可重试 ＋ toast；同时把失败回给卡面
+        // （设计规格 §三 error 态：卡内一行「提交失败：<人话>」＋不销卡）
+        const reason = (error as Error).message
+        useUiStore().toast(`审批提交失败：${reason}`, 'error')
+        return { ok: false, error: reason }
       }
       this.resolve(requestId)
+      // 记录档位：已决态一行显「· 本次／本会话／本项目／永久」（规格 §三 success）
+      useMessageStore().noteScope(requestId, scope ?? 'once')
       if (scope && scope !== 'once') void this.loadRules()
+      return { ok: true }
     },
     /** 规则管理页数据源（§B approval.rules） */
     async loadRules() {

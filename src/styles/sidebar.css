@@ -8,7 +8,7 @@
 .side-tabs {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 6px;
+  gap: 8px;
   padding: 8px;
 }
 
@@ -16,8 +16,8 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 6px;
-  padding: 7px 0;
+  gap: 8px;
+  padding: 8px 0;
   border-radius: 8px;
   font-size: 13px;
   color: var(--muted);
@@ -31,7 +31,7 @@
 }
 
 .side-section {
-  margin-bottom: 6px;
+  margin-bottom: 8px;
 }
 
 .menu-item {
@@ -39,9 +39,9 @@
   align-items: center;
   gap: 8px;
   width: 100%;
-  padding: 7px 8px;
-  border-radius: 6px;
-  font-size: 14px;
+  padding: 8px 8px;
+  border-radius: 8px;
+  font-size: 15px;
   color: var(--text);
 }
 
@@ -58,14 +58,14 @@
 }
 
 .section-block {
-  margin-bottom: 10px;
+  margin-bottom: 12px;
 }
 
 .section-head {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 2px 2px 6px;
+  padding: 4px 4px 8px;
   font-size: 11px;
   color: var(--muted);
   letter-spacing: 0.4px;
@@ -80,7 +80,7 @@
 }
 
 .section-head svg {
-  transition: transform 0.15s;
+  transition: transform 150ms;
 }
 
 .section-head svg.open {
@@ -93,7 +93,7 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  border-radius: 6px;
+  border-radius: 8px;
   color: var(--muted);
 }
 
@@ -112,8 +112,8 @@
   display: flex;
   align-items: center;
   gap: 8px;
-  padding: 6px 8px;
-  border-radius: 6px;
+  padding: 8px 8px;
+  border-radius: 8px;
   font-size: 13px;
   color: var(--text);
   cursor: pointer;
@@ -136,7 +136,7 @@
 }
 
 .task-when {
-  font-size: 12px;
+  font-size: 13px;
   flex: none;
 }
 
@@ -150,9 +150,9 @@
   align-items: center;
   justify-content: space-between;
   gap: 8px;
-  padding: 5px 8px;
-  border-radius: 6px;
-  font-size: 12px;
+  padding: 4px 8px;
+  border-radius: 8px;
+  font-size: 13px;
 }
 
 .ext-row:hover {
@@ -173,14 +173,14 @@
   display: flex;
   align-items: center;
   gap: 8px;
-  padding: 10px 12px;
+  padding: 12px 12px;
   cursor: pointer;
 }
 
 .avatar {
   width: 28px;
   height: 28px;
-  border-radius: 50%;
+  border-radius: 9999px;
   background: var(--code-bg);
   display: inline-flex;
   align-items: center;
@@ -205,16 +205,16 @@
   right: 8px;
   background: var(--panel);
   border: 1px solid var(--border);
-  border-radius: 10px;
+  border-radius: 12px;
   box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
-  padding: 6px;
+  padding: 8px;
   opacity: 0;
   visibility: hidden;
   transform: translateY(4px);
   transition:
-    opacity 0.15s,
-    transform 0.15s,
-    visibility 0.15s;
+    opacity 150ms,
+    transform 150ms,
+    visibility 150ms;
   z-index: 30;
 }
 
@@ -229,8 +229,8 @@
   align-items: center;
   gap: 8px;
   width: 100%;
-  padding: 8px 10px;
-  border-radius: 6px;
+  padding: 8px 12px;
+  border-radius: 8px;
   font-size: 13px;
   color: var(--text);
 }
@@ -253,20 +253,20 @@
 .modal-card {
   background: var(--panel);
   border: 1px solid var(--border);
-  border-radius: 14px;
-  padding: 20px 22px;
+  border-radius: 12px;
+  padding: 20px 24px;
   width: 320px;
   max-width: 90vw;
 }
 
 .modal-card h3 {
-  margin: 0 0 10px;
+  margin: 0 0 12px;
   font-size: 15px;
 }
 
 .feedback-input {
   width: 100%;
-  padding: 10px;
+  padding: 12px;
   border: 1px solid var(--border);
   border-radius: 8px;
   font: inherit;
@@ -295,13 +295,13 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  margin-bottom: 14px;
+  margin-bottom: 16px;
 }
 
 .modal-create-project .modal-header h3,
 .modal-create-task .modal-header h3 {
   margin: 0;
-  font-size: 16px;
+  font-size: 15px;
 }
 
 .modal-close {
@@ -310,7 +310,7 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  border-radius: 6px;
+  border-radius: 8px;
   background: transparent;
   border: none;
   color: var(--muted);
@@ -327,10 +327,10 @@
 .modal-create-task .field-label {
   display: flex;
   align-items: baseline;
-  gap: 2px;
-  font-size: 12.5px;
+  gap: 4px;
+  font-size: 13px;
   color: var(--text);
-  margin: 14px 0 6px;
+  margin: 16px 0 8px;
 }
 .modal-create-project .field-label:first-of-type,
 .modal-create-task .field-label:first-of-type {
@@ -338,18 +338,18 @@
 }
 
 .required {
-  color: #c0392b;
-  margin-left: 2px;
+  color: var(--danger);
+  margin-left: 4px;
 }
 
 /* 单行输入框：圆角 8px、浅灰背景、聚焦时 accent 色描边 */
 .modal-input {
   width: 100%;
-  padding: 9px 12px;
+  padding: 8px 12px;
   border: 1px solid var(--border);
   border-radius: 8px;
   font: inherit;
-  font-size: 13.5px;
+  font-size: 13px;
   background: var(--bg);
   color: var(--text);
   box-sizing: border-box;
@@ -369,12 +369,12 @@
   align-items: center;
   gap: 8px;
   width: 100%;
-  padding: 9px 12px;
+  padding: 8px 12px;
   border: 1px solid var(--border);
   border-radius: 8px;
   background: var(--bg);
   color: var(--text);
-  font-size: 13.5px;
+  font-size: 13px;
   cursor: pointer;
   box-sizing: border-box;
   text-align: left;
@@ -402,14 +402,14 @@
 .modal-card-task {
   width: 580px;
   border-radius: 12px;
-  padding: 16px 18px;
+  padding: 16px 16px;
 }
 
 /* 名称字数计数（0/50）：field-label 为 flex，此元素 margin-left:auto 靠右 */
 .char-count {
   margin-left: auto;
   color: var(--muted);
-  font-size: 12px;
+  font-size: 13px;
 }
 
 /* 指令多行输入框 */
@@ -421,11 +421,11 @@
 
 /* 下拉选择器：与 .modal-input 同款视觉 */
 .modal-select {
-  padding: 8px 10px;
+  padding: 8px 12px;
   border: 1px solid var(--border);
   border-radius: 8px;
   font: inherit;
-  font-size: 13.5px;
+  font-size: 13px;
   background: var(--bg);
   color: var(--text);
   box-sizing: border-box;
@@ -442,14 +442,14 @@
 .modal-create-task .modal-select,
 .modal-create-task .modal-textarea {
   background: var(--panel);
-  border-radius: 6px;
+  border-radius: 8px;
 }
 
 /* 执行方式行：下拉 + 旁注 */
 .mode-row {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 12px;
   flex-wrap: wrap;
 }
 .mode-row .modal-select {
@@ -460,7 +460,7 @@
   display: inline-flex;
   align-items: center;
   gap: 4px;
-  font-size: 12px;
+  font-size: 13px;
   color: var(--muted);
 }
 
@@ -468,7 +468,7 @@
 .cycle-row {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 12px;
   flex-wrap: wrap;
 }
 .cycle-select {
@@ -477,7 +477,7 @@
 .cycle-time {
   display: inline-flex;
   align-items: center;
-  gap: 6px;
+  gap: 8px;
   color: var(--muted);
   font-size: 13px;
   flex: 1;
@@ -485,17 +485,17 @@
 }
 .time-input {
   width: 108px;
-  padding: 6px 8px;
+  padding: 8px 8px;
 }
 .num-input {
   width: 56px;
-  padding: 6px 8px;
+  padding: 8px 8px;
 }
 .weekday-select {
-  padding: 6px 8px;
+  padding: 8px 8px;
 }
 .inline-hint {
-  font-size: 12.5px;
+  font-size: 13px;
   color: var(--muted);
 }
 .exec-word {
@@ -504,12 +504,12 @@
 }
 
 .feedback-sent {
-  color: #1e7e34;
+  color: var(--success);
   font-size: 13px;
   margin: 0;
 }
 
-/* 侧栏 hover / active 加深：浅灰底（#f8f8f8）上需要更深的选中/悬停色才有反差。
+/* 侧栏 hover / active 加深：浅灰底（var(--sidebar-bg)）上需要更深的选中/悬停色才有反差。
    此处用 .sidebar 前缀提高特异性，覆盖 core.css 中 session/workspace 列表的 --code-bg 默认色 */
 .sidebar .side-tabs button.active,
 .sidebar .session-list li.active,

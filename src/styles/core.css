@@ -1,40 +1,119 @@
+/* ============================================================================
+   项目级 DESIGN.md v1.0 · 语义 token（亮）
+   —— 本文件这两块是**全仓唯一 hex 白名单**；src/styles/** 其余位置一律 var(--*)
+   —— 值取自 DESIGN.md §2（冷调蓝灰·亮/暗各一表）
+   ============================================================================ */
 :root {
-  /* 站点底色统一为侧栏背景色（引用 --sidebar-bg，两处颜色永远同步） */
-  --bg: var(--sidebar-bg);
-  --panel: #ffffff;
-  --border: #e5e5e5;
-  --text: #1f1f1f;
-  --muted: #8e8e8e;
-  --accent: #1f1f1f;
-  --accent-contrast: #ffffff;
-  --code-bg: #f6f6f6;
-  --surface-2: #f0f0f1;
-  --user-text: #4a4a4a;
-  --link: #2563eb;
+  --bg: #f8f9fa;              /* 页面底色 */
+  --surface: #ffffff;         /* 卡片／面板／对话框 */
+  --panel: var(--surface);    /* 旧名保留（面板底）——与 --surface 同步 */
+  --surface-2: #f1f3f5;       /* 次级面：表头／代码块底 */
+  --text: #1a1c1e;            /* 正文（旧名保留） */
+  --text-primary: var(--text);
+  --text-secondary: #586270;  /* 辅助说明／时间戳 */
+  --muted: var(--text-secondary);
+  --text-disabled: #9ca3af;   /* 禁用态 */
+  --border: #e5e7eb;          /* 分割线／输入框边框 */
+  --border-strong: #d1d5db;   /* 需强调的分隔 */
+  --accent: #4f46e5;          /* 唯一强调色：主按钮／链接／选中态 */
+  --accent-hover: #4338ca;
+  --accent-soft: rgba(79, 70, 229, 0.1);
+  --accent-contrast: #ffffff; /* 强调色上的文字（亮色） */
+  --danger: #dc2626;          /* 删除／错误 */
+  --danger-soft: rgba(220, 38, 38, 0.1);
+  --success: #16a34a;         /* 完成／对勾 */
+  --success-soft: rgba(22, 163, 74, 0.1);
+  --warning: #f59e0b;         /* 警告／中风险 */
+  --warning-soft: rgba(245, 158, 11, 0.12);
+  /* —— baiz 专用语义（DESIGN.md §2）—— */
+  --risk-high: var(--danger);
+  --risk-medium: var(--warning);
+  --risk-unknown: var(--text-secondary);
+  /* 徽章文字色（补偿条目：底色为 --risk-* + 10%，文字另配以满足 ≥4.5:1） */
+  --risk-high-text: #b91c1c;
+  --risk-medium-text: #92400e;
+  --risk-unknown-text: var(--text-secondary);
+  --diff-add-bg: rgba(22, 163, 74, 0.1);
+  --diff-del-bg: rgba(220, 38, 38, 0.1);
+  --code-bg: var(--surface-2);
+  --user-text: #4b5563;
+  --user-bg: #f1f3f5;
   --hover: rgba(0, 0, 0, 0.04);
-  --user-bg: #f3f4f6;
-  --sidebar-bg: #f8f8f8;
-  --sidebar-hover: #eeeeee;
-  --sidebar-active: #e2e2e2;
+  --sidebar-bg: #f8f9fa;
+  --sidebar-hover: #f1f3f5;
+  --sidebar-active: #e9ecef;
+  /* 等宽块内的代码高亮 */
+  --code-str: #0f766e;
+  --code-kw: #7c3aed;
+  --code-fn: #1d4ed8;
+  --code-builtin: #0f766e;
+  --code-var: #1d4ed8;
+  --code-num: #b45309;
+  --code-cmt: #6b7280;
+  /* 字体栈（DESIGN.md §3） */
+  --font-sans: system-ui, -apple-system, 'Segoe UI', 'PingFang SC', 'Microsoft YaHei',
+    'Noto Sans SC', sans-serif;
+  --font-mono: 'Cascadia Code', 'Fira Code', 'JetBrains Mono', Consolas, monospace;
+  /* 通过色（对勾/成功文案色，配 --success-soft 底满足 ≥4.5:1） */
+  --success-text: #166534;
+  /* 阴影四层（DESIGN.md §6） */
+  --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.08);
+  --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.1);
+  --shadow-lg: 0 12px 32px rgba(0, 0, 0, 0.14);
+  --shadow-focus: 0 0 0 3px var(--accent-soft);
 }
 
+/* 项目级 DESIGN.md v1.0 · 语义 token（暗）——冷调蓝灰，非简单反色 */
 :root[data-theme='dark'] {
-  --bg: var(--sidebar-bg);
-  --panel: #252526;
-  --border: #3c3c3c;
-  --text: #e8e8e8;
-  --muted: #9a9a9a;
-  --accent: #e8e8e8;
-  --accent-contrast: #1e1e1e;
-  --code-bg: #2a2a2b;
-  --surface-2: #2d2d2f;
-  --user-text: #c8c8c8;
-  --link: #6cb2ff;
+  --bg: #0f1117;
+  --surface: #1a1d27;
+  --panel: var(--surface);
+  --surface-2: #232733;
+  --text: #e6e8ec;
+  --text-primary: var(--text);
+  --text-secondary: #8b949e;
+  --muted: var(--text-secondary);
+  --text-disabled: #484f58;
+  --border: #30363d;
+  --border-strong: #3f4753;
+  --accent: #818cf8;
+  --accent-hover: #6366f1;
+  --accent-soft: rgba(129, 140, 248, 0.16);
+  /* 暗色 accent 为浅色，白字不达标 ⇒ 按 DESIGN.md 附一#5 取深墨 */
+  --accent-contrast: #0f1117;
+  --danger: #f87171;
+  --danger-soft: rgba(248, 113, 113, 0.14);
+  --success: #4ade80;
+  --success-soft: rgba(74, 222, 128, 0.14);
+  --warning: #fbbf24;
+  --warning-soft: rgba(251, 191, 36, 0.16);
+  --risk-high: var(--danger);
+  --risk-medium: var(--warning);
+  --risk-unknown: var(--text-secondary);
+  --risk-high-text: #fca5a5;
+  --risk-medium-text: #fcd34d;
+  --risk-unknown-text: var(--text-secondary);
+  --diff-add-bg: rgba(74, 222, 128, 0.14);
+  --diff-del-bg: rgba(248, 113, 113, 0.14);
+  --code-bg: var(--surface-2);
+  --user-text: #c9d1d9;
+  --user-bg: #232733;
   --hover: rgba(255, 255, 255, 0.06);
-  --user-bg: #2f2f32;
-  --sidebar-bg: #1e1e1e;
-  --sidebar-hover: #2d2d2f;
-  --sidebar-active: #353537;
+  --sidebar-bg: #0f1117;
+  --sidebar-hover: #232733;
+  --sidebar-active: #2d3340;
+  --code-str: #7ee2b8;
+  --code-kw: #c4a5ff;
+  --code-fn: #79b8ff;
+  --code-builtin: #4ec9b0;
+  --code-var: #9cdcfe;
+  --code-num: #f0c674;
+  --code-cmt: #8b949e;
+  --success-text: #86efac;
+  --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.4);
+  --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.5);
+  --shadow-lg: 0 12px 32px rgba(0, 0, 0, 0.6);
+  --shadow-focus: 0 0 0 3px var(--accent-soft);
 }
 
 * {
@@ -50,10 +129,12 @@ body,
 
 body {
   font-family:
-    -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Microsoft YaHei', sans-serif;
+    system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Microsoft YaHei',
+    'Noto Sans SC', sans-serif;
   background: var(--bg);
   color: var(--text);
-  font-size: 14px;
+  font-size: 15px;
+  line-height: 1.6;
 }
 
 /* 滚动条统一配色：轨道背景透明（与所在内容区背景一致，视觉上融入内容），
@@ -126,7 +207,7 @@ button {
   display: flex;
   height: 100%;
   overflow: hidden;
-  padding: 10px 10px 10px 0px;
+  padding: 12px 12px 12px 0px;
 }
 
 .sidebar {
@@ -137,14 +218,14 @@ button {
   display: flex;
   flex-direction: column;
   overflow: hidden;
-  transition: width 0.22s ease, border-color 0.22s ease;
+  transition: width 250ms ease, border-color 250ms ease;
   padding: 0px;
 }
 
 /* 侧栏折叠：宽度收为 0（由 chatHeader 的按钮控制） */
 .sidebar-collapsed .sidebar {
   width: 0;
-  padding-left: 10px;
+  padding-left: 12px;
   border-right-color: transparent;
 }
 
@@ -190,8 +271,8 @@ button {
 }
 
 .tabs button {
-  padding: 10px 2px;
-  font-size: 12px;
+  padding: 12px 4px;
+  font-size: 13px;
   color: var(--muted);
 }
 
@@ -214,7 +295,7 @@ button {
   width: 100%;
   padding: 8px;
   border: 1px solid var(--border);
-  border-radius: 6px;
+  border-radius: 8px;
   color: var(--muted);
 }
 
@@ -226,12 +307,12 @@ button {
 
 .session-list li {
   padding: 8px;
-  border-radius: 6px;
+  border-radius: 8px;
   cursor: pointer;
   text-overflow: ellipsis;
   white-space: nowrap;
   /* 会话项之间 5px 空隙（末项去掉，避免底部多余留白） */
-  margin-bottom: 5px;
+  margin-bottom: 4px;
 }
 
 .session-list li:last-child {
@@ -245,12 +326,12 @@ button {
 
 .placeholder {
   color: var(--muted);
-  font-size: 12px;
+  font-size: 13px;
   padding: 8px;
 }
 
 .settings-link {
-  padding: 10px;
+  padding: 12px;
   border-top: 1px solid var(--border);
   text-align: left;
   color: var(--muted);
@@ -290,12 +371,12 @@ button {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 6px;
+  gap: 8px;
   padding: 8px;
-  border-radius: 6px;
+  border-radius: 8px;
   cursor: pointer;
   font-family: 'Cascadia Code', Consolas, monospace;
-  font-size: 12px;
+  font-size: 13px;
 }
 
 .workspace-list li.active,
@@ -311,7 +392,7 @@ button {
 }
 
 .ws-active {
-  color: #1e7e34;
+  color: var(--success);
   font-size: 11px;
   flex: none;
 }
@@ -320,7 +401,7 @@ button {
   display: flex;
   align-items: center;
   gap: 8px;
-  padding: 6px 4px;
+  padding: 8px 4px;
   cursor: pointer;
 }
 
@@ -337,14 +418,14 @@ button {
 .task-row {
   display: flex;
   flex-direction: column;
-  gap: 2px;
+  gap: 4px;
   padding: 8px;
   border-bottom: 1px solid var(--border);
 }
 
 .task-id {
   font-family: 'Cascadia Code', Consolas, monospace;
-  font-size: 12px;
+  font-size: 13px;
   color: var(--muted);
   overflow: hidden;
   text-overflow: ellipsis;
@@ -354,30 +435,30 @@ button {
 .task-status {
   align-self: flex-start;
   font-size: 11px;
-  padding: 1px 8px;
-  border-radius: 10px;
+  padding: 4px 8px;
+  border-radius: 12px;
   background: var(--code-bg);
   color: var(--muted);
 }
 
 .task-status.running {
-  color: #2563eb;
-  background: #e8efff;
+  color: var(--accent);
+  background: var(--accent-soft);
 }
 
 .task-status.completed {
-  color: #1e7e34;
-  background: #e8f5e9;
+  color: var(--success);
+  background: var(--success-soft);
 }
 
 .task-status.failed {
-  color: #c0392b;
-  background: #fdecea;
+  color: var(--danger);
+  background: var(--danger-soft);
 }
 
 .task-status.waiting_approval {
-  color: #b7791f;
-  background: #fdf3e3;
+  color: var(--risk-medium-text);
+  background: var(--warning-soft);
 }
 
 .task-elapsed {
@@ -393,20 +474,20 @@ button {
 
 /* 右侧文件树 */
 .tree-root {
-  padding: 2px 0;
+  padding: 4px 0;
 }
 
 .tree-dir,
 .tree-file {
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: 8px;
   padding-top: 4px;
   padding-bottom: 4px;
   padding-right: 8px;
-  border-radius: 5px;
+  border-radius: 4px;
   cursor: pointer;
-  font-size: 12px;
+  font-size: 13px;
 }
 
 .tree-dir:hover,
@@ -415,7 +496,7 @@ button {
 }
 
 .tree-dir svg {
-  transition: transform 0.15s;
+  transition: transform 150ms;
   color: var(--muted);
   flex: none;
 }
@@ -436,24 +517,24 @@ button {
 .tree-dot {
   width: 7px;
   height: 7px;
-  border-radius: 50%;
-  background: #2563eb;
+  border-radius: 9999px;
+  background: var(--accent);
   flex: none;
 }
 
 .tree-file-stats {
-  font-size: 10px;
+  font-size: 11px;
   font-family: 'Cascadia Code', Consolas, monospace;
   color: var(--muted);
   flex: none;
 }
 
 .tree-file-stats .stat-add {
-  color: #1e7e34;
+  color: var(--success);
 }
 
 .tree-file-stats .stat-del {
-  color: #c0392b;
+  color: var(--danger);
 }
 
 /* 代码查看器 + diff */
@@ -462,7 +543,7 @@ button {
   flex-direction: column;
   height: 100%;
   font-family: 'Cascadia Code', Consolas, monospace;
-  font-size: 12px;
+  font-size: 13px;
 }
 
 .viewer-head {
@@ -477,10 +558,10 @@ button {
 .viewer-path {
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: 8px;
   min-width: 0;
   color: var(--text);
-  font-size: 12px;
+  font-size: 13px;
   font-family: 'Cascadia Code', Consolas, monospace;
 }
 
@@ -501,7 +582,7 @@ button {
 .viewer-path svg {
   flex: none;
   color: var(--muted);
-  transition: transform 0.15s;
+  transition: transform 150ms;
 }
 
 .viewer-path svg.open {
@@ -518,9 +599,9 @@ button {
   overflow-y: auto;
   background: var(--panel);
   border: 1px solid var(--border);
-  border-radius: 10px;
+  border-radius: 12px;
   box-shadow: 0 6px 20px rgba(0, 0, 0, 0.12);
-  padding: 6px;
+  padding: 8px;
   z-index: 50;
 }
 
@@ -534,12 +615,12 @@ button {
   display: flex;
   align-items: baseline;
   justify-content: space-between;
-  gap: 10px;
+  gap: 12px;
   width: 100%;
   text-align: left;
-  padding: 6px 8px;
-  border-radius: 6px;
-  font-size: 12px;
+  padding: 8px 8px;
+  border-radius: 8px;
+  font-size: 13px;
   color: var(--text);
 }
 
@@ -562,12 +643,12 @@ button {
 .path-menu-tree {
   width: 100%;
   text-align: left;
-  padding: 6px 8px;
+  padding: 8px 8px;
   border-top: 1px solid var(--border);
   margin-top: 4px;
-  font-size: 12px;
+  font-size: 13px;
   color: var(--muted);
-  border-radius: 0 0 6px 6px;
+  border-radius: 0 0 8px 8px;
 }
 
 .path-menu-tree:hover {
@@ -580,24 +661,24 @@ button {
 }
 
 .viewer-stats .stat-add {
-  margin-right: 6px;
+  margin-right: 8px;
 }
 
 .viewer-actions {
   display: flex;
-  gap: 6px;
+  gap: 8px;
   flex: none;
 }
 
 .viewer-actions button {
-  padding: 3px 10px;
-  border-radius: 6px;
-  font-size: 12px;
+  padding: 4px 12px;
+  border-radius: 8px;
+  font-size: 13px;
 }
 
 .viewer-actions .apply-btn {
-  background: #1e7e34;
-  color: #ffffff;
+  background: var(--success);
+  color: var(--accent-contrast);
 }
 
 .viewer-actions .revert-btn {
@@ -613,18 +694,18 @@ button {
 .activity-line {
   display: flex;
   align-items: center;
-  gap: 6px;
-  font-size: 12px;
+  gap: 8px;
+  font-size: 13px;
   color: var(--muted);
-  margin-bottom: 6px;
+  margin-bottom: 8px;
 }
 
 .activity-dot {
   width: 7px;
   height: 7px;
-  border-radius: 50%;
-  background: #2563eb;
-  animation: activity-pulse 1.2s ease-in-out infinite;
+  border-radius: 9999px;
+  background: var(--accent);
+  /* MSG-3145：脉冲类动态按 DESIGN.md §7「禁止脉冲」撤除（常量点表达运行态） */
 }
 
 @keyframes activity-pulse {
@@ -653,35 +734,35 @@ button {
   flex-direction: column;
   background: var(--panel);
   border: 1px solid var(--border);
-  border-radius: 14px;
+  border-radius: 12px;
   box-shadow: 0 12px 40px rgba(0, 0, 0, 0.18);
   overflow: hidden;
 }
 
 .palette input {
-  padding: 14px 16px;
+  padding: 16px 16px;
   border: none;
   border-bottom: 1px solid var(--border);
   outline: none;
   font: inherit;
-  font-size: 14px;
+  font-size: 15px;
   background: transparent;
   color: var(--text);
 }
 
 .palette-list {
   overflow-y: auto;
-  padding: 6px;
+  padding: 8px;
 }
 
 .palette-list button {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 10px;
+  gap: 12px;
   width: 100%;
   text-align: left;
-  padding: 9px 12px;
+  padding: 8px 12px;
   border-radius: 8px;
   font-size: 13px;
   color: var(--text);
@@ -698,7 +779,7 @@ button {
 
 .pl-empty {
   color: var(--muted);
-  font-size: 12px;
+  font-size: 13px;
   text-align: center;
   padding: 16px;
   margin: 0;
@@ -721,7 +802,7 @@ button {
   background: var(--panel);
   border: 1px solid var(--border);
   border-radius: 16px;
-  padding: 26px 28px;
+  padding: 24px 28px;
   box-shadow: 0 16px 48px rgba(0, 0, 0, 0.2);
 }
 
@@ -741,30 +822,30 @@ button {
   padding-left: 20px;
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: 12px;
   font-size: 13px;
   line-height: 1.6;
 }
 
 .demo-btn {
   margin-left: 8px;
-  color: #2563eb;
+  color: var(--accent);
   border: 1px solid var(--border);
   border-radius: 8px;
-  padding: 2px 10px;
-  font-size: 12px;
+  padding: 4px 12px;
+  font-size: 13px;
 }
 
 .onboard-actions {
   display: flex;
   justify-content: flex-end;
-  gap: 10px;
+  gap: 12px;
 }
 
 .viewer-lines {
   flex: 1;
   overflow-y: auto;
-  padding: 6px 0;
+  padding: 8px 0;
 }
 
 .code-line {
@@ -786,14 +867,14 @@ button {
   width: 42px;
   flex: none;
   text-align: right;
-  padding-right: 10px;
-  color: #b8b8b8;
+  padding-right: 12px;
+  color: var(--text-disabled);
   user-select: none;
 }
 
 .code-line .cl-text {
   flex: 1;
-  padding-left: 10px;
+  padding-left: 12px;
 }
 
 .code-line.added {
@@ -801,7 +882,7 @@ button {
 }
 
 .code-line.added .cl-marker {
-  color: #1e7e34;
+  color: var(--success);
 }
 
 .code-line.removed {
@@ -809,7 +890,7 @@ button {
 }
 
 .code-line.removed .cl-marker {
-  color: #c0392b;
+  color: var(--danger);
 }
 
 :root[data-theme='dark'] .code-line.added {
@@ -836,14 +917,14 @@ button {
 
 .preview-name {
   font-family: 'Cascadia Code', Consolas, monospace;
-  font-size: 12px;
+  font-size: 13px;
 }
 
 .preview-body {
   flex: 1;
   overflow-y: auto;
-  padding: 10px 12px;
-  font-size: 12px;
+  padding: 12px 12px;
+  font-size: 13px;
 }
 
 .preview-text {
@@ -851,7 +932,7 @@ button {
   white-space: pre-wrap;
   word-break: break-word;
   font-family: 'Cascadia Code', Consolas, monospace;
-  font-size: 12px;
+  font-size: 13px;
   line-height: 1.6;
 }
 
@@ -862,8 +943,8 @@ button {
 }
 
 .settings-block h2 {
-  font-size: 14px;
-  margin: 0 0 10px;
+  font-size: 15px;
+  margin: 0 0 12px;
 }
 
 .key-row {
@@ -874,16 +955,16 @@ button {
 
 .key-row input {
   flex: 1;
-  padding: 8px 10px;
+  padding: 8px 12px;
   border: 1px solid var(--border);
-  border-radius: 6px;
+  border-radius: 8px;
   font: inherit;
   background: var(--panel);
 }
 
 .btn-primary {
-  padding: 8px 14px;
-  border-radius: 6px;
+  padding: 8px 16px;
+  border-radius: 8px;
   background: var(--accent);
   color: var(--accent-contrast);
   font-size: 13px;
@@ -896,20 +977,20 @@ button {
 
 .btn-ghost {
   padding: 8px 12px;
-  border-radius: 6px;
+  border-radius: 8px;
   border: 1px solid var(--border);
   font-size: 13px;
   color: var(--muted);
 }
 
 .key-state {
-  font-size: 12px;
+  font-size: 13px;
   color: var(--muted);
   margin: 8px 0 0;
 }
 
 .key-state.ok {
-  color: #1e7e34;
+  color: var(--success);
 }
 
 .key-msg {
@@ -919,7 +1000,7 @@ button {
 
 .dir-list {
   list-style: none;
-  margin: 10px 0 0;
+  margin: 12px 0 0;
   padding: 0;
 }
 
@@ -928,7 +1009,7 @@ button {
   align-items: center;
   justify-content: space-between;
   gap: 8px;
-  padding: 6px 0;
+  padding: 8px 0;
 }
 
 .dir-label {
@@ -937,7 +1018,7 @@ button {
   gap: 8px;
   min-width: 0;
   font-family: 'Cascadia Code', Consolas, monospace;
-  font-size: 12px;
+  font-size: 13px;
 }
 
 .dir-label span {
@@ -969,9 +1050,9 @@ button {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  border-radius: 7px;
+  border-radius: 8px;
   color: var(--muted);
-  transition: color 0.15s, background 0.15s;
+  transition: color 150ms, background 150ms;
 }
 
 .panel-toggle-btn:hover {
@@ -1039,9 +1120,9 @@ button {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  border-radius: 7px;
+  border-radius: 8px;
   color: var(--muted);
-  transition: color 0.15s, background 0.15s;
+  transition: color 150ms, background 150ms;
 }
 
 .header-icon-btn:hover {
@@ -1061,9 +1142,9 @@ button {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  border-radius: 7px;
+  border-radius: 8px;
   color: var(--muted);
-  transition: color 0.15s, background 0.15s;
+  transition: color 150ms, background 150ms;
 }
 
 .sidebar-toggle-fab:hover {
@@ -1074,7 +1155,7 @@ button {
 /* 侧栏展开时按钮为收起箭头（原始右箭头 → 旋转为左箭头） */
 .sidebar-toggle-fab svg.flip {
   transform: rotate(180deg);
-  transition: transform 0.22s ease;
+  transition: transform 250ms ease;
 }
 
 /* 待办收件箱常驻入口（§C B5）：挨着侧栏开关，z-index 高于扩展面板（20） */
@@ -1089,9 +1170,9 @@ button {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  border-radius: 7px;
+  border-radius: 8px;
   color: var(--muted);
-  transition: color 0.15s, background 0.15s;
+  transition: color 150ms, background 150ms;
 }
 
 .inbox-fab:hover {
@@ -1112,22 +1193,22 @@ button {
   justify-content: center;
   min-width: 15px;
   height: 15px;
-  padding: 0 3px;
+  padding: 0 4px;
   border-radius: 8px;
-  background: #c0392b;
-  color: #fff;
-  font-size: 10px;
+  background: var(--danger);
+  color: var(--accent-contrast);
+  font-size: 11px;
   line-height: 1;
 }
 
 .status {
   color: var(--muted);
-  font-size: 12px;
+  font-size: 13px;
 }
 
 /* MSG-2870 DEBT-592：run 卡死诚实报断显色（断态警示——勿与常态混） */
 .status.warn {
-  color: #c0392b;
+  color: var(--danger);
 }
 
 /* 消息滚动区：flex 占位（输入框上方）；内部虚拟滚动容器填满作为唯一滚动层，
@@ -1163,7 +1244,7 @@ button {
   /* 消息间距改由 padding 承担：虚拟滚动（DynamicScroller）按 item 的 border-box
      测量高度，.msg 的 margin-bottom 不计入会导致间距被下一个消息覆盖（叠在一起）。
      padding 计入测量高度，间距稳定保留 */
-  padding-bottom: 10px;
+  padding-bottom: 12px;
 }
 
 .empty {
@@ -1180,7 +1261,7 @@ button {
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 14px;
+  gap: 16px;
   min-height: 0;
 }
 
@@ -1190,7 +1271,7 @@ button {
 
 .empty-start {
   padding: 8px 20px;
-  border-radius: 18px;
+  border-radius: 16px;
   background: var(--accent);
   color: var(--accent-contrast);
   font-size: 13px;
@@ -1202,23 +1283,23 @@ button {
   width: 100%;
   max-width: 720px;
   margin: 8px auto 0;
-  padding: 6px 14px;
+  padding: 8px 16px;
   border-radius: 8px;
-  background: #fdf3e3;
-  border: 1px solid #e8c98a;
-  color: #8a5a00;
-  font-size: 12px;
+  background: var(--warning-soft);
+  border: 1px solid var(--warning);
+  color: var(--risk-medium-text);
+  font-size: 13px;
   text-align: center;
 }
 
 :root[data-theme='dark'] .reconnect-banner {
-  background: #3a2f1d;
-  border-color: #6b5520;
-  color: #e5b567;
+  background: var(--warning-soft);
+  border-color: var(--risk-medium-text);
+  color: var(--risk-medium-text);
 }
 
 .msg {
-  margin-bottom: 10px;
+  margin-bottom: 12px;
 }
 
 /* 用户消息整体右对齐：flex column + 交叉轴右端，让头部操作行、附件区、
@@ -1239,14 +1320,14 @@ button {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  margin-bottom: 6px;
+  margin-bottom: 8px;
   gap: 8px;
 }
 
 .elapsed {
   color: var(--muted);
-  font-size: 12px;
-  padding: 2px 6px;
+  font-size: 13px;
+  padding: 4px 8px;
   border-radius: 4px;
 }
 
@@ -1266,7 +1347,7 @@ button {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  border-radius: 6px;
+  border-radius: 8px;
   color: var(--muted);
   padding: 0;
   opacity: 1;
@@ -1283,7 +1364,7 @@ button {
   white-space: pre-wrap;
   word-break: break-word;
   line-height: 1.8;
-  font-size: 14px;
+  font-size: 15px;
   color: var(--user-text);
 }
 
@@ -1297,23 +1378,23 @@ button {
 
 .status-text {
   color: var(--muted);
-  font-size: 12px;
-  padding: 6px 0;
+  font-size: 13px;
+  padding: 8px 0;
 }
 
 .status-text.error {
-  color: #c0392b;
+  color: var(--danger);
 }
 
 /* —— 待办收件箱（前端协作标准 v1.0 §C B5）：常驻入口 ＋ 右侧抽屉 —— */
 .sb-inbox {
   display: inline-flex;
   align-items: center;
-  gap: 5px;
-  padding: 2px 7px;
-  border-radius: 6px;
+  gap: 4px;
+  padding: 4px 8px;
+  border-radius: 8px;
   color: var(--muted);
-  font-size: 12px;
+  font-size: 13px;
   /* 状态栏整体为悬浮层（batch.css 内 pointer-events:none）——入口按钮须单独收回指针事件，
      否则「常驻待办入口」看得见点不动 */
   pointer-events: auto;
@@ -1337,8 +1418,8 @@ button {
   height: 16px;
   padding: 0 4px;
   border-radius: 8px;
-  background: #c0392b;
-  color: #fff;
+  background: var(--danger);
+  color: var(--accent-contrast);
   font-size: 11px;
 }
 
@@ -1366,21 +1447,21 @@ button {
   display: flex;
   align-items: center;
   gap: 8px;
-  padding: 12px 14px;
+  padding: 12px 16px;
   border-bottom: 1px solid var(--border);
 }
 
 .inbox-title {
   display: inline-flex;
   align-items: center;
-  gap: 6px;
+  gap: 8px;
   font-size: 13px;
   font-weight: 600;
 }
 
 .inbox-count {
   color: var(--muted);
-  font-size: 12px;
+  font-size: 13px;
 }
 
 .inbox-close {
@@ -1390,7 +1471,7 @@ button {
   justify-content: center;
   width: 26px;
   height: 26px;
-  border-radius: 6px;
+  border-radius: 8px;
   color: var(--muted);
 }
 
@@ -1400,15 +1481,15 @@ button {
 }
 
 .inbox-more {
-  margin: 8px 14px 0;
-  color: #b7791f;
-  font-size: 12px;
+  margin: 8px 16px 0;
+  color: var(--risk-medium-text);
+  font-size: 13px;
 }
 
 .inbox-body {
   flex: 1;
   overflow-y: auto;
-  padding: 10px 14px 20px;
+  padding: 12px 16px 20px;
 }
 
 .inbox-section {
@@ -1418,18 +1499,18 @@ button {
 .inbox-section-title {
   margin: 0 0 8px;
   color: var(--muted);
-  font-size: 12px;
+  font-size: 13px;
   font-weight: 600;
 }
 
 .inbox-card {
-  margin-bottom: 10px;
+  margin-bottom: 12px;
 }
 
 .inbox-empty {
   margin: 0;
   color: var(--muted);
-  font-size: 12px;
+  font-size: 13px;
 }
 
 .inbox-row {
@@ -1437,13 +1518,13 @@ button {
   align-items: center;
   gap: 8px;
   width: 100%;
-  margin-bottom: 6px;
-  padding: 8px 10px;
+  margin-bottom: 8px;
+  padding: 8px 12px;
   border: 1px solid var(--border);
   border-radius: 8px;
   background: transparent;
   color: var(--text);
-  font-size: 12.5px;
+  font-size: 13px;
   text-align: left;
 }
 
@@ -1460,18 +1541,48 @@ button {
 
 .inbox-row-action {
   color: var(--muted);
-  font-size: 12px;
+  font-size: 13px;
+}
+
+/* 收件箱行内风险徽章（卡内徽章样式在 ApprovalCard.vue 的 scoped 样式里，
+   行内这枚属列表，独立在此定义——两处不共用类，避免作用域串味） */
+.inbox-row .risk {
+  padding: 4px 8px;
+  border-radius: 4px;
+  font-size: 11px;
+  line-height: 1.4;
+  white-space: nowrap;
+}
+
+.inbox-row .risk.high {
+  background: var(--danger-soft);
+  color: var(--risk-high-text);
+}
+
+.inbox-row .risk.medium {
+  background: var(--warning-soft);
+  color: var(--risk-medium-text);
+}
+
+.inbox-row .risk.low {
+  background: var(--success-soft);
+  color: var(--success-text);
+}
+
+.inbox-row .risk.unknown {
+  background: var(--surface-2);
+  color: var(--risk-unknown-text);
 }
 
 .inbox-rule {
   display: flex;
   align-items: center;
   gap: 8px;
-  margin-bottom: 6px;
-  padding: 6px 8px;
+  margin-bottom: 8px;
+  padding: 8px 8px;
   border: 1px dashed var(--border);
   border-radius: 8px;
-  font-size: 12px;
+  font-size: 13px;
 }
 
 .inbox-rule-text {
@@ -1486,6 +1597,6 @@ button {
 }
 
 .inbox-rule-revoke {
-  color: #c0392b;
-  font-size: 12px;
+  color: var(--danger);
+  font-size: 13px;
 }
