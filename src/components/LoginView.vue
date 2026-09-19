@@ -6,6 +6,8 @@
       <!-- DEBT-738（MSG-3148）：演示态**肉眼可辨**——登录页常显「演示模式（未连接）」
            （演示传输只在 dev 或显式 VITE_BAIZ_DEMO=1 时存在，绝不再生产兜底） -->
       <p v-if="settings.demoMode" class="login-mode">{{ t('chat.demoMode') }}</p>
+      <!-- DEBT-742：会话被 daemon 判失效（-32002）后回到登录页——先说清原因再让人登 -->
+      <p v-if="auth.sessionExpired" class="login-expired">{{ t('errors.sessionExpired') }}</p>
       <form class="login-form" @submit.prevent="submit">
         <label class="login-field">
           <span>账号</span>
@@ -90,6 +92,15 @@ async function submit() {
   background: var(--warning-soft);
   color: var(--risk-medium-text);
   font-size: 11px;
+}
+.login-expired {
+  margin: 0 0 20px;
+  align-self: flex-start;
+  padding: 4px 8px;
+  border-radius: 4px;
+  background: var(--danger-soft);
+  color: var(--danger);
+  font-size: 13px;
 }
 .login-form {
   display: flex;

@@ -340,6 +340,8 @@ export default {
   errors: {
     network: '无法连接 daemon，请检查网关设置',
     unauthorized: '未授权，请检查 API Key',
+    sessionExpired: '登录已过期，请重新登录',
+    relogin: '重新登录',
     invalidParams: '请求参数错误',
     methodNotFound: '方法暂不支持',
     taskNotFound: '任务不存在',

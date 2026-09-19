@@ -329,7 +329,7 @@ async function requestEscalation() {
 
 .risk {
   /* 规格 §二 写「徽章内边距 2×8」，但 §五#1 机判要求间距全 4 倍数——
-     两处冲突取可机判项 ⇒ 4×8（视觉差 2px；见 DESIGN.md 附一#9） */
+     两处冲突取可机判项 ⇒ 4×8（视觉差 2px；见 DESIGN.md 附一#8） */
   padding: 4px 8px;
   border-radius: 4px;
   font-size: 11px;
@@ -493,7 +493,7 @@ async function requestEscalation() {
 .scope-option {
   position: relative;
   /* 小号按钮取 8×12（DESIGN.md §4 原文写「小号 6×12」，与 §10#4 四倍数铁律冲突，
-     取可机判项；见 DESIGN.md 附一#9） */
+     取可机判项；见 DESIGN.md 附一#8） */
   padding: 8px 12px;
   border: 1px solid var(--border);
   border-radius: 8px;

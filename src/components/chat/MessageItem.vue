@@ -73,6 +73,11 @@ function goSettings() {
   void router.push('/settings')
 }
 
+/** DEBT-742：会话失效 ⇒ 明确入口回到登录页（自愈已在 store 侧清 token） */
+function goLogin() {
+  void router.push('/login')
+}
+
 /** 标准 v1.0 §A3：队列单条取消（chat.queue_cancel） */
 function cancelQueued() {
   void messages.cancelQueued(props.message.conversationId, props.message.id)
@@ -202,6 +207,14 @@ function cancelQueued() {
         @click="goSettings"
       >
         {{ t('errors.goSettings') }}
+      </button>
+      <button
+        v-if="message.meta?.errorKey === 'sessionExpired'"
+        type="button"
+        class="retry-btn"
+        @click="goLogin"
+      >
+        {{ t('errors.relogin') }}
       </button>
     </div>
 

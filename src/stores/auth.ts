@@ -23,6 +23,8 @@ export const useAuthStore = defineStore("auth", {
     userId: "" as string,
     loading: false as boolean,
     error: "" as string,
+    /** DEBT-742：会话被 daemon 判失效（-32002）后置真——UI 据此提示"请重新登录" */
+    sessionExpired: false as boolean,
   }),
   getters: {
     loggedIn(state): boolean {
@@ -55,6 +57,7 @@ export const useAuthStore = defineStore("auth", {
         } catch {
           /* storage 不可用仅失持久，不阻断登录态 */
         }
+        this.sessionExpired = false;
         return true;
       } catch (e) {
         // MSG-2311 吞错面修：真 error 词透出上屏——剥 RPC 前缀得
@@ -76,11 +79,21 @@ export const useAuthStore = defineStore("auth", {
       this.sessionToken = "";
       this.userId = "";
       this.error = "";
+      this.sessionExpired = false;
       try {
         sessionStorage.removeItem(TOKEN_KEY);
       } catch {
         /* storage 不可用零残留面已清 */
       }
+    },
+    /**
+     * DEBT-742 自愈：daemon 判会话失效（-32002）⇒ **立即清失效 token**（含
+     * sessionStorage）＋置 `sessionExpired`——断「失效 token 一直揣着、每次发消息
+     * 都同样失败」的循环；由调用方引导重登（路由跳登录页）。
+     */
+    expireSession() {
+      this.logout();
+      this.sessionExpired = true;
     },
   },
 });

@@ -341,6 +341,8 @@ export default {
   errors: {
     network: 'Cannot reach daemon. Check gateway settings',
     unauthorized: 'Unauthorized. Check the API key',
+    sessionExpired: 'Session expired. Please sign in again',
+    relogin: 'Sign in again',
     invalidParams: 'Invalid parameters',
     methodNotFound: 'Method not supported',
     taskNotFound: 'Task not found',

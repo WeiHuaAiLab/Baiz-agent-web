@@ -313,6 +313,16 @@ export const useMessageStore = defineStore('message', {
         // （真失败径零波及——run 非 cancelled 照走下方红面）
         if (run?.status === 'cancelled') return
         const mapped = mapRpcError(error)
+        // DEBT-742 自愈：会话失效（-32002）⇒ 清失效 token ＋ 引导重登——
+        // 否则失效 token 一直被随行重发（chat.send 的 session_token），每次发送同样失败。
+        if (mapped.key === 'sessionExpired') {
+          useAuthStore().expireSession()
+          void import('../router')
+            .then(({ router }) => router.push({ name: 'login' }))
+            .catch(() => {
+              /* 路由不可用（测试/无 app 上下文）不影响清 token 与报错面 */
+            })
+        }
         if (run) {
           run.status = 'failed'
           run.finishedAt = Date.now()
