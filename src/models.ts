@@ -34,7 +34,10 @@ export interface UsageCost {
   promptTokens: number
   completionTokens: number
   totalTokens: number
-  costUsd: number
+  /** 标准 v1.0 §A3：计费改读后端值（cost_usd）——前端自备单价表已删 */
+  costUsd?: number
+  /** 后端给出的每百万 token 单价（cost_per_mtok），展示口径同后端 */
+  costPerMtok?: number
 }
 
 export interface MessageMeta {
@@ -47,6 +50,21 @@ export interface MessageMeta {
   action?: string
   risk?: string
   details?: string
+  /** 标准 v1.0 §C B1：审批理由一句（人话·零术语）——卡头下第一行 */
+  reason?: string
+  /** 标准 v1.0 §C B5：全库挂起总数 ⇒「另有 N 张卡」角标 */
+  pendingTotal?: number
+  /** 标准 v1.0 §C B5：无会话来源（`__inbox__`）⇒ 落全局收件箱 */
+  inbox?: boolean
+  /** 最近一次所选档位（once／session／project／forever） */
+  scope?: string
+  /** 已申请放行（§B approval.escalate——升级≠免审） */
+  escalated?: boolean
+  /** 队列排队中（§A3 chat.send 回执 queued／position） */
+  queued?: boolean
+  queuePosition?: number
+  /** 排队条目已取消 */
+  queueCancelled?: boolean
   approved?: boolean
   elapsedMs?: number
   status?: string

@@ -1,5 +1,6 @@
 // 事件路由：SSE 帧 → 消息/审批 store 的动作分发，未知事件仅 debug 日志。
 import type { SseFrame } from './sse'
+import type { ApprovalRequiredData } from './types'
 import type { useApprovalStore } from '../stores/approval'
 import type { useMessageStore } from '../stores/message'
 
@@ -26,16 +27,24 @@ export function routeFrame(frame: SseFrame, messages: MessageStore, approvals: A
       messages.onToolResult(data as never)
       break
     case 'approval.required': {
-      messages.onApprovalRequired(data as never)
-      const approval = data as { request_id: string; tool_name: string; args_preview: string }
+      // 标准 v1.0 §A1：帧字段收全——`risk` 直接采信（旧「默认 medium 占位
+      // ＋ 无条件 refreshRisk」已删，回退径永不触发）；`conversation_id`
+      // 无来源＝`__inbox__`（落全局收件箱，不丢）；`reason`／`pending_total`
+      // 一并入列（§C B1／B5）。
+      const approval = data as unknown as ApprovalRequiredData
+      messages.onApprovalRequired(approval)
+      // 会话归属回退：帧缺 `conversation_id` 时用 run 已知会话兜底；
+      // 两者皆无 ⇒ `__inbox__`（无会话来源的卡不得丢弃）
+      const fallbackConversation = messages.conversationOf(approval.task_id) || undefined
       approvals.upsert({
         request_id: approval.request_id,
         action: approval.tool_name,
-        // P2 修复：默认档位占位，真实 risk 由 refreshRisk 异步回填
-        risk: 'medium',
+        risk: approval.risk,
         details: approval.args_preview,
+        reason: approval.reason,
+        conversationId: approval.conversation_id ?? fallbackConversation,
       })
-      void approvals.refreshRisk(approval.request_id)
+      approvals.notePendingTotal(approval.pending_total)
       break
     }
     case 'approval.resolved':

@@ -1,5 +1,20 @@
 export type TaskStatus = 'pending' | 'running' | 'completed' | 'failed' | 'cancelled' | 'waiting_approval'
 
+// —— 前端协作标准 v1.0（审批／队列／状态对接规范）字段与枚举 ——
+
+/**
+ * 无会话来源（RPC／CLI／定时／探针触发）的审批卡，daemon 以本常量作
+ * `conversation_id`（标准 §A1）——前端必须落到「全局收件箱」，不得丢弃。
+ */
+export const INBOX_CONVERSATION_ID = '__inbox__'
+
+/** 审批档位（标准 §B `permission.respond.scope`）：缺省 `once` ⇒ 不建规则 */
+export type ApprovalScope = 'once' | 'session' | 'project' | 'forever'
+
+export function isInboxConversation(conversationId?: string | null): boolean {
+  return !conversationId || conversationId === INBOX_CONVERSATION_ID
+}
+
 export interface AuthHandshakeParams {
   client_type: 'gui' | 'cli' | 'tui'
   client_version: string
@@ -66,6 +81,9 @@ export interface ChatSendResult {
   task_id: string
   status: string
   model: string
+  /** 标准 §A3：入队回执——`queued:true` ＋ `position` ⇒ 队列条「排队中·第 N 位」 */
+  queued?: boolean
+  position?: number
 }
 
 export interface ChatQueueCancelParams {
@@ -82,11 +100,47 @@ export interface PendingApproval {
   action: string
   risk: string
   details?: string
+  reason?: string
+  conversation_id?: string
+  status?: string
+  created_at?: string
 }
 
 export interface PermissionRespondParams {
   request_id: string
   approved: boolean
+  /** 标准 §B：缺省＝once（不建规则）；session／project／forever 才落规则 */
+  scope?: ApprovalScope
+}
+
+/** 标准 §B `approval.rules`：规则对象数组 */
+export interface ApprovalRule {
+  rule_id: string
+  rule_content: string
+  authorized_root?: string
+  scope?: ApprovalScope
+  revision?: number
+  created?: string
+}
+
+/** 标准 §B `approval.policy`：可机判优先级表 deny(1) > mode_baseline(2) > auto(3) > ask(4) */
+export interface ApprovalPolicyLevel {
+  name: string
+  priority: number
+}
+
+export interface ApprovalPolicyResult {
+  levels?: ApprovalPolicyLevel[]
+  [key: string]: unknown
+}
+
+export interface ApprovalRevokeParams {
+  rule_id: string
+}
+
+export interface ApprovalEscalateParams {
+  request_id: string
+  [key: string]: unknown
 }
 
 export interface A2aStatusResult {
@@ -123,7 +177,16 @@ export interface ApprovalRequiredData {
   request_id: string
   task_id: string
   tool_name: string
+  /** 参数预览 ≤200 字（卡面走人话渲染，禁裸 JSON——标准 §A1/§C B2） */
   args_preview: string
+  /** 有会话归属＝会话 id；无来源＝`__inbox__`（标准 §A1） */
+  conversation_id?: string
+  /** 全库挂起总数（含积压）⇒ 角标「另有 N 张卡」 */
+  pending_total?: number
+  /** 理由一句（人话·零术语）——卡上必须显示（§C B1） */
+  reason?: string
+  /** `high`／`medium`（`safe` 不弹卡故不上帧）——直接采信，禁默认 medium */
+  risk?: string
 }
 
 export interface PermissionRequestData {
@@ -139,6 +202,9 @@ export interface DoneData {
     prompt_tokens: number
     completion_tokens: number
     total_tokens: number
+    /** 标准 §A3：计费改读后端值（前端自备单价表已删） */
+    cost_usd?: number
+    cost_per_mtok?: number
   }
 }
 

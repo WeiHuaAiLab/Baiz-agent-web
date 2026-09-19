@@ -19,7 +19,6 @@ import { useFilesStore } from "../../stores/files";
 import { getBridge } from "../../bridge";
 import { clearDraft, loadDraft, saveDraft } from "../../drafts";
 import { formatFileSize, shortMime } from "../../utils/format";
-import { estimateCostUsd } from "../../stores/message";
 import {
     commandRiskFlag,
     translateCommand,
@@ -117,8 +116,16 @@ const lastUsage = computed(() => {
 const costText = computed(() => {
     const u = lastUsage.value;
     if (!u) return null;
-    const cny = (u.costUsd * 7.1).toFixed(3);
-    return `本轮 ¥${cny} · ${u.totalTokens.toLocaleString()} tokens · 验证 ✅`;
+    // 标准 v1.0 §A3：计费展示改读后端值（usage.cost_usd／cost_per_mtok）——
+    // 前端自备单价表已删；后端未给成本即不显示金额，禁前端另算一份。
+    const parts: string[] = [];
+    if (u.costUsd !== undefined) {
+        parts.push(`本轮 $${u.costUsd.toFixed(4)}（¥${(u.costUsd * 7.1).toFixed(3)}）`);
+    }
+    parts.push(`${u.totalTokens.toLocaleString()} tokens`);
+    if (u.costPerMtok !== undefined) parts.push(`$${u.costPerMtok}/MTok`);
+    parts.push("验证 ✅");
+    return parts.join(" · ");
 });
 // 批0 命令翻译：输入框里打命令时实时给一句人话 + 危险预警
 const commandTranslation = computed(() => translateCommand(input.value));

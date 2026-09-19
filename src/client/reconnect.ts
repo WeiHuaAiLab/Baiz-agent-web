@@ -21,6 +21,12 @@ export interface ReconnectOptions {
   retryDelayMs?: number
   maxRetryDelayMs?: number
   onStateChange?: (state: ReconnectState) => void
+  /**
+   * 标准 v1.0 §C B6（重连补拉）：每次（重）连建立即回调——消费方据此调
+   * `permission.pending` 补拉断线期间产生的审批卡（推送可丢，状态须可查）。
+   * 首连、断线重连、resync 续订三径皆触发。
+   */
+  onConnected?: () => void
   onResyncRequired?: (info: { oldest_seq: number; latest_seq: number }) => void
 }
 
@@ -109,6 +115,7 @@ export class SseReconnect {
       this.armStableReset()
       this.setState('connected')
       this.armWatchdog()
+      this.notifyConnected()
     } catch (error) {
       if (error instanceof RpcError && error.code === RPC_ERROR_CODES.RESYNC_REQUIRED) {
         await this.handleResync(error)
@@ -163,8 +170,18 @@ export class SseReconnect {
       this.armStableReset()
       this.setState('connected')
       this.armWatchdog()
+      this.notifyConnected()
     } catch {
       this.scheduleReconnect()
+    }
+  }
+
+  /** B6 补拉回调：消费方异常不牵连连接管理（留痕后继续） */
+  private notifyConnected(): void {
+    try {
+      this.options.onConnected?.()
+    } catch (error) {
+      console.warn('[baiz] onConnected 回调异常', error)
     }
   }
 

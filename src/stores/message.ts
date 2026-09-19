@@ -5,10 +5,12 @@ import { getClient } from '../client/singleton'
 import type { AttachmentItem } from './files'
 import { mapRpcError } from '../utils/errors'
 import { formatFileSize } from '../utils/format'
+import { TOOL_LABELS_ZH as TOOL_NAMES_ZH } from '../utils/approvalText'
 import { useUiStore } from './ui'
 import { useSettingsStore } from './settings'
 import { useWorkingTreeStore } from './workingTree'
 import { useAuthStore } from './auth'
+import { INBOX_CONVERSATION_ID, isInboxConversation } from '../client/types'
 import type {
   ChatMessage,
   MessageMeta,
@@ -39,39 +41,7 @@ let messageSeq = 0
 // 批0 循环提示：按会话记录「同类错误」出现次数（错误码/首行摘要），第 3 次起给台阶
 const errorCounters = new Map<string, Map<string, number>>()
 
-// DeepSeek 现行价（美元/百万 token；只做展示口径，真实价由 daemon 归一后回填）
-const USD_PER_MT: Record<string, number> = { input: 0.27, output: 1.1 }
-
-/** 批0 成本小字：token 用量 → 人民币成本（按 7.1 汇率展示） */
-export function estimateCostUsd(usage: {
-  prompt_tokens: number
-  completion_tokens: number
-}): number {
-  const input = (usage.prompt_tokens / 1_000_000) * USD_PER_MT.input
-  const output = (usage.completion_tokens / 1_000_000) * USD_PER_MT.output
-  return input + output
-}
-
-/** 工具名 → 中文俗称（字幕里不说英文，说人话） */
-const TOOL_NAMES_ZH: Record<string, string> = {
-  shell_exec: '命令',
-  cargo_test: '测试',
-  cargo_build: '编译',
-  apply_patch: '改代码',
-  grep_files: '搜代码',
-  read_file: '读文件',
-  list_dir: '看目录',
-  web_fetch: '抓网页',
-  web_search: '搜索',
-  code_edit: '改代码',
-  fs_write: '写文件',
-  fs_read: '读文件',
-  git_commit: '提交代码',
-  git_diff: '看改动',
-  wechat_read: '读微信',
-  classify_customers: '客户分级',
-  crm_push: '推给 CRM',
-}
+// 工具名 → 中文俗称（字幕与审批卡共表；唯一真源在 utils/approvalText.ts）
 
 /** 批0 人话字幕：把一次工具调用翻译成小白能看懂的一句话（说人话，不说术语） */
 export function subtitleForTool(toolName: string, success: boolean, preview: string): string {
@@ -210,6 +180,15 @@ export const useMessageStore = defineStore('message', {
       if (this.byConversation[conversationId]) return
       const rows = await db.messages.where('conversationId').equals(conversationId).sortBy('createdAt')
       this.byConversation[conversationId] = rows
+      // 补建审批索引（§C B6／B9）：本地历史里的未决卡也进 request→message 映射——
+      // 重连补拉的档位回填（updateRisk）与销卡帧（onApprovalResolved）据此联动到卡面，
+      // 否则刷新后「卡还在、点同意不转已决态」。
+      for (const row of rows) {
+        const requestId = row.meta?.requestId
+        if (!requestId || row.meta?.approved !== undefined) continue
+        this.requestToMessage[requestId] = row.id
+        this.requestToConversation[requestId] = conversationId
+      }
     },
     async push(conversationId: string, message: ChatMessage) {
       if (!this.byConversation[conversationId]) this.byConversation[conversationId] = []
@@ -311,6 +290,20 @@ export const useMessageStore = defineStore('message', {
             run.taskId = result.task_id
             this.runs[result.task_id] = run
           }
+        }
+        // 标准 v1.0 §A3／§C：队列条——chat.send 回执 queued:true／position
+        // ⇒ 「排队中·第 N 位」＋单条取消（chat.queue_cancel，见 cancelQueued）
+        if (result.queued === true) {
+          await this.push(
+            conversationId,
+            makeMessage(conversationId, 'status', '', {
+              taskId: result.task_id || clientTaskId,
+              status: 'queued',
+              statusKey: 'queued',
+              queued: true,
+              ...(typeof result.position === 'number' ? { queuePosition: result.position } : {}),
+            }),
+          )
         }
       } catch (error) {
         const run = this.runs[clientTaskId]
@@ -439,6 +432,25 @@ export const useMessageStore = defineStore('message', {
       }
       this.trimRuns()
     },
+    /**
+     * 队列单条取消（标准 v1.0 §A3／§B `chat.queue_cancel`）：成功才改态，
+     * 失败照录并 toast——不静默、不假装已取消。
+     */
+    async cancelQueued(conversationId: string, messageId: string) {
+      const list = this.byConversation[conversationId]
+      const msg = list?.find((item) => item.id === messageId)
+      const taskId = msg?.meta?.taskId
+      if (!msg || !taskId) return
+      try {
+        await getClient().queueCancel({ conversation_id: conversationId, task_id: taskId })
+      } catch (error) {
+        useUiStore().toast(`取消失败：${(error as Error).message}`, 'error')
+        return
+      }
+      msg.meta = { ...msg.meta, queued: false, queueCancelled: true, status: 'cancelled' }
+      msg.text = '已取消排队'
+      await db.messages.put(cloneForDb(msg))
+    },
     flushRun(taskId: string) {
       const timer = flushTimers.get(taskId)
       if (timer) {
@@ -499,14 +511,48 @@ export const useMessageStore = defineStore('message', {
       return this.runs[taskId]?.conversationId ?? null
     },
     onTaskUpdated(data: { task_id: string; status: string; progress?: number }) {
-      const run = this.ensureRun(data.task_id, this.conversationOf(data.task_id) ?? '')
+      // 标准 v1.0 §A3：daemon 已开始发 task.updated（旧版从不发 ⇒ 界面永远
+      // 像「还在跑」）。终态帧即收口消息条——不等 done 帧也不残留运行态。
+      const run = this.runs[data.task_id]
       this.markRunActive(data.task_id)
-      if (run.status === 'cancelled') return
+      if (!run || run.status === 'cancelled') return
       run.status = data.status
       if (['completed', 'failed', 'cancelled'].includes(data.status) && !run.finishedAt) {
         run.finishedAt = Date.now()
         run.elapsedMs = run.finishedAt - run.startedAt
+        this.settleAssistantMessage(run, data.status)
       }
+    },
+    /** 终态收口：把 run 的正文落成 assistant 消息（done 帧缺席时的兜底） */
+    settleAssistantMessage(run: RunState, status: string) {
+      this.flushRun(run.taskId)
+      if (!run.conversationId) return
+      const msg = this.byConversation[run.conversationId]?.find(
+        (item) => item.meta?.taskId === run.taskId && item.kind === 'assistant',
+      )
+      if (msg) {
+        msg.text = run.text
+        msg.meta = {
+          ...msg.meta,
+          elapsedMs: run.elapsedMs,
+          streaming: false,
+          status,
+        }
+        const timer = persistTimers.get(msg.id)
+        if (timer) clearTimeout(timer)
+        persistTimers.delete(msg.id)
+        void db.messages.put(cloneForDb(msg))
+        return
+      }
+      void this.push(
+        run.conversationId,
+        makeMessage(run.conversationId, 'assistant', run.text, {
+          taskId: run.taskId,
+          elapsedMs: run.elapsedMs,
+          streaming: false,
+          status,
+        }),
+      )
     },
     onToken(data: TokenData) {
       const run = this.ensureRun(data.task_id, this.conversationOf(data.task_id) ?? '')
@@ -594,35 +640,48 @@ export const useMessageStore = defineStore('message', {
         }
       }
     },
+    /**
+     * 审批卡入列（标准 v1.0 §A1／§C B1·B5）：
+     * - `conversation_id` 有会话归属 ⇒ 落该会话；无来源（缺省或 `__inbox__`）
+     *   ⇒ 落 `__inbox__` 全局收件箱——**不得丢弃**（治 668/689）；
+     * - `risk` 直接采信，缺省即「档位未知」（禁默认 medium，§C B8）；
+     * - `reason`／`pending_total` 随 meta 落卡（§C B1／B5）。
+     * 无 run 的卡（RPC／CLI／定时／探针触发）不造空 run，只落收件箱。
+     */
     onApprovalRequired(data: ApprovalRequiredData) {
-      const run = this.ensureRun(data.task_id, this.conversationOf(data.task_id) ?? '')
       this.markRunActive(data.task_id)
-      if (run.status === 'cancelled') return
-      if (!run.conversationId) return
-      const msg = makeMessage(run.conversationId, 'approval', '', {
+      const run = this.runs[data.task_id]
+      if (run?.status === 'cancelled') return
+      const hasSession = !isInboxConversation(data.conversation_id)
+      const conversationId = hasSession
+        ? (data.conversation_id as string)
+        : run?.conversationId || INBOX_CONVERSATION_ID
+      const msg = makeMessage(conversationId, 'approval', '', {
         taskId: data.task_id,
         requestId: data.request_id,
         toolName: data.tool_name,
         argsPreview: data.args_preview,
         action: data.tool_name,
-        // P2 修复（2026-08-22）：daemon 协议帧零扩（裁985②），approval.required
-        // 不带 risk；此处默认 medium 占位，真实档位由 approval store 的
-        // refreshRisk（permission.pending RPC）异步回填后覆盖。
-        risk: 'medium',
+        // 帧内 risk 直接采信；缺省不带键 ⇒ 渲染面显示「档位未知」
+        ...(data.risk ? { risk: data.risk } : {}),
+        ...(data.reason ? { reason: data.reason } : {}),
+        ...(typeof data.pending_total === 'number' ? { pendingTotal: data.pending_total } : {}),
+        ...(conversationId === INBOX_CONVERSATION_ID ? { inbox: true } : {}),
         details: data.args_preview,
       })
       this.requestToMessage[data.request_id] = msg.id
-      this.requestToConversation[data.request_id] = run.conversationId
-      void this.push(run.conversationId, msg)
+      this.requestToConversation[data.request_id] = conversationId
+      void this.push(conversationId, msg)
     },
-    updateRisk(requestId: string, risk: string) {
+    /** 档位回填（重连补拉径）；缺值即「未知」——禁落假 medium（§C B8） */
+    updateRisk(requestId: string, risk?: string) {
       const messageId = this.requestToMessage[requestId]
       if (!messageId) return
       const conversationId = this.requestToConversation[requestId]
       const list = conversationId ? this.byConversation[conversationId] : undefined
       const msg = list?.find((item) => item.id === messageId)
       if (msg?.meta) {
-        msg.meta = { ...msg.meta, risk }
+        msg.meta = { ...msg.meta, risk: risk ? risk : 'unknown' }
         void db.messages.put(cloneForDb(msg))
       }
     },
@@ -651,12 +710,21 @@ export const useMessageStore = defineStore('message', {
       run.finishedAt = Date.now()
       run.elapsedMs = run.finishedAt - run.startedAt
       // 批0 成本小字：done 帧的真实 usage → 记账
+      // 标准 v1.0 §A3：计费改读后端值（cost_usd／cost_per_mtok）——
+      // 前端自备单价表已删，缺值即不显示，禁前端另算一份。
       if (data.usage) {
+        const costUsd =
+          typeof data.usage.cost_usd === 'number' && Number.isFinite(data.usage.cost_usd)
+            ? data.usage.cost_usd
+            : undefined
         run.usage = {
           promptTokens: data.usage.prompt_tokens,
           completionTokens: data.usage.completion_tokens,
           totalTokens: data.usage.total_tokens,
-          costUsd: estimateCostUsd(data.usage),
+          ...(costUsd === undefined ? {} : { costUsd }),
+          ...(typeof data.usage.cost_per_mtok === 'number'
+            ? { costPerMtok: data.usage.cost_per_mtok }
+            : {}),
         }
       }
       if (!run.conversationId) return

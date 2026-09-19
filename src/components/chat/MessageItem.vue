@@ -72,6 +72,11 @@ function remove() {
 function goSettings() {
   void router.push('/settings')
 }
+
+/** 标准 v1.0 §A3：队列单条取消（chat.queue_cancel） */
+function cancelQueued() {
+  void messages.cancelQueued(props.message.conversationId, props.message.id)
+}
 </script>
 
 <template>
@@ -156,6 +161,23 @@ function goSettings() {
     </div>
     <ToolRow v-else-if="message.kind === 'tool_call'" :message="message" />
     <ApprovalCard v-else-if="message.kind === 'approval'" :message="message" />
+    <!-- 标准 v1.0 §A3／§C：队列条——「排队中·第 N 位」＋单条取消 -->
+    <div
+      v-else-if="message.kind === 'status' && (message.meta?.queued || message.meta?.queueCancelled)"
+      class="status-text queued"
+    >
+      <template v-if="message.meta?.queueCancelled">
+        {{ t('chat.queueCancelled') }}
+      </template>
+      <template v-else>
+        <span class="queue-text">
+          {{ t('chat.queuePosition', { n: message.meta?.queuePosition ?? 1 }) }}
+        </span>
+        <button type="button" class="queue-cancel" @click="cancelQueued">
+          {{ t('chat.queueCancel') }}
+        </button>
+      </template>
+    </div>
     <div v-else-if="message.kind === 'status'" class="status-text" :class="message.meta?.status">
       <template v-if="message.meta?.statusKey">
         {{ t('status.' + message.meta.statusKey) }}
@@ -183,24 +205,9 @@ function goSettings() {
       </button>
     </div>
 
-    <div v-if="showTrace && run" class="trace-panel">
-      <div v-if="run.reasoning" class="trace-reasoning">
-        <span>{{ t('chat.thinking') }}</span>
-        {{ run.reasoning }}
-      </div>
-      <div v-for="(item, i) in run.trace" :key="i" class="trace-item" :class="item.kind">
-        <template v-if="item.kind === 'tool.call'">
-          {{ t('chat.toolCall') }} {{ item.toolName }}
-          <span v-if="item.argsPreview" class="trace-args">{{ item.argsPreview }}</span>
-        </template>
-        <template v-else-if="item.kind === 'tool.result'">
-          {{ t('chat.toolResult') }} {{ item.preview }}
-        </template>
-        <template v-else>{{ t('chat.thinking') }}</template>
-      </div>
-    </div>
-
-    <!-- 批0 人话字幕：工具调用全翻译成小白能看懂的一句话（默认隐藏，设置中开启） -->
+    <!-- 批0 人话字幕：工具调用全翻译成小白能看懂的一句话（默认隐藏，设置中开启）
+         —— 团队线开关原样保留；上方「过程回看」旧面板按本地线撤除
+         （MSG-2998 修② 三分离归组 RunBlocks 已取代之——见本文件 117-122 行）。 -->
     <div v-if="settings.showHuman && subtitles.length" class="xp-subtitles">
       <div
         v-for="(sub, i) in subtitles"

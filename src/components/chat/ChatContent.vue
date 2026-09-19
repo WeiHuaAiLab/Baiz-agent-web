@@ -9,17 +9,20 @@ import { useSessionStore } from '../../stores/session'
 import { useMessageStore } from '../../stores/message'
 import { useSettingsStore } from '../../stores/settings'
 import { useUiStore } from '../../stores/ui'
+import { useApprovalStore } from '../../stores/approval'
 import { getBridge } from '../../bridge'
 import type { ChatMessage, RunState } from '../../models'
 import MessageItem from './MessageItem.vue'
 import RunBlocks from './RunBlocks.vue'
 import StreamingMarkdownView from '../markdown/StreamingMarkdownView.vue'
+import Icon from '../common/Icon.vue'
 
 const { t } = useI18n()
 const session = useSessionStore()
 const messages = useMessageStore()
 const settings = useSettingsStore()
 const ui = useUiStore()
+const approvals = useApprovalStore()
 
 // 事件：
 // - scroller-ready：虚拟滚动容器（DynamicScroller 根 .vue-recycle-scroller）就绪/销毁时上报 DOM，
@@ -206,6 +209,17 @@ async function onStreamingClick(event: MouseEvent) {
     >
       {{ t('status.disconnectedReconnect') }}
     </div>
+
+    <!-- 标准 v1.0 §C B5：`pending_total` 角标＋常驻入口——「另有 N 张卡」 -->
+    <button
+      v-if="approvals.badgeCount > 0"
+      type="button"
+      class="approval-banner"
+      @click="ui.openInbox()"
+    >
+      <Icon name="inbox" :size="14" />
+      {{ t('approval.inboxBanner', { n: approvals.badgeCount }) }}
+    </button>
 
     <div v-if="displayItems.length === 0 && streamingRuns.length === 0" class="empty-state">
       <p class="empty">{{ t('chat.empty') }}</p>

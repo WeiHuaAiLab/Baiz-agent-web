@@ -41,6 +41,8 @@ export const useUiStore = defineStore('ui', {
     // （切换会话保持——显于 ChatHeader 徽标）
     programmingMode: false,
     paletteOpen: false,
+    /** 全局收件箱面板（标准 v1.0 §C B5：待办常驻＋计数，入口常驻） */
+    inboxOpen: false,
     showOnboarding: !onboardingSeen,
     pendingPrompt: '',
     sidebarCollapsed: false,
@@ -100,6 +102,15 @@ export const useUiStore = defineStore('ui', {
     },
     closePalette() {
       this.paletteOpen = false
+    },
+    openInbox() {
+      this.inboxOpen = true
+    },
+    closeInbox() {
+      this.inboxOpen = false
+    },
+    toggleInbox() {
+      this.inboxOpen = !this.inboxOpen
     },
     completeOnboarding() {
       this.showOnboarding = false

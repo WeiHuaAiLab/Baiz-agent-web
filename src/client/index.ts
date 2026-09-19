@@ -4,6 +4,10 @@ import type { RpcTransport } from './transport'
 import type { SseFrame } from './sse'
 import type {
   A2aStatusResult,
+  ApprovalEscalateParams,
+  ApprovalPolicyResult,
+  ApprovalRevokeParams,
+  ApprovalRule,
   AuthHandshakeParams,
   AuthLoginParams,
   AuthLoginResult,
@@ -37,11 +41,22 @@ export interface BaizClient {
   probeEventSeq(): Promise<number>
   provideKey(key: string): Promise<{ stored: boolean }>
   chatSend(params: ChatSendParams): Promise<ChatSendResult>
+  /** 停止在途任务（task.cancel 语义，勿与队列单条取消混用） */
   chatQueueCancel(params: ChatQueueCancelParams): Promise<ChatQueueCancelResult>
   /** MSG-2722 L3 编程 UI：ToolLoop Blocked 人工回传续跑（daemon tool_loop.resume） */
   taskResume(params: TaskResumeParams): Promise<TaskResumeResult>
+  /** 标准 §B：队列单条取消（chat.queue_cancel） */
+  queueCancel(params: ChatQueueCancelParams): Promise<ChatQueueCancelResult>
   permissionPending(): Promise<{ pending: PendingApproval[] }>
   permissionRespond(params: PermissionRespondParams): Promise<{ resolved: boolean; status: string }>
+  /** 标准 §B：规则管理页数据源（规则对象数组） */
+  approvalRules(): Promise<ApprovalRule[]>
+  /** 标准 §B：撤销规则——撤销后必重弹 */
+  approvalRevoke(params: ApprovalRevokeParams): Promise<unknown>
+  /** 标准 §B：可机判优先级表（设置页展示） */
+  approvalPolicy(): Promise<ApprovalPolicyResult>
+  /** 标准 §B：申请放行（升级≠免审——批准后仍走审批执行） */
+  approvalEscalate(params: ApprovalEscalateParams): Promise<unknown>
   authLogin(params: AuthLoginParams): Promise<AuthLoginResult>
   a2aStatus(): Promise<A2aStatusResult>
   // DEBT-546 定时任务真链：schedule.* 五方法（daemon 侧调度注册表/RPC 在案）
@@ -86,8 +101,22 @@ export function createClient(transport: RpcTransport): BaizClient {
     // MSG-2722：Blocked 人工回传续跑（daemon handler tool_loop.resume——
     // task_id＋note——authorize 走 rpc 层统一 token 注入）
     taskResume: (params) => rpc.call('tool_loop.resume', { task_id: params.task_id, note: params.note }),
+    // 标准 v1.0 §B：队列单条取消（1.0.16 起 daemon 侧有 chat.queue_cancel）
+    queueCancel: (params) =>
+      rpc.call('chat.queue_cancel', {
+        conversation_id: params.conversation_id,
+        task_id: params.task_id,
+      }),
     permissionPending: () => rpc.call('permission.pending'),
     permissionRespond: (params) => rpc.call('permission.respond', params),
+    approvalRules: async () => {
+      const result = await rpc.call<ApprovalRule[] | { rules?: ApprovalRule[] }>('approval.rules')
+      if (Array.isArray(result)) return result
+      return Array.isArray(result?.rules) ? result.rules : []
+    },
+    approvalRevoke: (params) => rpc.call('approval.revoke', params),
+    approvalPolicy: () => rpc.call('approval.policy'),
+    approvalEscalate: (params) => rpc.call('approval.escalate', params),
     a2aStatus: () => rpc.call('a2a.status'),
     // DEBT-546：daemon schedule.* 五方法（对卯 handler dispatch 同名）
     scheduleCreate: (params) => rpc.call('schedule.create', params),

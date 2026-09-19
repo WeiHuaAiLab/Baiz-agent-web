@@ -223,6 +223,118 @@
   color: #c0392b;
 }
 
+/* —— 标准 v1.0 §C B1~B4：理由置顶／人话摘要／档位下拉／两行按钮 —— */
+.approval-reason {
+  margin-bottom: 6px;
+  color: var(--text);
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.approval-summary {
+  margin: 6px 0 0;
+  color: var(--muted);
+  font-size: 12.5px;
+  line-height: 1.5;
+  overflow-wrap: anywhere;
+}
+
+.approval-scope {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 10px;
+}
+
+.approval-scope-label {
+  flex: none;
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.approval-scope-options {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.scope-option {
+  padding: 3px 10px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: transparent;
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.scope-option.active {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: var(--accent-contrast);
+}
+
+.scope-option:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+.approval-actions-secondary {
+  border-top: 1px dashed var(--border);
+}
+
+.approval-actions .remember:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+.approval-actions .escalate {
+  color: var(--text);
+}
+
+.risk.unknown {
+  background: var(--hover);
+  color: var(--muted);
+}
+
+.risk.small {
+  padding: 0 6px;
+  font-size: 11px;
+}
+
+/* 另有 N 张卡（§C B5）：会话内就地入口 */
+.approval-banner {
+  display: flex;
+  align-items: center;
+  align-self: center;
+  gap: 6px;
+  margin: 8px 16px 0;
+  padding: 6px 12px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--panel);
+  color: var(--text);
+  font-size: 12.5px;
+}
+
+.approval-banner:hover {
+  background: var(--hover);
+}
+
+/* 队列条（§A3）：排队中·第 N 位 ＋ 单条取消 */
+.status-text.queued {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.queue-cancel {
+  padding: 2px 8px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  color: var(--accent);
+  font-size: 12px;
+}
+
 /* 过程回看 */
 .trace-panel {
   margin-top: 8px;

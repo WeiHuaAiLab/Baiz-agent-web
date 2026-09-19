@@ -88,6 +88,11 @@ const reconnect = new SseReconnect({
   // 首连 handshake：短连接探测 daemon 最新 seq（mock 演示无此端不注入）
   ...(transport.kind === 'mock' ? {} : { probeLatestSeq: () => client.probeEventSeq() }),
   onStateChange: (state) => settings.setConnection(state),
+  // 标准 v1.0 §C B6（重连补拉）：每次（重）连建立即调 permission.pending——
+  // 推送可丢、状态须可查，断线期间产生的卡重连后仍在。
+  onConnected: () => {
+    void approvals.syncPending()
+  },
 })
 reconnect.onDispatch((frame) => routeFrame(frame, messages, approvals))
 
