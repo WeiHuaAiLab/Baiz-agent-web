@@ -13,6 +13,7 @@ import {
   formatBytes,
   highlightPreview,
   isCredentialFile,
+  previewFailureKey,
 } from '../../../utils/filePreview'
 import type { PreviewDecode, PreviewLoader } from '../../../utils/filePreview'
 import Icon from '../../common/Icon.vue'
@@ -70,7 +71,10 @@ async function load(): Promise<void> {
     decode.value = decodePreview(bytes, undefined, hints)
   } catch (error) {
     if (seq !== loadSeq) return
-    errorText.value = error instanceof Error ? error.message : String(error)
+    // MSG-3225 ①：人话＋可行动指引＋**服务端原文**（零改写）——旧面只显
+    // 「预览读取失败」六字，用户无从下手。
+    const raw = error instanceof Error ? error.message : String(error)
+    errorText.value = t(previewFailureKey(raw), { detail: raw })
   } finally {
     if (seq === loadSeq) loading.value = false
   }

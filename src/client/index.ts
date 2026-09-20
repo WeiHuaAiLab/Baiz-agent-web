@@ -121,7 +121,17 @@ export function createClient(transport: RpcTransport): BaizClient {
         conversation_id: params.conversation_id,
         task_id: params.task_id,
       }),
-    permissionPending: () => rpc.call('permission.pending'),
+    // MSG-3225 ②（幽灵待办）：**返回形双兼容**——daemon `handler.rs:326`
+    // `handle_permission_pending` 的 `result` 是**裸数组**（实机空册响应 36 B
+    // ＝ `{"jsonrpc":"2.0","id":9,"result":[]}`），而 mock（`demo/script.ts:346`）
+    // 与本文件旧签名都是 `{ pending: [...] }`。旧口径按对象解包 ⇒ 装机面
+    // `pending === undefined` ⇒ 补拉**恒空**（对账失效）。此处统一成 `{ pending }`。
+    permissionPending: async () => {
+      const result = await rpc.call<unknown>('permission.pending')
+      if (Array.isArray(result)) return { pending: result as PendingApproval[] }
+      const maybe = (result ?? {}) as { pending?: unknown }
+      return { pending: Array.isArray(maybe.pending) ? (maybe.pending as PendingApproval[]) : [] }
+    },
     permissionRespond: (params) => rpc.call('permission.respond', params),
     approvalRules: async () => {
       const result = await rpc.call<ApprovalRule[] | { rules?: ApprovalRule[] }>('approval.rules')

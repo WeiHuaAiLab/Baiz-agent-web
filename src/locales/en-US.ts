@@ -93,6 +93,16 @@ export default {
     previewLoading: 'Loading…',
     previewUnavailable: 'Preview is not available for this file yet',
     previewFailed: 'Failed to load preview',
+    // MSG-3225 (1) DEBT-753: preview failure = plain words + action + server text
+    previewFailOutside:
+      'This file is outside the daemon authorized directories; nothing was read or written. Add its folder to authorized_roots in ~/.closer/config.toml, or use a file inside the workspace. Server said: {detail}',
+    previewFailMissing:
+      'The daemon cannot find this file (or the path cannot be resolved); nothing was read or written. Check that the file is still at that location. Server said: {detail}',
+    previewFailUnreadable:
+      'The daemon failed to read this file (permissions / lock / IO); nothing was written. Retry later, or make sure the current user can read it. Server said: {detail}',
+    previewFailTooBig:
+      'The file exceeds the preview read limit (rejected by the daemon); nothing was written. Open it with a system editor instead. Server said: {detail}',
+    previewFailGeneric: 'Failed to load preview (nothing was read or written). Server said: {detail}',
     previewTruncated: 'Truncated: showing first {shown} (of {total})',
     previewBinary: 'Binary file — no preview',
     previewEmpty: 'Empty file',
@@ -436,6 +446,9 @@ export default {
     deny: 'Deny',
     approved: '✓ Approved',
     denied: '✗ Denied',
+    // MSG-3225 (2): terminal state per the daemon's authoritative pending list
+    // (expired / card already settled) — not the same as "denied".
+    expired: '— Expired (never decided)',
     highRisk: 'High risk',
     mediumRisk: 'Medium risk',
     lowRisk: 'Low risk',

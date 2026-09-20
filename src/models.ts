@@ -66,6 +66,9 @@ export interface MessageMeta {
   /** 排队条目已取消 */
   queueCancelled?: boolean
   approved?: boolean
+  /** MSG-3225 ②：按 daemon 权威挂起清单判定的**已终态**（未决超期／已被服务端销卡）
+   *  ——与「用户拒绝」区分（不是 denied），只在服务端已无该 request 时置位 */
+  expired?: boolean
   elapsedMs?: number
   status?: string
   statusKey?: string

@@ -57,7 +57,56 @@ export function base64ToBytes(b64: string): Uint8Array | null {
 
 /** MSG-3014 接线工厂：daemon RPC → PreviewLoader（接真——装机可执行）。
  *  败面/null 俱诚实返回 null（界面降级文案）；daemon 标记随载荷透传
- *  （size/truncated/binary——显示面真值来源）。 */
+ *  （size/truncated/binary——显示面真值来源）。
+ *
+ *  MSG-3225 ①（DEBT-753「预览读取失败」零信息）：**RPC 败面不再吞成 null**——
+ *  包装成 `PreviewLoadError`（带 `kind` 与人话键位）抛给界面，界面按
+ *  `previewFailureKey()` 显「人话＋可行动指引＋服务端原文」。旧口径把
+ *  daemon 的越界原文（如「路径越界（不在授权目录内）」）整条吞掉 ⇒ 界面只剩
+ *  「预览读取失败」六字，用户无从下手。 */
+export class PreviewLoadError extends Error {
+  readonly kind: PreviewFailureKind
+  /** 服务端原文（逐字——零改写，供界面附在指引后） */
+  readonly raw: string
+
+  constructor(raw: string) {
+    super(raw)
+    this.name = 'PreviewLoadError'
+    this.kind = classifyPreviewFailure(raw)
+    this.raw = raw
+  }
+}
+
+export type PreviewFailureKind = 'outside' | 'missing' | 'unreadable' | 'toobig' | 'unknown'
+
+/** 服务端败因归类（纯函数·可机判）：越界／不存在／不可读／过大／未知。 */
+export function classifyPreviewFailure(raw: string): PreviewFailureKind {
+  const s = raw ?? ''
+  if (/越界|不在授权|授权目录|authorized|白名单/.test(s)) return 'outside'
+  if (/过大|too\s*large|MAX_READ/.test(s)) return 'toobig'
+  if (/不存在|不可解析|No such file|os error 2|not found/i.test(s)) return 'missing'
+  if (/不可读|打开失败|读取失败|权限|拒绝访问|Access is denied|Permission denied/i.test(s)) {
+    return 'unreadable'
+  }
+  return 'unknown'
+}
+
+/** 败因 → i18n 键（界面按 `t(key, { detail: 原文 })` 渲染）。 */
+export function previewFailureKey(raw: string): string {
+  switch (classifyPreviewFailure(raw)) {
+    case 'outside':
+      return 'files.previewFailOutside'
+    case 'missing':
+      return 'files.previewFailMissing'
+    case 'unreadable':
+      return 'files.previewFailUnreadable'
+    case 'toobig':
+      return 'files.previewFailTooBig'
+    default:
+      return 'files.previewFailGeneric'
+  }
+}
+
 export function createRpcPreviewLoader(call: PreviewRpcCaller): PreviewLoader {
   return async (path: string): Promise<Uint8Array | PreviewPayload | null> => {
     try {
@@ -71,8 +120,11 @@ export function createRpcPreviewLoader(call: PreviewRpcCaller): PreviewLoader {
         truncated: resp.truncated === true,
         binary: resp.binary === true,
       }
-    } catch {
-      return null
+    } catch (error) {
+      // MSG-3225 ①：败面**上抛原文**（不再静默 null）。null 只留给
+      // 「服务端回了载荷但载荷不可用」这一档（诚实降级）。
+      const raw = error instanceof Error ? error.message : String(error)
+      throw new PreviewLoadError(raw)
     }
   }
 }

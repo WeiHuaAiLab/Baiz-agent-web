@@ -733,6 +733,39 @@ export const useMessageStore = defineStore('message', {
         delete this.requestToConversation[data.request_id]
       }
     },
+    /**
+     * MSG-3225 ②（待办收件箱幽灵项）：按 daemon **权威挂起清单**给本地已终态卡收口。
+     *
+     * 病灶：收件箱面板的真源是 `messages.list('__inbox__')`（**已持久化的聊天消息**），
+     * 不是 `approvals.pending`；`approval.resolved` 帧一旦缺失（超时销卡帧未达／
+     * App 关闭／流断），`meta.approved` 永不置位 ⇒ 卡在收件箱里**永久留存**
+     * （老板实机 51 条，最早今晨）。daemon 侧挂起表实机已空 ⇒ 属**前端本地残留**，
+     * 不是「daemon 未销卡」。
+     *
+     * 口径：**只标终态、不删档**（可逆——消息与原文俱在，只是不再计入待办）；
+     * `notBefore` 之后到达的卡**一律不动**（防与在途帧竞态误杀新卡）。
+     *
+     * @returns 本次收口的条数（供实测/讫报「清场后条数」）
+     */
+    expireStaleApprovals(liveRequestIds: Iterable<string>, notBefore: number): number {
+      const live = new Set(liveRequestIds)
+      let expiredCount = 0
+      for (const list of Object.values(this.byConversation)) {
+        for (const msg of list) {
+          if (msg.kind !== 'approval') continue
+          const meta = msg.meta
+          if (!meta || meta.approved !== undefined) continue
+          const requestId = meta.requestId
+          if (!requestId || live.has(requestId)) continue
+          if (!(msg.createdAt < notBefore)) continue
+          msg.meta = { ...meta, approved: false, expired: true }
+          msg.text = '已失效（未决超期）'
+          void db.messages.put(cloneForDb(msg))
+          expiredCount += 1
+        }
+      }
+      return expiredCount
+    },
     onDone(data: DoneData) {
       this.markRunActive(data.task_id)
       const run = this.runs[data.task_id]
