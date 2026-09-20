@@ -178,6 +178,22 @@ export interface WeknoraSetConfigResult {
   normalized_base_url?: string
 }
 
+// —— MSG-3189 `E2②`：切档审计（**契约先行**·daemon 面待落地）——
+// 口径建议：`audit.execModeChanged`；字段 mode／previous／at／account（见讫报字段表）。
+
+export type ExecModeWire = 'plan' | 'confirm' | 'auto'
+
+export interface AuditExecModeChangedParams {
+  /** 调**到**哪一档 */
+  mode: ExecModeWire
+  /** 调**自**哪一档 */
+  previous: ExecModeWire
+  /** 切档时刻（ISO-8601·前端时钟） */
+  at: string
+  /** 账号（daemon user_id；未登录＝'local'） */
+  account: string
+}
+
 export interface TokenData {
   task_id: string
   token: string

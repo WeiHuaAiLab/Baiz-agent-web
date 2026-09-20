@@ -9,6 +9,7 @@ import { useUiStore } from './stores/ui'
 import { seedDemoIfNeeded } from './demo/seed'
 import { useWorkingTreeStore } from './stores/workingTree'
 import { useMemoryStore } from './stores/memory'
+import { useExecModeStore } from './stores/execMode'
 import CommandPalette from './components/CommandPalette.vue'
 import OnboardingOverlay from './components/OnboardingOverlay.vue'
 import StatusBar from './components/StatusBar.vue'
@@ -23,6 +24,7 @@ const ui = useUiStore()
 const settings = useSettingsStore()
 const working = useWorkingTreeStore()
 const memory = useMemoryStore()
+const execMode = useExecModeStore()
 
 function applyTheme() {
   document.documentElement.dataset.theme = settings.theme
@@ -31,6 +33,8 @@ function applyTheme() {
 onMounted(async () => {
   // 应用主题
   applyTheme()
+  // MSG-3189 E2③：介入方式**启动加载**——fail-closed：盘上"完全执行"一律回落「每次确认」
+  execMode.hydrate()
   // 创建Demo会话
   await seedDemoIfNeeded()
   // 模拟工作树（编码版本管理）[初始化workingTree树结构到Store中]

@@ -13,6 +13,7 @@ export type IconName =
   | 'copy'
   | 'refresh'
   | 'check'
+  | 'shield'
   | 'user'
   | 'feedback'
   | 'info'
@@ -53,6 +54,8 @@ const paths: Record<IconName, string> = {
   copy: 'M9 9h11v11H9zM5 15V5h10',
   refresh: 'M21 12a9 9 0 1 1-2.6-6.4M21 3v6h-6',
   check: 'M4 12l5 5L20 7',
+  // MSG-3189 E1：介入方式（权限档）图标
+  shield: 'M12 3l7 3v6c0 4.2-2.9 7.6-7 9-4.1-1.4-7-4.8-7-9V6l7-3Z',
   user: 'M12 12a4 4 0 1 0 0-8 4 4 0 0 0 0 8Zm-7 8a7 7 0 0 1 14 0',
   feedback: 'M21 15a2 2 0 0 1-2 2H9l-5 4V5a2 2 0 0 1 2-2h13a2 2 0 0 1 2 2v10ZM12 8v3M12 14h.01',
   info: 'M12 21a9 9 0 1 0 0-18 9 9 0 0 0 0 18Zm0-13v5M12 16h.01',

@@ -8,6 +8,7 @@ import type {
   ApprovalPolicyResult,
   ApprovalRevokeParams,
   ApprovalRule,
+  AuditExecModeChangedParams,
   AuthHandshakeParams,
   AuthLoginParams,
   AuthLoginResult,
@@ -74,6 +75,12 @@ export interface BaizClient {
   weknoraGetConfig(params?: { token?: string }): Promise<WeknoraConfigResult>
   /** DEBT-743：写知识库连接配置（`api_key` 入参即写、零回显、零落日志） */
   weknoraSetConfig(params: WeknoraSetConfigParams): Promise<WeknoraSetConfigResult>
+  /**
+   * MSG-3189 `E2②`：切档审计（**契约先行**）——口径 `audit.execModeChanged`，
+   * 字段 `mode／previous／at／account`。daemon 面未落地前调用会失败（-32601），
+   * 调用方（`stores/execMode.ts`）**本地留存待上报**，不静默丢弃。
+   */
+  auditExecModeChanged(params: AuditExecModeChangedParams): Promise<unknown>
   onEvent(handler: (frame: SseFrame) => void): () => void
   close(): void
 }
@@ -144,6 +151,7 @@ export function createClient(transport: RpcTransport): BaizClient {
     weknoraGetConfig: (params) => rpc.call<WeknoraConfigResult>('weknora.get_config', params ?? {}),
     weknoraSetConfig: (params) =>
       rpc.call<WeknoraSetConfigResult>('weknora.set_config', params),
+    auditExecModeChanged: (params) => rpc.call('audit.execModeChanged', params),
     onEvent: (handler) => transport.onEvent(handler),
     close: () => transport.close(),
   }

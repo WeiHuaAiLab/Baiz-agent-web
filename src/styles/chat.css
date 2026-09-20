@@ -792,6 +792,118 @@
 }
 
 
+/* MSG-3189 E1：介入方式选择器（`+` 旁·当前档常显）
+   圆角 8／间距 4 倍数／热区 ≥44×44（::after 扩，不撑视觉高）／九态齐 */
+.exec-mode {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+}
+
+.exec-mode-btn {
+  position: relative;
+  height: 32px;
+  padding: 0 12px;
+  border: 1px solid transparent;
+  border-radius: 8px;
+  color: var(--muted);
+  font-size: 13px;
+  transition:
+    background 150ms cubic-bezier(0.4, 0, 0.2, 1),
+    color 150ms cubic-bezier(0.4, 0, 0.2, 1),
+    border-color 150ms cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* 热区 ≥44×44（视觉高 32 ⇒ 上下各扩 6） */
+.exec-mode-btn::after {
+  content: '';
+  position: absolute;
+  inset: -6px -4px;
+}
+
+.exec-mode-btn:hover {
+  color: var(--text);
+  background: var(--hover);
+}
+
+.exec-mode-btn:active {
+  filter: brightness(0.95);
+}
+
+.exec-mode-btn:focus-visible {
+  outline: none;
+  box-shadow: var(--shadow-focus);
+}
+
+.exec-mode-btn.active {
+  border-color: var(--border-strong);
+  color: var(--text);
+}
+
+.exec-mode-label {
+  white-space: nowrap;
+}
+
+.exec-mode-menu {
+  position: absolute;
+  bottom: calc(100% + 8px);
+  left: 0;
+  z-index: 40;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 240px;
+  padding: 8px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--surface);
+  box-shadow: var(--shadow-md);
+}
+
+.exec-mode-item {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 4px;
+  width: 100%;
+  padding: 8px 12px;
+  border: 1px solid transparent;
+  border-radius: 8px;
+  text-align: left;
+  color: var(--text);
+}
+
+.exec-mode-item:hover {
+  background: var(--hover);
+}
+
+.exec-mode-item:focus-visible {
+  outline: none;
+  box-shadow: var(--shadow-focus);
+}
+
+.exec-mode-item.active {
+  border-color: var(--accent);
+  background: var(--accent-soft);
+}
+
+.em-name {
+  font-size: 13px;
+}
+
+.em-hint {
+  color: var(--text-secondary);
+  font-size: 11px;
+  line-height: 1.4;
+}
+
+.em-note {
+  margin: 4px 0 0;
+  color: var(--text-secondary);
+  font-size: 11px;
+  line-height: 1.4;
+}
+
 .actions-spacer {
   flex: 1;
 }

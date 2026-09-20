@@ -466,6 +466,19 @@ export default {
     revoke: 'Revoke',
     revokeHint: 'After revoking, the same action asks again',
   },
+  // MSG-3189 E1/E2: intervention mode selector (three tiers; current always visible)
+  execMode: {
+    label: 'Intervention',
+    plan: 'Plan first',
+    confirm: 'Confirm each',
+    auto: 'Full execution',
+    planHint: 'Draft a plan before touching files; you approve, then it edits',
+    confirmHint: 'Ask on every file write / command (default)',
+    autoHint: 'Stop asking each time — sandbox, allowlist and authorized dirs still apply',
+    title: 'Intervention: {mode} ({hint})',
+    orthogonal:
+      'Independent of "remember scope" (card options) and "authorized directories" — three different layers.',
+  },
   // DEBT-738 (MSG-3148): no mock fallback in production — offline gate screen
   offline: {
     title: 'Cannot reach the local service',

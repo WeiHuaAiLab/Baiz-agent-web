@@ -463,6 +463,18 @@ export default {
     revoke: '撤销',
     revokeHint: '撤销后，同类操作会重新弹卡确认',
   },
+  // MSG-3189 E1／E2：介入方式选择器（三档·当前档常显·默认每次确认）
+  execMode: {
+    label: '介入方式',
+    plan: '计划模式',
+    confirm: '每次确认',
+    auto: '完全执行',
+    planHint: '动手前先出计划；你点头再改文件',
+    confirmHint: '每次改文件／跑命令都弹卡确认（默认）',
+    autoHint: '不再逐次弹卡——沙箱、白名单、授权目录照旧生效',
+    title: '介入方式：{mode}（{hint}）',
+    orthogonal: '与「记住范围」（卡上四档）、「授权目录」互不替代——三者是不同层。',
+  },
   // DEBT-738（MSG-3148）：生产禁兜底 mock ⇒ 传输取不到时挂「无法连接本地服务」页
   offline: {
     title: '无法连接本地服务',

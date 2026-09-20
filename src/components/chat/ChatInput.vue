@@ -16,6 +16,8 @@ import {
 import type { TaskDraft } from "../../stores/workspace";
 import { useUiStore } from "../../stores/ui";
 import { useFilesStore } from "../../stores/files";
+import { useExecModeStore } from "../../stores/execMode";
+import type { ExecMode } from "../../stores/execMode";
 import { getBridge } from "../../bridge";
 import { clearDraft, loadDraft, saveDraft } from "../../drafts";
 import { formatFileSize, shortMime } from "../../utils/format";
@@ -35,6 +37,24 @@ const settings = useSettingsStore();
 const workspace = useWorkspaceStore();
 const ui = useUiStore();
 const files = useFilesStore();
+// MSG-3189 E1：介入方式（三档·当前档常显）
+const execMode = useExecModeStore();
+const execMenuOpen = ref(false);
+const execModeOptions = computed<Array<{ value: ExecMode; label: string; hint: string }>>(() => [
+    { value: "plan", label: t("execMode.plan"), hint: t("execMode.planHint") },
+    { value: "confirm", label: t("execMode.confirm"), hint: t("execMode.confirmHint") },
+    { value: "auto", label: t("execMode.auto"), hint: t("execMode.autoHint") },
+]);
+const execModeTitle = computed(() =>
+    t("execMode.title", {
+        mode: t(`execMode.${execMode.mode}`),
+        hint: t(`execMode.${execMode.mode}Hint`),
+    }),
+);
+async function chooseExecMode(mode: ExecMode) {
+    execMenuOpen.value = false;
+    await execMode.setMode(mode);
+}
 // DEBT-540-B：＋号门禁前置——能力门前置钮层（tauri 壳未注册时禁用＋
 // 单条明示——勿点击后连 toast）
 const attachSupported = computed(() => getBridge().has('fs.pickAttachment'));
@@ -476,6 +496,42 @@ watch(
                 >
                     <Icon name="plus" :size="16" />
                 </button>
+
+                <!-- MSG-3189 E1：介入方式选择器（`+` 旁·**当前档常显**·默认「每次确认」） -->
+                <div class="exec-mode">
+                    <button
+                        type="button"
+                        class="act-btn exec-mode-btn"
+                        :class="{ active: execMode.isAuto }"
+                        :title="execModeTitle"
+                        :aria-label="execModeTitle"
+                        aria-haspopup="menu"
+                        :aria-expanded="execMenuOpen"
+                        data-exec-mode="button"
+                        @click="execMenuOpen = !execMenuOpen"
+                    >
+                        <Icon name="shield" :size="16" />
+                        <span class="exec-mode-label">{{ t(`execMode.${execMode.mode}`) }}</span>
+                    </button>
+                    <div v-if="execMenuOpen" class="exec-mode-menu" role="menu">
+                        <button
+                            v-for="option in execModeOptions"
+                            :key="option.value"
+                            type="button"
+                            role="menuitemradio"
+                            class="exec-mode-item"
+                            :class="{ active: execMode.mode === option.value }"
+                            :aria-checked="execMode.mode === option.value"
+                            :data-mode="option.value"
+                            @click="chooseExecMode(option.value)"
+                        >
+                            <span class="em-name">{{ option.label }}</span>
+                            <span class="em-hint">{{ option.hint }}</span>
+                        </button>
+                        <!-- E2④ 三层正交：介入方式（本档）× 记住范围（卡上四档）× 授权目录 -->
+                        <p class="em-note">{{ t('execMode.orthogonal') }}</p>
+                    </div>
+                </div>
 
                 <!-- MSG-2722 L3 编程 UI：编程模式钮（mode=programming——
                     ToolLoop 真件链——发送侧消费 ui.programmingMode） -->
