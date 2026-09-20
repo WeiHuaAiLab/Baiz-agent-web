@@ -35,6 +35,7 @@ export default {
     dropUnsupported: '当前版本不支持拖拽上传（请更新壳）',
     stop: '停止',
     scrollToLatest: '回到最新',
+    loadingMessages: '消息加载中…',
     export: '导出会话',
     openPanel: '打开文件面板',
     toggleSidebar: '展开/收起侧栏',

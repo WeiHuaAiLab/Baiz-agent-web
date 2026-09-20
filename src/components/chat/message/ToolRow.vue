@@ -3,14 +3,14 @@
 // 文件类工具的 path 命中预览型扩展（HTML/JS/CSS/Vue/TS/SVG/...）时改用 FileCard，
 // 其余扩展保留原 .file-ref 链接——保持最小侵入。
 import { computed, ref } from 'vue'
-import type { ChatMessage } from '../../models'
-import { useWorkingTreeStore } from '../../stores/workingTree'
-import { useSettingsStore } from '../../stores/settings'
-import { diffStats } from '../../utils/diff'
-import { translateTool } from '../../utils/commandTranslator'
-import { extractFilePath, extractShellCommand, extractUrl, parseTraceArgs } from '../../utils/traceText'
-import { classifyFile } from '../../utils/fileCard'
-import Icon from '../common/Icon.vue'
+import type { ChatMessage } from '../../../models'
+import { useWorkingTreeStore } from '../../../stores/workingTree'
+import { useSettingsStore } from '../../../stores/settings'
+import { diffStats } from '../../../utils/diff'
+import { translateTool } from '../../../utils/commandTranslator'
+import { extractFilePath, extractShellCommand, extractUrl, parseTraceArgs } from '../../../utils/traceText'
+import { classifyFile } from '../../../utils/fileCard'
+import Icon from '../../common/Icon.vue'
 import FileCard from './FileCard.vue'
 
 const props = defineProps<{ message: ChatMessage }>()

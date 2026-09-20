@@ -62,14 +62,14 @@ describe('Reasoning 帧 UI 回显', () => {
     await settleMount()
     routeFrame(reasoningFrame(taskId, '第一步先分析'), messages, approvals)
     await wrapper.vm.$nextTick()
-    const block = wrapper.find('.streaming-tail .reasoning-stream')
+    const block = wrapper.find('.streaming-tail .reasoning-block')
     expect(block.exists()).toBe(true)
-    expect(wrapper.find('.reasoning-stream-head').text()).toContain('思考过程')
-    expect(wrapper.find('.reasoning-stream-body').text()).toContain('第一步先分析')
+    expect(wrapper.find('.streaming-tail .reasoning-head').text()).toContain('深度思考')
+    expect(wrapper.find('.streaming-tail .reasoning-body').text()).toContain('第一步先分析')
 
     routeFrame(reasoningFrame(taskId, '，再设计方案'), messages, approvals)
     await wrapper.vm.$nextTick()
-    expect(wrapper.find('.reasoning-stream-body').text()).toBe(
+    expect(wrapper.find('.streaming-tail .reasoning-body').text()).toBe(
       '第一步先分析，再设计方案',
     )
   })
@@ -92,12 +92,13 @@ describe('Reasoning 帧 UI 回显', () => {
       .filter((i) => i.kind === 'assistant')
     expect(assistants.length).toBe(1)
     expect(store.runs[taskId].reasoning).toContain('深度思考全量内容')
-    // 思考块在（终态折叠——2413 面）；展开可见全量 reasoning
+    // 思考块在；终态默认展开（落地后不该藏起来），内容可见
     const thought = wrapper.find('.reasoning-block')
     expect(thought.exists()).toBe(true)
-    expect(wrapper.find('.reasoning-block .reasoning-body').exists()).toBe(false)
-    await wrapper.find('.reasoning-head').trigger('click')
+    expect(wrapper.find('.reasoning-block .reasoning-body').exists()).toBe(true)
     expect(wrapper.find('.reasoning-body').text()).toContain('深度思考全量内容')
+    await wrapper.find('.reasoning-head').trigger('click')
+    expect(wrapper.find('.reasoning-block .reasoning-body').exists()).toBe(false)
   })
 
   it('真无输出不误伤：无正文无思考——「（无输出）」照显', async () => {
@@ -117,7 +118,7 @@ describe('Reasoning 帧 UI 回显', () => {
     await wrapper.vm.$nextTick()
     await new Promise((resolve) => setTimeout(resolve, 160)) // token flush 100ms 窗
     await wrapper.vm.$nextTick()
-    expect(wrapper.find('.reasoning-stream-body').text()).toContain('边想边写')
+    expect(wrapper.find('.streaming-tail .reasoning-body').text()).toContain('边想边写')
     // token 正文照渲（StreamingMarkdownView 区在——run.text 累积）
     const run = useMessageStore().runs[taskId]
     expect(run.text).toBe('你好，世界')

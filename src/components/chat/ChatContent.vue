@@ -1,7 +1,6 @@
 <script setup lang="ts">
-// 聊天内容体：重连提示、空状态、虚拟滚动消息列表、流式渲染尾条与"回到最新"按钮。
-// 暴露 scrollToBottom()（发送消息后强制回到底部）；滚动容器就绪/内容变化时通过
-// scroller-ready / content-changed 事件通知外层 OverlayScrollArea 更新悬浮滚动条。
+// 聊天内容体：重连提示、空状态、骨架屏（加载占位）、虚拟滚动消息列表、流式渲染尾条与"回到最新"按钮。
+// 暴露 scrollToBottom()（发送消息后强制回到底部）+ unpin()（外部主动解除流式贴底）。
 import { computed, nextTick, onBeforeUnmount, ref, watch } from 'vue'
 import { DynamicScroller, DynamicScrollerItem } from 'vue-virtual-scroller'
 import { useI18n } from 'vue-i18n'
@@ -13,6 +12,7 @@ import { getBridge } from '../../bridge'
 import type { ChatMessage, RunState } from '../../models'
 import MessageItem from './MessageItem.vue'
 import StreamingMarkdownView from '../markdown/StreamingMarkdownView.vue'
+import SkeletonChatView from './SkeletonChatView.vue'
 
 const { t } = useI18n()
 const session = useSessionStore()
@@ -20,33 +20,102 @@ const messages = useMessageStore()
 const settings = useSettingsStore()
 const ui = useUiStore()
 
-// 事件：
-// - scroller-ready：虚拟滚动容器（DynamicScroller 根 .vue-recycle-scroller）就绪/销毁时上报 DOM，
-//   外层 OverlayScrollArea 以此作为滚动条 target（响应式更新，解决异步加载时序问题）。
-// - content-changed：消息内容（长度/文本/流式）变化后通知外层刷新悬浮滑块位置。
-const emit = defineEmits<{
-  (e: 'scroller-ready', el?: HTMLElement): void
-  (e: 'content-changed'): void
-}>()
+// 历史上 ChatContent 向外层 OverlayScrollArea 上报 scroller-ready / content-changed 用于绘制
+// 悬浮滚动条；v2 起 OverlayScrollArea 退化为普通容器（性能优先），这两个事件无接收方，
+// 故移除。如未来需要再次「主动通知外层某事件」再考虑重新引入。
 
 const scroller = ref<{
   scrollToItem(index: number, options?: ScrollToOptions): void
   $el: HTMLElement
 }>()
+// 贴底（跟随）状态 =「用户是否还想跟着底部走」，只能由用户手势置 false。
+// 为什么不看滚动位置：写 scrollTop 的不止用户——① 本文件的贴底循环；
+// ② DynamicScroller 在 item 尺寸变化后按「逻辑位置」恢复 scrollTop
+//    （useDynamicScroller 里 flush:post 的 watcher，还会 dispatch 合成 scroll 事件）；
+// ③ 内容收缩时浏览器把 scrollTop clamp 回去。
+// 旧实现把「离底部 > 120px」当解除信号，于是上面任一次程序写入都会把 pinned
+// 打成 false 并停掉循环，而此后没有任何代码路径把它置回 true —— 流式尾条就永久
+// 停在视口下方（实测：一次程序写入后 gap 只增不减，内容再长视图也不动）。
+// 现在：scroll 事件只在「用户手势窗内」参与解除判定；任何原因触底都重新吸附。
 const pinned = ref(true)
+// 「真的到底」容差：吸附态下 scrollTop 被 clamp 到整数像素，留 8px 抗 DPR 取整
+const BOTTOM_EPS = 8
+// 手势内「回到吸附带」容差：滚轮一格 ~100px，要用户贴到 8px 内不现实。
+// 沿用旧的 120px 阈值，但它现在只对手势生效，程序写入撞不进这个判定
+const REARM_PX = 120
+// 用户手势有效期：wheel / touch / 键盘翻页 / 拖悬浮滑块之后这么久内的 scroll
+// 事件才可能是「人滚的」，窗口外的一律视为程序写入
+const GESTURE_MS = 250
+// 贴底循环的静默预算（帧）：流式进行中常驻；流式结束后再跑这么多帧，
+// 吸收「尾条下线 → 真实消息上线」时 item 高度「估计值 → 实测值」的两跳，之后自动退出
+const PIN_IDLE_FRAMES = 30
 
 let scrollEl: HTMLElement | null = null
+let gestureUntil = 0
+let touchY: number | null = null
 // 流式期间的 rAF 贴底循环句柄：DynamicScroller 是动态高度虚拟滚动，
 // item 真实高度在渲染后由 ResizeObserver 下一帧才测量更新，单次
 // scrollTop=scrollHeight 会停在旧高度，循环可保证始终贴住真实底部。
 let pinRafId = 0
+let pinIdle = PIN_IDLE_FRAMES
+
+/* DynamicScroller 测量期遮罩：
+   DynamicScroller 是「动态高度」虚拟滚动——item 真实高度要等渲染后 ResizeObserver
+   异步测量才知道。在测量完成前，库的累积偏移是按 min-item-size 估的，第一个真
+   实高度远超估值的 item 出现时，下一个 item 会按旧偏移叠上去——视觉上瞬间「文字
+   内容重叠」。该库的固有视觉残影，无法只靠 CSS 修复。
+   修法：在 DynamicScroller 同级盖一层 absolute 铺满的 mask（SkeletonChatView），
+   把测量窗口期（~10 帧 ≈ 167ms）整体遮住，用户看不到「重叠」瞬间，只看到
+   「骨架 → 真内容」过渡。同 DOM 结构（msg.user / msg.assistant + sk-line 宽度
+   不同）保证落定不发生纵向位移。
+   —— 不在流式期使用：流式期每个 token 都会触发 ResizeObserver 重新测量，如开启
+     会一直盖着挡住用户看 tail；流式期 payload 增长的是「最后一条 run」，没有重叠
+     问题（run 在 after 槽，不是 RecycleScroller 的标准 item）。 */
+const showMeasurementOverlay = ref(false)
+let measurementFrames = 0
+let measurementRafId = 0
+const MEASUREMENT_FRAMES = 10 // ~167ms @60Hz：覆盖库内 ResizeObserver + Vue nextTick 两阶段
+
+function startMeasurementOverlay() {
+  if (streamingRuns.value.length > 0) return
+  if (measurementRafId) cancelAnimationFrame(measurementRafId)
+  showMeasurementOverlay.value = true
+  measurementFrames = 0
+  const tick = () => {
+    measurementFrames++
+    if (measurementFrames >= MEASUREMENT_FRAMES) {
+      showMeasurementOverlay.value = false
+      measurementRafId = 0
+      return
+    }
+    measurementRafId = requestAnimationFrame(tick)
+  }
+  measurementRafId = requestAnimationFrame(tick)
+}
+
+onBeforeUnmount(() => {
+  if (measurementRafId) cancelAnimationFrame(measurementRafId)
+})
+
+function markGesture() {
+  gestureUntil = performance.now() + GESTURE_MS
+}
+
+function atBottom(el: HTMLElement) {
+  return el.scrollTop + el.clientHeight >= el.scrollHeight - BOTTOM_EPS
+}
 
 function startPinLoop() {
+  pinIdle = PIN_IDLE_FRAMES
   if (pinRafId || !pinned.value || !scrollEl) return
   const tick = () => {
     pinRafId = 0
     if (!pinned.value || !scrollEl) return
-    scrollEl.scrollTop = scrollEl.scrollHeight
+    // 已贴底就不写：写 scrollTop 会强制一次 layout、并派发 scroll 事件
+    // （后者又驱动 OverlayScrollArea.sync），稳态下每帧白做一遍
+    if (!atBottom(scrollEl)) scrollEl.scrollTop = scrollEl.scrollHeight
+    // 流式进行中常驻（内容每 100ms 就在长）；流式结束后按静默预算自动退出
+    if (streamingRuns.value.length === 0 && --pinIdle <= 0) return
     pinRafId = requestAnimationFrame(tick)
   }
   pinRafId = requestAnimationFrame(tick)
@@ -59,9 +128,29 @@ function stopPinLoop() {
   }
 }
 
+/** 解除跟随（用户主动离开底部：上滚 / 拖悬浮滑块 / 键盘向上翻页） */
+function unpin() {
+  // 解除跟随（用户主动离开底部：上滚 / 键盘向上翻页）。
+  // 注：v2 起 OverlayScrollArea 不再绘制悬浮滑块，拖悬浮滑块的解除路径已下线；
+  // 仍保留此函数供外部（如 ChatView）需要时主动解除时调用。
+  pinned.value = false
+  stopPinLoop()
+}
+
 const activeId = computed(() => session.activeId)
 const displayItems = computed<ChatMessage[]>(() => [...messages.list(activeId.value)])
 const streamingRuns = computed(() => messages.activeRuns(activeId.value))
+
+// 「加载中」判定：当前 activeId 对应的消息列表尚未从 IndexedDB 载入
+//（byConversation[id] === undefined）。
+// 与"加载完且为空"区分：前者说明数据正在异步载入，应显示骨架屏（避免空帧闪
+// empty-state）；后者说明这是合法空会话（用户清空了消息），应显示 empty-state。
+// 为什么不看 displayItems：displayItems === 0 在两种情况下都成立，会把骨架屏吞掉。
+const isLoadingMessages = computed(() => {
+  const id = activeId.value
+  if (!id) return false
+  return messages.byConversation[id] === undefined
+})
 
 // 流式尾条思考过程折叠：默认展开（实时查看推理），reasoning 帧停止增长 2 秒后自动折叠，
 // 用户点击 head 可手动切换；进入历史消息（无活跃 run）不参与此状态。
@@ -90,6 +179,11 @@ watch(
   { deep: true, immediate: true },
 )
 
+// 折叠态判定：只要没被显式写成 false 就展开（流式期默认展开——实时可读）
+function reasoningOpen(taskId: string): boolean {
+  return reasoningShowMap.value[taskId] !== false
+}
+
 function toggleReasoning(taskId: string) {
   const current = reasoningShowMap.value[taskId]
   reasoningShowMap.value = { ...reasoningShowMap.value, [taskId]: !current }
@@ -109,42 +203,101 @@ onBeforeUnmount(() => {
 watch(
   activeId,
   async (id) => {
-    // 切换会话：重置贴底状态；消息加载完毕后默认滚动到底部
+    // 切换会话：重置贴底状态；消息加载完毕后默认滚动到底部。
+    // 注意：单次 scrollTop = scrollHeight 不能保证贴底成功——DynamicScroller 是动态高度
+    // 虚拟滚动，item 真实高度靠 ResizeObserver 异步测量，初始 scrollHeight 只是「估计值」。
+    // 用贴底循环代替：每帧检查 + 写入，直到真贴底（PIN_IDLE_FRAMES = 30 帧 ≈ 500ms
+    // 足够覆盖 estimate → measure 的两跳）。流式期（如果切到正在切会立即发起流式）
+    // 会自动转为常驻，不退。scroller watch 会在 scrollEl 就绪后补一次 startPinLoop，
+    // 覆盖「messages.load 后 scrollEl 还没绑定」的时序差。
     pinned.value = true
     if (!id) return
     await messages.load(id)
-    // 等虚拟滚动容器渲染、scrollEl 绑定完成（scroller 的 watch 为 post flush，
-    // 在 nextTick 回调之前已执行），再强制贴底
-    await nextTick()
-    if (scrollEl) scrollEl.scrollTop = scrollEl.scrollHeight
+    startPinLoop()
   },
   { immediate: true },
 )
 
 function onScroll(event: Event) {
   const el = event.target as HTMLElement
-  pinned.value = el.scrollTop + el.clientHeight >= el.scrollHeight - 120
-  // 用户上滚脱离贴底：停止流式贴底循环（下一帧起不再强制回底）
-  if (!pinned.value) stopPinLoop()
+  const gap = el.scrollHeight - el.clientHeight - el.scrollTop
+  if (gap <= BOTTOM_EPS) {
+    // 任何原因触底（贴底循环 / 手滚 / 拖滑块 / 库的定位恢复恰好落在底部）
+    // 都算吸附——这是「跟随」唯一的重新武装点
+    pinned.value = true
+    return
+  }
+  // 非触底：只有用户手势窗内的滚动才代表「人主动离开底部」；
+  // 窗口外的（贴底循环自身、虚拟列表的逻辑位置恢复、clamp）一律忽略，
+  // 否则一次程序写入就能永久掐死贴底循环
+  if (performance.now() > gestureUntil) return
+  if (gap > REARM_PX) unpin()
+  else if (!pinned.value) pinned.value = true
+}
+
+// —— 用户滚动手势：只登记意图，吸附判定统一收口在 onScroll ——
+// 上滚要立即解除（不等 scroll 事件落地），否则当帧还会和贴底循环抢一次 scrollTop
+function onWheel(event: WheelEvent) {
+  markGesture()
+  if (event.deltaY < 0) unpin()
+}
+
+function onTouchStart(event: TouchEvent) {
+  markGesture()
+  touchY = event.touches[0]?.clientY ?? null
+}
+
+function onTouchMove(event: TouchEvent) {
+  markGesture()
+  const y = event.touches[0]?.clientY
+  // 手指下滑 = 内容上移 = 离开底部
+  if (y !== undefined && touchY !== null && y > touchY + 2) unpin()
+  if (y !== undefined) touchY = y
+}
+
+const SCROLL_KEYS = new Set(['PageUp', 'PageDown', 'ArrowUp', 'ArrowDown', 'Home', 'End', ' '])
+// keydown 冒泡自滚动容器内的聚焦元素（容器本身不可聚焦，但翻页键会滚最近的祖先）
+function onKeydown(event: KeyboardEvent) {
+  if (!SCROLL_KEYS.has(event.key)) return
+  markGesture()
+  if (event.key === 'PageUp' || event.key === 'ArrowUp' || event.key === 'Home') unpin()
+}
+
+function detachScrollListeners() {
+  if (!scrollEl) return
+  scrollEl.removeEventListener('scroll', onScroll)
+  scrollEl.removeEventListener('wheel', onWheel)
+  scrollEl.removeEventListener('touchstart', onTouchStart)
+  scrollEl.removeEventListener('touchmove', onTouchMove)
+  scrollEl.removeEventListener('keydown', onKeydown)
 }
 
 // 虚拟滚动容器就绪/销毁时：
-// 1) 手动绑定 scroll（组件 @scroll 不会转发到内部根元素 —— inheritAttrs:false，此前贴底判断从未执行）；
-// 2) 上报容器给外层 OverlayScrollArea 作为滚动条 target。
+// 手动绑定 scroll 与滚动手势（组件 @scroll 不会转发到内部根元素 —— inheritAttrs:false，
+// 此前贴底判断从未执行）；不再向上 emit scroller-ready（v2 起外层 OverlayScrollArea
+// 不再监听 target）。
 watch(
   scroller,
   (s) => {
-    if (scrollEl) scrollEl.removeEventListener('scroll', onScroll)
+    detachScrollListeners()
     scrollEl = (s?.$el as HTMLElement | undefined) ?? null
-    if (scrollEl) scrollEl.addEventListener('scroll', onScroll, { passive: true })
-    emit('scroller-ready', scrollEl ?? undefined)
+    if (scrollEl) {
+      scrollEl.addEventListener('scroll', onScroll, { passive: true })
+      scrollEl.addEventListener('wheel', onWheel, { passive: true })
+      scrollEl.addEventListener('touchstart', onTouchStart, { passive: true })
+      scrollEl.addEventListener('touchmove', onTouchMove, { passive: true })
+      scrollEl.addEventListener('keydown', onKeydown)
+      // 首次绑定常发生在「发送之后、首个 token 之前」：那一刻 onSubmitted 里的
+      // startPinLoop 因 scrollEl 还没就绪而落空，这里补一次
+      if (pinned.value && streamingRuns.value.length > 0) startPinLoop()
+    }
   },
   { flush: 'post' },
 )
 
 onBeforeUnmount(() => {
   stopPinLoop()
-  if (scrollEl) scrollEl.removeEventListener('scroll', onScroll)
+  detachScrollListeners()
   scrollEl = null
 })
 
@@ -152,33 +305,44 @@ watch(
   () =>
     displayItems.value.length +
     (displayItems.value.at(-1)?.text ?? '').length +
-    streamingRuns.value.reduce((sum, run) => sum + run.text.length, 0),
-  async () => {
-    // 内容变化（含流式增长）：通知外层刷新悬浮滑块（上滚脱离贴底时 scrollTop 不变，需手动 sync）
-    emit('content-changed')
-    if (!pinned.value) return
-    if (streamingRuns.value.length > 0) {
-      // 流式期：item 高度每帧异步测量，由 rAF 循环持续贴底
-      startPinLoop()
-      return
-    }
-    await nextTick()
-    // 直接将 scrollTop 设为 scrollHeight，绕过 virtual scroller 的
-    // scrollToItem 索引计算（虚拟滚动中 item 高度尚未 layout 时会被下一次的 render
-    // 覆盖回旧的偏移，表现为「滚到底但没真的到底」）
-    if (scrollEl) scrollEl.scrollTop = scrollEl.scrollHeight
+    // reasoning 一并计入：流式尾条（含思考区）已移入滚动容器，其增长只改
+    // scrollHeight、不改容器的 clientHeight，ResizeObserver 不会触发——
+    // 这个签名变化是「通知外层重算滑块 + 启动贴底」的唯一信号源。
+    // 只算正文长度的话，纯 reasoning 阶段（还没吐 token）就会掉链子。
+    streamingRuns.value.reduce(
+      (sum, run) => sum + run.text.length + (run.reasoning?.length ?? 0),
+      0,
+    ),
+  () => {
+    // 内容变化（含流式增长）：贴底统一交给循环（自带静默预算，会自我续期 / 退出）：
+    // 非流式期也走它，因为虚拟列表的 item 高度同样是「下一帧才测量落地」的，
+    // 一次性 scrollTop = scrollHeight 只会停在估计高度上（且会被下一次 render
+    // 覆盖回旧偏移，表现为「滚到底但没真的到底」）
+    if (pinned.value) startPinLoop()
   },
 )
 
-// SSE 推流结束（run 全部完成/停止）：停止贴底循环，内容最终落地后补一次贴底
+// SSE 推流结束（run 全部完成/停止）：不硬停循环——尾条下线、真实消息上线
+// 还要经历「估计高度 → 实测高度」两次跳变，续期让贴底把这两跳一并吸收
 watch(
   () => streamingRuns.value.length,
   (count, prev) => {
     if (count === 0 && prev > 0) {
-      stopPinLoop()
-      emit('content-changed')
-      if (pinned.value && scrollEl) scrollEl.scrollTop = scrollEl.scrollHeight
+      if (pinned.value) startPinLoop()
     }
+  },
+)
+
+// 测量期遮罩触发：会话首次从「无消息」切到「有消息」（即 messages.load 完成、
+// 初次进入可视区的那一帧）。displayItems 已计算完成、DynamicScroller 已经挂载、
+// 但库内部 ResizeObserver 还在异步测每条 item 的真实高度——这窗口期内盖一层
+// SkeletonChatView 避免「文字重叠」视觉残影外露。
+// 注意：watcher 自身会触发 1+ 次（onSubmitted 后也会让 displayItems 增长），
+// 函数内部有「已在跑 / 流式期跳过」双重短路，不会重复打开。
+watch(
+  () => displayItems.value.length,
+  (len, prev) => {
+    if (prev === 0 && len > 0) startMeasurementOverlay()
   },
 )
 
@@ -193,8 +357,9 @@ function scrollToBottom() {
     if (scrollEl) scrollEl.scrollTop = scrollEl.scrollHeight
   })
 }
-// 暴露 scroller：外层 OverlayScrollArea 通过 target 绑定滚动容器，绘制悬浮滚动条
-defineExpose({ scrollToBottom, scroller })
+// 暴露 scrollToBottom（发送后回到底部）、unpin（外部主动解除流式贴底）。
+// v2 起不再暴露 scroller（外层 OverlayScrollArea 已不监听 target）。
+defineExpose({ scrollToBottom, unpin })
 
 function activityText(run: RunState): string {
   const last = run.trace[run.trace.length - 1]
@@ -249,49 +414,92 @@ async function onStreamingClick(event: MouseEvent) {
       {{ t('status.disconnectedReconnect') }}
     </div>
 
-    <div v-if="displayItems.length === 0 && streamingRuns.length === 0" class="empty-state">
+    <!-- 加载中：渲染骨架屏（MSG-2662）。宽度/间距与真实消息同款，落定后不发生纵向位移 -->
+    <SkeletonChatView v-if="isLoadingMessages && displayItems.length === 0 && streamingRuns.length === 0" />
+
+    <!-- 加载完且确认是空会话：empty-state 引导创建（合法空，不要用骨架屏替代） -->
+    <div v-else-if="displayItems.length === 0 && streamingRuns.length === 0" class="empty-state">
       <p class="empty">{{ t('chat.empty') }}</p>
       <button type="button" class="empty-start" @click="ui.openCreate('session')">
         {{ t('chat.emptyStart') }}
       </button>
     </div>
 
-    <div v-if="displayItems.length > 0" class="message-scroll">
+    <!-- 有消息或有活跃流即出滚动容器：两者皆空时由上方分支接管 -->
+    <div
+      v-else
+      class="message-scroll"
+    >
       <DynamicScroller
         ref="scroller"
         class="message-list"
         :items="displayItems"
-        :min-item-size="64"
+        :min-item-size="120"
       >
         <template #default="{ item, index, active }">
-          <DynamicScrollerItem :item="item" :active="active" :data-index="index">
+          <DynamicScrollerItem
+            :item="item"
+            :active="active"
+            :data-index="index"
+            :size-dependencies="[item.text, item.meta?.taskId, item.meta?.attachments?.length, item.meta?.streaming]"
+          >
             <div class="message-inner">
               <MessageItem :message="item" />
             </div>
           </DynamicScrollerItem>
         </template>
-      </DynamicScroller>
-    </div>
 
-    <div v-if="streamingRuns.length" class="streaming-tail" @click="onStreamingClick">
-      <div v-for="run in streamingRuns" :key="run.taskId" class="msg assistant streaming-block">
-        <!-- MSG-2661 目④：reasoning 帧流式增量渲染——思考过程随帧长（区标
-             「思考过程」——与正文分离——终态后同源折叠于 MessageItem） -->
-        <div v-if="run.reasoning" class="reasoning-stream" :class="{ folded: !reasoningShowMap[run.taskId] }">
-          <div class="reasoning-stream-head" @click.stop="toggleReasoning(run.taskId)">
-            <span class="reasoning-stream-dots">⋯</span>
-            {{ t('chat.reasoningLabel') }}
-            <span class="reasoning-stream-toggle">{{ reasoningShowMap[run.taskId] ? '▾' : '▸' }}</span>
+        <!-- 流式尾条：走 RecycleScroller 的 after 槽（item-wrapper 之后的
+             .vue-recycle-scroller__slot，仍在该滚动容器内），尾条因此成为滚动内容
+             的一部分——scrollHeight 含其高度，贴底循环（scrollTop = scrollHeight）
+             实时把它按在底部；OverlayScrollArea 的 target 就是这个容器，
+             滑块长度/位置随之把尾条算进去，不再出现「内容长过容器、溢出到输入框」。 -->
+        <template #after>
+          <div v-if="streamingRuns.length" class="streaming-tail" @click="onStreamingClick">
+            <div v-for="run in streamingRuns" :key="run.taskId" class="msg assistant">
+              <!-- 运行态头部：与终态 AssistantMessage 的 .msg-head 同构同高
+                   （终态左侧是「耗时」按钮、右侧是 26px 操作按钮；流式期左侧换成
+                   活动文本、右侧留空），落定时头部高度不变、整块不发生纵向位移 -->
+              <div class="msg-head">
+                <span class="elapsed static streaming-status">
+                  <span class="activity-dot" />
+                  {{ activityText(run) }}
+                </span>
+              </div>
+
+              <!-- MSG-2661 目④：reasoning 帧流式增量渲染——思考过程随帧长。
+                   类名/结构与终态 RunReasoning 完全同源（同一套 .reasoning-block
+                   样式），仅折叠态语义不同：流式期默认展开（实时可读），
+                   2 秒无新帧自动折叠，终态则是默认折叠。 -->
+              <div v-if="run.reasoning" class="reasoning-block">
+                <button
+                  type="button"
+                  class="reasoning-head"
+                  :class="{ open: reasoningOpen(run.taskId) }"
+                  @click.stop="toggleReasoning(run.taskId)"
+                >
+                  <span class="reasoning-dots">⋯</span>
+                  <span>{{ t('chat.deepThink') }}</span>
+                  <span class="reasoning-toggle">{{ reasoningOpen(run.taskId) ? '▾' : '▸' }}</span>
+                </button>
+                <div v-show="reasoningOpen(run.taskId)" class="reasoning-body">{{ run.reasoning }}</div>
+              </div>
+
+              <StreamingMarkdownView :text="run.text" />
+              <span class="caret" />
+            </div>
           </div>
-          <pre v-show="reasoningShowMap[run.taskId] !== false" class="reasoning-stream-body">{{ run.reasoning }}</pre>
-        </div>
-        <div class="activity-line">
-          <span class="activity-dot" />
-          {{ activityText(run) }}
-        </div>
-        <StreamingMarkdownView :text="run.text" />
-        <span class="caret" />
-      </div>
+        </template>
+      </DynamicScroller>
+
+      <!-- 测量期遮罩：DynamicScroller 第一次把消息渲染进可视区时，库内
+           ResizeObserver 还在异步测各 item 的真实高度——这窗口期内盖一层
+           轻量加载占位，避免「估计高度 → 实测高度」跳变造成的"文字
+           重叠"视觉残影外露。startMeasurementOverlay 控制 10 帧（~167ms）
+           后自动渐隐，库内测量已在该窗口内完成。流式期不进入。 -->
+      <transition name="mask-fade">
+        <div v-if="showMeasurementOverlay" class="measurement-mask"> </div>
+      </transition>
     </div>
 
     <button

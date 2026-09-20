@@ -362,7 +362,8 @@
   font-family: 'Cascadia Code', Consolas, monospace;
 }
 
-/* MSG-2413 思考过程折叠块 */
+/* MSG-2413 思考过程折叠块（RunReasoning）。流式尾条（MSG-2661 目④）复用同一套
+   类名与结构——同源即同形，流式期与终态的思考块逐像素一致，只差默认折叠态 */
 .reasoning-block {
   width: 100%;
   margin: 6px 0;
@@ -401,51 +402,20 @@
   color: var(--muted);
   white-space: pre-wrap;
   word-break: break-word;
+  /* 行业共识（ChatGPT / Cline / Cursor / 豆包 / Kimi）：约 320px ≈ 17 行
+     （按 12px × line-height 1.55 ≈ 18.6px/行计算）。思考过长时滚动——既不会让单
+     条消息吃掉半屏，也足够展示大部分思考轨迹。 */
   max-height: 320px;
   overflow-y: auto;
   border-top: 1px solid var(--border);
+  /* 滚动条样式与 .code-body 保持一致 */
+  scrollbar-width: thin;
+  scrollbar-color: var(--scrollbar-thumb) transparent;
 }
 
-/* MSG-2661 目④：流式 reasoning 增量区（思考过程随帧长——streaming-tail 内） */
-.reasoning-stream {
-  width: 100%;
-  margin: 2px 0 6px;
-  border: 1px solid var(--border);
-  border-radius: 8px;
-  overflow: hidden;
-  font-size: 12px;
-  background: var(--bg-soft, rgba(127, 127, 127, 0.04));
-}
-.reasoning-stream-head {
-  padding: 4px 12px;
-  color: var(--muted);
-  font-weight: 500;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  gap: 4px;
-}
-.reasoning-stream-dots {
-  flex: 0 0 auto;
-}
-.reasoning-stream-toggle {
-  margin-left: auto;
-  font-size: 11px;
-  opacity: 0.7;
-}
-.reasoning-stream-body {
-  margin: 0;
-  padding: 6px 12px 8px;
-  color: var(--muted);
-  white-space: pre-wrap;
-  word-break: break-word;
-  max-height: 320px;
-  overflow-y: auto;
-  border-top: 1px solid var(--border);
-}
-.reasoning-stream.folded .reasoning-stream-head {
-  border-bottom: none;
-}
+/* MSG-2661 目④：流式 reasoning 增量区不再单列样式——流式尾条直接复用上面的
+   .reasoning-block / .reasoning-head / .reasoning-body 一套（同源即同形），
+   流式期与终态的思考块逐像素一致，只差折叠态（流式默认展开）。 */
 
 /* MSG-2413 工具执行行（命令/URL） */
 .tool-cmd {
@@ -458,28 +428,38 @@
   word-break: break-all;
 }
 
-/* 流式尾条 */
+/* 流式尾条：DynamicScroller 的 after 槽内容（.vue-recycle-scroller__slot），
+   在滚动容器内部、item-wrapper 之后——是滚动内容的一部分，随列表一起滚动，
+   不再是「被 flex 压扁在滚动区外」的兄弟节点。
+   宽度/居中/底部呼吸全部对齐消息条目（.message-inner = 720px 居中 + padding-bottom
+   10px；间距走 padding 而非 margin，因为滚动区末端的 margin 不计入 scrollHeight），
+   尾条因此与真实消息逐像素同位——落定时内容不位移。 */
 .streaming-tail {
   width: 100%;
   max-width: 720px;
   margin: 0 auto;
-  padding: 0 0 4px;
 }
 
-.streaming-block {
-  background: var(--code-bg);
-  border-radius: 8px;
-  padding: 10px 14px;
+/* 尾条内的 .msg 与 .message-inner .msg 同款：margin 归零、间距走 padding */
+.streaming-tail .msg {
+  margin-bottom: 0;
+  padding-bottom: 10px;
+}
+
+/* 运行态状态位：复用终态「耗时」按钮的 .elapsed 尺寸（12px / padding 2px 6px /
+   muted），右侧没有 26px 操作按钮时用 min-height 补齐其行高——.msg-head 的高度
+   因此在「流式 → 终态」之间保持不变，不会整块上下跳。 */
+.msg-head .elapsed.streaming-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 26px;
+  background: transparent;
+  cursor: default;
 }
 
 .caret {
-  display: inline-block;
-  width: 7px;
-  height: 14px;
-  vertical-align: -2px;
-  margin-left: 2px;
-  background: var(--text);
-  animation: blink 1s steps(1) infinite;
+  display: none;
 }
 
 @keyframes blink {
@@ -488,16 +468,13 @@
   }
 }
 
-/* 输入区容器：绝对定位于消息滚动区底部（bottom: 10px 与底部保持距离），
-   宽度撑满 chat-body，高度由内容（.composer）撑开——随 textarea 输入行数 /
-   附件行数自动变化。脱离文档流后消息区完整占满 chat-body，
-   底部预留空间由 chat-body 的 padding-bottom（--chat-input-h + 20px）承担。 */
+/* 输入区容器：static 位于滚动容器（.chat-body）之下的兄弟节点——不参与滚动、
+   不覆盖消息区。高度由内容（.composer）撑开——随 textarea 输入行数 /
+   附件行数自动变化；底部 10px 与容器下沿保持距离（顶部呼吸由 .composer 的
+   padding-top: 8px 承担）。 */
 .chat-input {
-  position: absolute;
-  left: 0;
-  right: 0;
-  bottom: 10px;
-  z-index: 10;
+  flex: none;
+  padding-bottom: 10px;
 }
 
 .composer {
@@ -506,7 +483,7 @@
   width: 100%;
   max-width: 720px;
   margin: 0 auto;
-  /* 顶部 8px 呼吸；底部 0——下沿间距已由 .chat-input 的 bottom: 10px 承担 */
+  /* 顶部 8px 呼吸；底部 0——下沿间距已由 .chat-input 的 padding-bottom 承担 */
   padding: 8px 0 0;
 }
 

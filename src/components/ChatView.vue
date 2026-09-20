@@ -1,7 +1,7 @@
 <script setup lang="ts">
 // 聊天主视图（页面组装层）：创建会话（CreateChat）/ 创建项目（CreateProject）/ 会话展示（头部 / 内容体 / 输入区）三套布局 + 右侧扩展面板（抽屉）。
 // 页面级快捷键（Ctrl+K 命令面板、Ctrl+N 新建会话、Esc 关闭创建流程）在此统一处理。
-import { computed, nextTick, onBeforeUnmount, onMounted, ref } from 'vue'
+import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useSessionStore } from '../stores/session'
 import { useUiStore } from '../stores/ui'
@@ -26,10 +26,6 @@ const extensionOpen = computed({
 })
 const extensionType = ref<ExtensionPanelType>('files')
 const contentRef = ref<InstanceType<typeof ChatContent>>()
-// 外层 OverlayScrollArea 实例（用于内容变化后手动 sync 滑块）
-const overlayRef = ref<InstanceType<typeof OverlayScrollArea>>()
-// 悬浮滚动条的 target：由 ChatContent 上报的消息滚动容器（响应式，异步加载也能正确绑定）
-const scrollTarget = ref<HTMLElement>()
 
 // 创建模式（新会话/普通任务）：chat-main 只显示居中的创建引导，隐藏会话展示
 // 注：「新建项目」(createMode === 'project') 升级为全局弹窗（App.vue 挂载），
@@ -58,15 +54,6 @@ function onSubmitted() {
     contentRef.value?.scrollToBottom();
 }
 
-function onScrollerReady(el?: HTMLElement) {
-    scrollTarget.value = el;
-}
-
-function syncScroll() {
-    // 消息内容变化后，等 DOM 更新完再刷新悬浮滑块位置/高度
-    void nextTick(() => overlayRef.value?.sync());
-}
-
 onMounted(() => {
     window.addEventListener('keydown', onKeydown);
 });
@@ -82,18 +69,10 @@ onBeforeUnmount(() => {
             <CreateChat v-if="showCreateGuide" />
             <template v-else>
                 <ChatHeader />
-                <OverlayScrollArea
-                    ref="overlayRef"
-                    class="chat-body"
-                    :target="scrollTarget"
-                >
-                    <ChatContent
-                        ref="contentRef"
-                        @scroller-ready="onScrollerReady"
-                        @content-changed="syncScroll"
-                    />
-                    <ChatInput @submitted="onSubmitted" />
+                <OverlayScrollArea class="chat-body">
+                    <ChatContent ref="contentRef" />
                 </OverlayScrollArea>
+                <ChatInput @submitted="onSubmitted" />
             </template>
         </div>
         <button

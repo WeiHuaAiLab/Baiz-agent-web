@@ -2,10 +2,10 @@
 // 审批卡增强（件 3）：JSON 友好展示 + apply_patch 改动预览（DiffView）
 import { computed, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { useApprovalStore } from '../../stores/approval'
+import { useApprovalStore } from '../../../stores/approval'
 import DiffView from './DiffView.vue'
-import type { ChatMessage } from '../../models'
-import type { DiffLine } from '../../utils/diff'
+import type { ChatMessage } from '../../../models'
+import type { DiffLine } from '../../../utils/diff'
 
 const props = defineProps<{ message: ChatMessage }>()
 const { t } = useI18n()

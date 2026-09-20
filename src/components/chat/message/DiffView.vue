@@ -3,8 +3,8 @@
 import { computed, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import hljs from 'highlight.js/lib/common'
-import { computeLineDiff } from '../../utils/diff'
-import type { DiffLine } from '../../utils/diff'
+import { computeLineDiff } from '../../../utils/diff'
+import type { DiffLine } from '../../../utils/diff'
 
 const { t } = useI18n()
 

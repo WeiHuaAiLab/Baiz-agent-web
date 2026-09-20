@@ -35,6 +35,7 @@ export default {
     dropUnsupported: 'Drag-and-drop upload is unsupported in this shell version',
     stop: 'Stop',
     scrollToLatest: 'Back to latest',
+    loadingMessages: 'Loading messages…',
     export: 'Export chat',
     openPanel: 'Open files panel',
     toggleSidebar: 'Toggle sidebar',

@@ -14,10 +14,10 @@
 // open 路径会把内容写进 workingTree，让 FilesPanel 预览（preview 模式）现形。
 import { computed, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { useWorkingTreeStore } from '../../stores/workingTree'
-import { useUiStore } from '../../stores/ui'
-import { getBridge } from '../../bridge'
-import { classifyFile, basenameOf } from '../../utils/fileCard'
+import { useWorkingTreeStore } from '../../../stores/workingTree'
+import { useUiStore } from '../../../stores/ui'
+import { getBridge } from '../../../bridge'
+import { classifyFile, basenameOf } from '../../../utils/fileCard'
 
 const props = defineProps<{
   path: string

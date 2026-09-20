@@ -1,14 +1,14 @@
 // MSG-2413 红证：思考过程折叠块＋工具执行行现形——mock 帧/组件态→现形断言
 import { beforeEach, describe, expect, it } from 'vitest'
 import { createPinia, setActivePinia } from 'pinia'
-import { shallowMount } from '@vue/test-utils'
+import { mount, shallowMount } from '@vue/test-utils'
 import { createI18n } from 'vue-i18n'
 import { routeFrame } from '../src/client/eventRouter'
 import { useApprovalStore } from '../src/stores/approval'
 import { useMessageStore } from '../src/stores/message'
 import { router } from '../src/router'
 import MessageItem from '../src/components/chat/MessageItem.vue'
-import ToolRow from '../src/components/chat/ToolRow.vue'
+import ToolRow from '../src/components/chat/message/ToolRow.vue'
 import zhCN from '../src/locales/zh-CN'
 
 const i18n = createI18n({
@@ -64,17 +64,20 @@ describe('MSG-2413 思考/执行渲染面', () => {
       text: '已完成',
       trace: [],
     }
-    const wrapper = shallowMount(MessageItem, {
+    // mount（非 shallow）：思考折叠块已下沉到 message/ 子组件（AssistantMessage → RunReasoning），
+    // shallow 会把中间层 stub 掉导致断言打空——挂真子树，验证「壳分发 → 折叠块现形」整链
+    const wrapper = mount(MessageItem, {
       props: { message: messages.byConversation[conversationId][0] },
       global: { plugins: [i18n, router] },
     })
     const head = wrapper.find('.reasoning-head')
     expect(head.exists()).toBe(true)
     expect(head.text()).toContain('深度思考')
-    // 默认收起：body 不现形
-    expect(wrapper.find('.reasoning-body').exists()).toBe(false)
-    await head.trigger('click')
+    // 默认展开（思考过程是协作证据，落地后不该藏起来）；点击 head 可手动折叠
+    expect(wrapper.find('.reasoning-body').exists()).toBe(true)
     expect(wrapper.find('.reasoning-body').text()).toContain('先 A 后 B')
+    await head.trigger('click')
+    expect(wrapper.find('.reasoning-body').exists()).toBe(false)
   })
 
   it('ToolRow 执行行：shell 命令 $ 现形（跑了什么逐项现形）', () => {

@@ -123,12 +123,28 @@
 
 .code-body {
   overflow-x: auto;
+  /* 桌面端最大高度 480px（约 24 行，按 13px × line-height 1.55 ≈ 20px/行计算）。
+     行业标准（参考 ChatGPT / Claude / Cursor）：让单段代码不吞掉半屏，
+     但短片段免于被截——超出时纵向滚动。*/
+  max-height: 480px;
+  overflow-y: auto;
   padding: 10px 0;
   font-family: 'Cascadia Code', 'JetBrains Mono', Consolas, monospace;
   font-size: 13px;
   line-height: 1.55;
   /* 保留行与行之间的 \n：默认 white-space: normal 会把换行折叠成空格，导致代码块所有行挤成一行 */
   white-space: pre;
+  /* 与项目其他可滚区域一致的细滚动条 */
+  scrollbar-width: thin;
+  scrollbar-color: var(--scrollbar-thumb) transparent;
+}
+
+/* 移动端降级（< 900px，沿用项目 chat 布局断点）：小屏要看清代码，让视口高度
+   作上限（480px 固定值在小屏会截得过狠，如 4 寸屏 480px ≈ 占 65% 视高） */
+@media (max-width: 899px) {
+  .code-body {
+    max-height: 60vh;
+  }
 }
 
 .code-body .ln {

@@ -4,7 +4,7 @@
 // 以及定时任务创建的覆盖流程。发送成功后 emit('submitted')，由外层驱动内容体回到底部。
 // 附件：点「+」调起本地文件选择（files.attachFromPicker），已选附件以 chip 展示在输入框上方、可单个移除，
 // 发送时随消息一并提交（sendWith 携带 files.attachments）。
-import { computed, onBeforeUnmount, onMounted, ref, watch } from "vue";
+import { computed, onBeforeUnmount, ref, watch } from "vue";
 import { useI18n } from "vue-i18n";
 import { useSessionStore } from "../../stores/session";
 import { useMessageStore } from "../../stores/message";
@@ -44,31 +44,13 @@ const input = ref("");
 const taskDraft = ref<TaskDraft>(createEmptyTaskDraft());
 let draftTimer: ReturnType<typeof setTimeout> | null = null;
 
-// 根容器：改为 absolute 定位后脱离文档流，消息区会完整占满 chat-body。
-// 这里用 ResizeObserver 把自身高度同步为 :root 上的 --chat-input-h，
-// 由 .chat-body 的 padding-bottom（--chat-input-h + 20px）为「滚动到最底部」预留空间，
-// 最后一条消息恰好停在输入框上方、不被遮挡。
-// 变量挂在 documentElement 而非 .chat-body：避免元素作用域/时序导致 CSS 拿不到值，
-// CSS 侧还有默认值兜底（见 core.css .chat-body）。
-const inputRoot = ref<HTMLElement>();
+// 根容器为 static 布局，位于滚动容器之外（见 ChatView：ChatInput 与
+// OverlayScrollArea 平级），消息区高度不再依赖输入框高度——原先
+// 「ResizeObserver 量高 → 写 --chat-input-h → 参与 .chat-body padding-bottom」
+// 的连锁重排已移除，这里不再需要任何高度观测。
 // composer 容器 ref：drag 事件挂在此处（不挂在 .chat-input 整个外层），
 // 让遮罩精确覆盖 composer 本体、不沾染 .chat-input 的 padding/margin。
 const composerRef = ref<HTMLElement>();
-let heightObserver: ResizeObserver | null = null;
-
-onMounted(() => {
-    const root = inputRoot.value;
-    if (!root) return;
-    const syncHeight = () => {
-        document.documentElement.style.setProperty(
-            "--chat-input-h",
-            `${root.offsetHeight}px`,
-        );
-    };
-    syncHeight();
-    heightObserver = new ResizeObserver(syncHeight);
-    heightObserver.observe(root);
-});
 
 const voiceHint = ref(false);
 // 批0 语音：浏览器形态用 Web Speech API 真转写；Tauri 形态后续接 sherpa-onnx
@@ -159,8 +141,6 @@ watch(input, () => {
 });
 
 onBeforeUnmount(() => {
-    heightObserver?.disconnect();
-    heightObserver = null;
     if (draftTimer) clearTimeout(draftTimer);
     if (activeId.value) void saveDraft(activeId.value, input.value);
 });
@@ -340,7 +320,7 @@ watch(
         </div>
     </div>
 
-    <div ref="inputRoot" class="chat-input">
+    <div class="chat-input">
         <form
             ref="composerRef"
             class="composer composer-block"

@@ -206,4 +206,44 @@ describe('ChatView 消息流渲染', () => {
     // 非回归上下文（未设置 createReturn）：创建完成后直接关闭
     expect(ui.createMode).toBe('')
   })
+
+  it('会话切换：activeId 已设置但 byConversation[id] 仍为 undefined → 骨架屏占位（避免空帧闪 empty-state）', async () => {
+    const session = useSessionStore()
+    const messages = useMessageStore()
+    const conversationId = 'c-skel'
+    session.activeId = conversationId
+    // 关键：不要触发 messages.load() —— byConversation[conversationId] 应保持 undefined
+    expect(messages.byConversation[conversationId]).toBeUndefined()
+
+    const wrapper = mount(ChatView, {
+      global: { plugins: [i18n, router] },
+    })
+    await wrapper.vm.$nextTick()
+
+    // 骨架屏接管：4 行占位（与 SkeletonChatView 模板结构一致）
+    expect(wrapper.find('.skeleton-chat').exists()).toBe(true)
+    expect(wrapper.findAll('.skeleton-chat .message-inner')).toHaveLength(4)
+    // empty-state / 消息列表都不该出现
+    expect(wrapper.find('.empty-state').exists()).toBe(false)
+    expect(wrapper.find('.message-scroll').exists()).toBe(false)
+  })
+
+  it('加载完成且会话确认空：empty-state（合法空，不要再走骨架屏）', async () => {
+    const session = useSessionStore()
+    const messages = useMessageStore()
+    const conversationId = 'c-empty'
+    session.activeId = conversationId
+    // 模拟 messages.load 走完的终态：键存在但数组为空（合法空会话）
+    messages.byConversation[conversationId] = []
+
+    const wrapper = mount(ChatView, {
+      global: { plugins: [i18n, router] },
+    })
+    await wrapper.vm.$nextTick()
+
+    // 不再走骨架屏 → empty-state 接管
+    expect(wrapper.find('.skeleton-chat').exists()).toBe(false)
+    expect(wrapper.find('.empty-state').exists()).toBe(true)
+    expect(wrapper.find('.empty-state .empty-start').exists()).toBe(true)
+  })
 })

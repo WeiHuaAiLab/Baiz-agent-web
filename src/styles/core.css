@@ -101,12 +101,14 @@ body {
   scrollbar-color: var(--scrollbar-thumb) transparent;
 }
 
-/* 规范 §2.2：窗口过窄（<900px）降级全宽，不挤压 */
+/* 规范 §2.2：窗口过窄（<900px）降级全宽，不挤压。
+   注：.message-list 会透传到滚动容器（.vue-recycle-scroller）根元素上，其左右
+   padding 把「消息条目 + 流式尾条（after 槽，同在容器内）」一并内缩——
+   故此处不再单列 .streaming-tail，否则叠加成 32px。 */
 @media (max-width: 899px) {
 
   .chat-header,
   .message-list,
-  .streaming-tail,
   .composer {
     max-width: none;
     padding-left: 16px;
@@ -609,16 +611,8 @@ button {
   color: var(--text);
 }
 
-/* 运行活动行 */
-.activity-line {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  font-size: 12px;
-  color: var(--muted);
-  margin-bottom: 6px;
-}
-
+/* 流式运行指示点：嵌在尾条 .msg-head 的状态位（.streaming-status）里，
+   终态同一位置是「耗时」按钮——位置/行高一致，落定时不位移 */
 .activity-dot {
   width: 7px;
   height: 7px;
@@ -1005,6 +999,9 @@ button {
   background: var(--hover);
 }
 
+/* 会话展示布局：头部 / 滚动体 / 输入框，自上而下三行。
+   输入框是普通 flex 行（static），不再以 absolute 覆盖在滚动体之上——
+   滚动体高度因此与输入框高度解耦，输入框增删行只重排自己这一行。 */
 .chat-main {
   flex: 1;
   min-width: 0;
@@ -1014,20 +1011,17 @@ button {
   position: relative;
 }
 
-/* chat 主体滚动容器：外层 OverlayScrollArea 根（.scroll-area）上挂 .chat-body，
-   内部纵向排列「消息区（flex:1 滚动）」+「输入框（absolute 底部）」。
-   输入框脱离文档流后消息区占满全高，此处用 padding-bottom 预留
-   「输入框高度（--chat-input-h，由 ChatInput 的 ResizeObserver 同步）+ 20px」，
-   滚动到最底部时最后一条消息恰好停在输入框上方、不被遮挡。
-   ——chat-input-h 默认 200px 兜底：即使 JS 变量延迟/未写入，也保证
-   消息区底部有足够空间，输入框不会盖住最后一条消息。 */
+/* chat 滚动容器：外层 OverlayScrollArea 根（.scroll-area）上挂 .chat-body，
+   内部只有消息区（ChatContent，flex:1 撑满整高）。输入框（ChatInput）是
+   .chat-main 下与滚动容器平级的兄弟节点（static 定位），不参与滚动、不覆盖
+   消息区，故此处无须 padding-bottom 预留高度；「输入框 ResizeObserver 量高
+   → 写 --chat-input-h → 变量参与 padding 计算」的连锁重排一并不复存在。 */
 .chat-body {
   flex: 1;
   min-height: 0;
   display: flex;
   flex-direction: column;
   position: relative;
-  padding-bottom: calc(var(--chat-input-h, 200px) + 20px);
 }
 
 /* ChatContent 统一内容容器：占满输入框以上空间 */
@@ -1037,6 +1031,10 @@ button {
   display: flex;
   flex-direction: column;
   position: relative;
+  /* 聊天内容区显式白底（默认 body 走 --sidebar-bg 是 #f8f8f8 浅灰，
+     此处覆写为 #ffffff；用户气泡仍是 --user-bg 浅灰，"白底 + 浅灰气泡"
+     形成层次）。深色模式走 var(--panel) 由主题变量统一切换。 */
+  background: var(--panel);
 }
 
 /* 头部占满 100% 宽度，内部内容体与消息列一致（720px 居中） */
@@ -1108,9 +1106,10 @@ button {
   font-size: 12px;
 }
 
-/* 消息滚动区：flex 占位（输入框上方）；内部虚拟滚动容器填满作为唯一滚动层，
+/* 消息滚动区：flex 占满滚动容器（.chat-body）；内部虚拟滚动容器填满作为唯一滚动层，
    原生滚动条始终隐藏（不占空间、内容永不跳动）；
-   悬浮滚动条由外层 OverlayScrollArea（target=滚动容器）绘制，轨道覆盖整个 chat 区域 */
+   悬浮滚动条由外层 OverlayScrollArea（target=滚动容器）绘制，轨道与滚动区同高
+   （输入框已移出滚动容器，不再被轨道覆盖） */
 .message-scroll {
   flex: 1;
   min-height: 0;
@@ -1118,20 +1117,52 @@ button {
   flex-direction: column;
   position: relative;
 }
-
-/* 虚拟滚动容器（DynamicScroller 根 .vue-recycle-scroller）：
-   注意 class="message-list" 不会传播到该元素（第三方组件 inheritAttrs:false），
-   高度/滚动条规则必须通过子选择器命中，否则滚动容器高度退化为内容高度（无法滚动） */
+ 
 .message-scroll>.vue-recycle-scroller {
   flex: 1;
   min-height: 0;
   width: 100%;
-  scrollbar-width: none;
+  overflow-y: overlay;
+  scrollbar-gutter: stable;
+  scrollbar-width: thin;
+  scrollbar-color: var(--scrollbar-thumb) transparent;
+} 
+.measurement-mask {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  background: var(--panel); 
+  overflow: hidden;
+  pointer-events: none;
 }
 
-.message-scroll>.vue-recycle-scroller::-webkit-scrollbar {
-  width: 0;
-  height: 0;
+/* 测量期轻量加载占位：居中的小绿点 + "消息加载中…" 文案。
+   比 SkeletonChatView 更轻量，只用于 DynamicScroller 测量窗口期（~167ms），
+   避免长时间展示那套 4 行对话骨架带来的"丑"/"空"感。 */
+.measurement-spinner {
+  margin: auto;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  color: var(--text-secondary);
+  font-size: 14px;
+}
+
+/* 复用流式消息里的活动蓝点，放大到 9px，让它在背景上足够明显又不刺眼 */
+.measurement-spinner .activity-dot {
+  width: 9px;
+  height: 9px;
+}
+
+/* 渐隐过渡：从 mask 切到真内容时给 200ms 淡出，让眼睛接受"内容落地"。
+   进入端瞬间（mask 浮现）不需动画——它本来就该抢占视觉。 */
+.mask-fade-leave-active {
+  transition: opacity 200ms ease;
+}
+.mask-fade-leave-to {
+  opacity: 0;
 }
 
 /* 消息内容容器：滚动区占满整宽，内容限宽 720px 居中（滚动条贴边、阅读宽度友好） */
@@ -1164,6 +1195,77 @@ button {
 
 .empty-state .empty {
   margin: 0;
+}
+
+/* ── 对话骨架屏（MSG-2662）：会话切换/初次加载消息时占位 ──
+   容器宽度/居中/底部呼吸全部对齐 .message-inner（720px 居中 + padding-bottom 10px）——
+   落定后骨架被替换为真实消息时不发生纵向位移。
+   视觉参考：用户消息为右对齐灰色圆角气泡；AI 消息为左对齐 .msg-head 短条 + 多行段落。
+   与真实 AssistantMessage 同构（无头像），骨架正文左边缘与真实消息完全对齐——
+   之前有 avatar 时骨架正文右偏 34px，肉眼可辨，故移除。
+   占位色使用 color-mix 混入少量 --text，让 --surface-2 在浅色/深色背景下都可见，
+   避免原来 "一片白" 的丑陋感。整体风格干净、无代码块、无强烈 shimmer。 */
+.skeleton-chat {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  padding: 16px 0 0;
+  /* 不响应点击：避免用户点到空白处触发无意义行为 */
+  pointer-events: none;
+  background: var(--panel);
+}
+
+.skeleton-chat .message-inner {
+  max-width: 720px;
+  margin: 0 auto;
+  padding-bottom: 10px;
+}
+
+/* 基础占位条：比 --surface-2 深一度，确保在 --bg 上有可见对比 */
+.sk-line {
+  display: block;
+  height: 12px;
+  border-radius: 4px;
+  background: color-mix(in oklab, var(--surface-2) 85%, var(--text));
+}
+
+/* 用户消息：右对齐灰色气泡，与真实 .user-text 同款圆角/内边距 */
+.sk-user-bubble {
+  height: 36px;
+  border-radius: 8px;
+  background: var(--user-bg);
+  max-width: 70%;
+}
+
+/* AI 消息骨架：无头像——真实 AssistantMessage 也是无头像（只有 .msg-head + 正文），
+   去掉之前的 padding-left: 34px，让骨架正文左边缘与真实消息完全对齐。
+   结构对应：.sk-meta ↔ .msg-head（耗时/操作行）、.sk-assistant-body ↔ MarkdownView */
+.sk-assistant {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.sk-meta {
+  width: 72px;
+  height: 10px;
+  border-radius: 3px;
+  opacity: 0.7;
+}
+
+.sk-assistant-body {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+/* 尊重用户的 prefers-reduced-motion：无需额外处理，本版本已是无动画静态占位 */
+@media (prefers-reduced-motion: reduce) {
+  .sk-line,
+  .sk-user-bubble {
+    animation: none;
+  }
 }
 
 .empty-start {
