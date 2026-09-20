@@ -93,6 +93,11 @@ export interface RunState {
   elapsedMs?: number
   reasoning: string
   text: string
+  /**
+   * MSG-3216：内部决策载荷（决策 JSON）——只进受控折叠区（RunBlocks 内部过程块），
+   * 严禁进 text（正文）。分流由 utils/decisionStream.ts 在收帧层完成。
+   */
+  decision?: string
   trace: TraceItem[]
   /** 批0：工具调用人话字幕（按调用顺序） */
   subtitles?: SubtitleItem[]

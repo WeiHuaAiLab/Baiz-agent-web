@@ -71,6 +71,8 @@ export default {
     // MSG-2998 修②（DEBT-544 part 2）：three-way split block labels
     blockCommands: 'Commands',
     blockResults: 'Results',
+    // MSG-3216 P0: internal process (decision payload) folded block label
+    blockInternal: 'Internal process (collapsed)',
     queuePosition: 'Queued · position {n}',
     queueCancel: 'Cancel',
     queueCancelled: 'Removed from queue',
