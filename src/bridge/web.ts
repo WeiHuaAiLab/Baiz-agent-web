@@ -257,5 +257,9 @@ export function createWebBridge(): Bridge {
         window.open(url, '_blank', 'noopener')
       },
     },
+    // MSG-3203 DEBT-741：web 形态无 updater——返 null（has 门控前置）
+    async checkUpdate() {
+      return null
+    },
   }
 }

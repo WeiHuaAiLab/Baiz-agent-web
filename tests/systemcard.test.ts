@@ -12,6 +12,12 @@ import SystemCard from '../src/components/settings/SystemCard.vue'
 const mocks = vi.hoisted(() => ({
   detectRuntime: vi.fn(() => 'tauri'),
   detectVersion: vi.fn(() => Promise.resolve(null)),
+  // MSG-3203 DEBT-741：组件新增 getBridge 依赖——测试替身须同面
+  // （has('updater.check')=false ⇒ 「检查更新」钮不显；本文件不测该面）
+  getBridge: vi.fn(() => ({
+    has: () => false,
+    checkUpdate: async () => null,
+  })),
 }))
 vi.mock('../src/bridge', () => mocks)
 

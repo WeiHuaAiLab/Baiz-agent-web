@@ -87,5 +87,9 @@ export function createMockBridge(): Bridge {
     openExternal: {
       async open() {},
     },
+    // MSG-3203 DEBT-741：mock 形态无更新（能力门 has('updater.check')=false 面）
+    async checkUpdate() {
+      return null
+    },
   }
 }

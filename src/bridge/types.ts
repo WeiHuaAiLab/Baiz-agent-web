@@ -13,6 +13,7 @@ export type CapabilityName =
   | 'dialog'
   | 'window.control'
   | 'open.external'
+  | 'updater.check'
 
 export interface FileEntry {
   name: string
@@ -71,6 +72,15 @@ export interface OpenExternalBridge {
   open(url: string): Promise<void>
 }
 
+// MSG-3203 DEBT-741（移植 MSG-2726）：自动更新检查结果
+// （tauri 形态——无新版/web 形态 null）
+export interface UpdateCheckResult {
+  available: boolean
+  version?: string
+  /** 下载并安装（tauri 插件 downloadAndInstall——被动装） */
+  install(): Promise<void>
+}
+
 export class UnsupportedError extends Error {
   constructor(public readonly capability: CapabilityName) {
     super(`capability not available: ${capability}`)
@@ -87,5 +97,8 @@ export interface Bridge {
   readonly dialog: DialogBridge
   readonly windowControl: WindowControlBridge
   readonly openExternal: OpenExternalBridge
+  /** MSG-3203：自动更新检查（tauri 形态真检——无新版返 available:false——
+   *  非 tauri 形态返 null（has('updater.check') 前置门控） */
+  checkUpdate(): Promise<UpdateCheckResult | null>
   has(name: CapabilityName): boolean
 }

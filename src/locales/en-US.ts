@@ -238,6 +238,13 @@ export default {
     resetDemo: 'Reset demo data',
     resetConfirm: 'This will clear local data and regenerate demo sessions. Continue?',
     clearMemoryConfirm: 'This will clear all local message history. Continue?',
+    // MSG-3203 DEBT-741: update check
+    checkUpdate: 'Check for updates',
+    checking: 'Checking…',
+    updateAvailable: 'New version available',
+    updateConfirm: 'Download and install now? A restart is needed afterwards:',
+    updateNone: 'You are on the latest version',
+    updateFailed: 'Update check failed. Please try again later.',
     appearance: 'Appearance',
     appearanceHint: 'Language and theme apply instantly',
     themeLight: 'Light',
