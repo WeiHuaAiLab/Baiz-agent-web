@@ -231,6 +231,13 @@ export default {
     resetDemo: '重置演示数据',
     resetConfirm: '此操作将清空本地数据并重新生成演示会话，确定继续？',
     clearMemoryConfirm: '将清空全部本地消息历史，确定继续？',
+    // MSG-3203 DEBT-741：更新检查面
+    checkUpdate: '检查更新',
+    checking: '检查中…',
+    updateAvailable: '发现新版本',
+    updateConfirm: '是否现在下载并安装？安装完成后重启生效：',
+    updateNone: '已是最新版本',
+    updateFailed: '检查更新失败，请稍后重试',
     appearance: '外观',
     appearanceHint: '界面语言与主题即时生效',
     themeLight: '亮',

@@ -601,5 +601,21 @@
   gap: 8px;
 }
 
+/* MSG-3203 DEBT-741（移植 MSG-2726）：关于页「检查更新」钮——版本行内嵌 */
+.check-update-btn {
+  margin-left: 10px;
+  padding: 2px 10px;
+  font-size: 12px;
+  color: var(--accent, #4d8dff);
+  background: transparent;
+  border: 1px solid currentColor;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+.check-update-btn:disabled {
+  opacity: 0.55;
+  cursor: default;
+}
 
 
