@@ -276,7 +276,7 @@
 /* ═══ MSG-3233 ⑤：自 origin/main **摘段**移植的文件卡片样式（逐段摘·不整件替换） ═══
    归一路径（照 DESIGN §10 四条机判）：间距全 4 倍数（15→16／10→8／6→8／1→4／5→4）、
    圆角取 {4,8,12,16,9999}（10→12／6→8）、字号取 {11,13,15,18,22,28}（9→11／12→13）、
-   去裸 hex（#fff → var(--accent-contrast)）。 */
+   去裸 hex（纯白写法 → `var(--accent-contrast)`）。 */
 .file-cards {
   display: flex;
   flex-wrap: wrap;
