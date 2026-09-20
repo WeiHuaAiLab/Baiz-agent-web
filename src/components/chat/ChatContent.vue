@@ -13,6 +13,7 @@ import { useApprovalStore } from '../../stores/approval'
 import { getBridge } from '../../bridge'
 import type { ChatMessage, RunState } from '../../models'
 import MessageItem from './MessageItem.vue'
+import SkeletonChatView from './SkeletonChatView.vue'
 import RunBlocks from './RunBlocks.vue'
 import StreamingMarkdownView from '../markdown/StreamingMarkdownView.vue'
 import Icon from '../common/Icon.vue'
@@ -66,6 +67,8 @@ function stopPinLoop() {
 const activeId = computed(() => session.activeId)
 const displayItems = computed<ChatMessage[]>(() => [...messages.list(activeId.value)])
 const streamingRuns = computed(() => messages.activeRuns(activeId.value))
+// MSG-3233 ④：消息加载态——**加载中且消息为空**时盖骨架（免空帧闪 empty-state）
+const loadingMessages = ref(false)
 
 watch(
   activeId,
@@ -73,7 +76,12 @@ watch(
     // 切换会话：重置贴底状态；消息加载完毕后默认滚动到底部
     pinned.value = true
     if (!id) return
-    await messages.load(id)
+    loadingMessages.value = true
+    try {
+      await messages.load(id)
+    } finally {
+      loadingMessages.value = false
+    }
     // 等虚拟滚动容器渲染、scrollEl 绑定完成（scroller 的 watch 为 post flush，
     // 在 nextTick 回调之前已执行），再强制贴底
     await nextTick()
@@ -221,7 +229,14 @@ async function onStreamingClick(event: MouseEvent) {
       {{ t('approval.inboxBanner', { n: approvals.badgeCount }) }}
     </button>
 
-    <div v-if="displayItems.length === 0 && streamingRuns.length === 0" class="empty-state">
+    <!-- MSG-3233 ④：加载中且空 ⇒ 骨架；否则走空态（两者互斥） -->
+    <SkeletonChatView
+      v-if="loadingMessages && displayItems.length === 0 && streamingRuns.length === 0"
+    />
+    <div
+      v-else-if="displayItems.length === 0 && streamingRuns.length === 0"
+      class="empty-state"
+    >
       <p class="empty">{{ t('chat.empty') }}</p>
       <button type="button" class="empty-start" @click="ui.openCreate('session')">
         {{ t('chat.emptyStart') }}

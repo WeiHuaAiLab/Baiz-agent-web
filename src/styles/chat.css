@@ -273,6 +273,97 @@
 
 /* MSG-2998 修②（DEBT-544 目二）：三分离归组——思考/执行命令/执行结果
    三区各自成块、互不混入（流式与终态同构） */
+/* ═══ MSG-3233 ⑤：自 origin/main **摘段**移植的文件卡片样式（逐段摘·不整件替换） ═══
+   归一路径（照 DESIGN §10 四条机判）：间距全 4 倍数（15→16／10→8／6→8／1→4／5→4）、
+   圆角取 {4,8,12,16,9999}（10→12／6→8）、字号取 {11,13,15,18,22,28}（9→11／12→13）、
+   去裸 hex（#fff → var(--accent-contrast)）。 */
+.file-cards {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px;
+  margin: 8px 12px;
+}
+
+.file-card {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  max-width: 50%;
+  width: auto;
+  flex: 0 1 auto;
+  padding: 8px 12px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--panel);
+  cursor: pointer;
+  transition: border-color 0.15s, background 0.15s, transform 0.05s;
+}
+
+.file-card:hover {
+  border-color: var(--muted);
+  background: var(--hover);
+}
+
+.file-card:active {
+  transform: translateY(1px);
+}
+
+.file-card-icon {
+  flex: none;
+  width: 48px;
+  height: 48px;
+  border-radius: 8px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  color: var(--accent-contrast);
+  gap: 4px;
+}
+
+.file-card-label {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  line-height: 1;
+}
+
+.file-card-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.file-card-name {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.file-card-path {
+  font-size: 11px;
+  color: var(--muted);
+  font-family: 'Cascadia Code', Consolas, monospace;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  margin-top: 4px;
+}
+
+.file-card-meta {
+  flex: none;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.file-card-lines {
+  font-size: 11px;
+  color: var(--muted);
+  font-family: 'Cascadia Code', Consolas, monospace;
+}
 .run-blocks {
   display: flex;
   flex-direction: column;

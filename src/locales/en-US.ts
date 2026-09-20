@@ -72,6 +72,8 @@ export default {
     thoughtChars: '{n} chars',
     toolCall: 'Tool',
     toolResult: 'Result',
+    // MSG-3233 ②: file card (ported from upstream) — click opens it in the side panel
+    fileCard: { open: 'Opened in panel' },
     // MSG-2998 修②（DEBT-544 part 2）：three-way split block labels
     blockCommands: 'Commands',
     blockResults: 'Results',

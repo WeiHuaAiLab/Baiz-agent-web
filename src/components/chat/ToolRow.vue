@@ -1,13 +1,17 @@
 <script setup lang="ts">
 // 工具调用行：展示工具名、运行状态（运行中/成功/失败）、文件引用与 diff 统计、可展开参数预览。
+// MSG-3233 ③（自 origin/main 挑件）：文件类工具的 path 命中**预览型扩展**
+// （HTML/JS/CSS/Vue/TS/SVG/MD…）时改用 FileCard 渲染；其余扩展保留原 `.file-ref`（最小侵入）。
 import { computed, ref } from 'vue'
 import type { ChatMessage } from '../../models'
 import { useWorkingTreeStore } from '../../stores/workingTree'
 import { useSettingsStore } from '../../stores/settings'
 import { diffStats } from '../../utils/diff'
 import { translateTool } from '../../utils/commandTranslator'
-import { extractFilePath, extractShellCommand, extractUrl } from '../../utils/traceText'
+import { extractFilePath, extractShellCommand, extractUrl, parseTraceArgs } from '../../utils/traceText'
+import { classifyFile } from '../../utils/fileCard'
 import Icon from '../common/Icon.vue'
+import FileCard from './FileCard.vue'
 
 const props = defineProps<{ message: ChatMessage }>()
 const working = useWorkingTreeStore()
@@ -26,6 +30,14 @@ const toolUrl = computed(() => extractUrl(props.message.meta?.argsPreview))
 const isFileTool = computed(() =>
   /^(fs\.|code\.|fs_|code_|read_file)/.test(props.message.meta?.toolName ?? ''),
 )
+/** MSG-3233 ③：预览型扩展判定——命中走 FileCard，未命中走原 .file-ref */
+const previewKind = computed(() => (filePath.value ? classifyFile(filePath.value) : null))
+/** 文件内容兜底：fs.write 一类 argsPreview 直接带 content；否则回退 workingTree 已落盘版本 */
+const fileContent = computed(() => {
+  const args = parseTraceArgs(props.message.meta?.argsPreview)
+  if (args && typeof args.content === 'string') return args.content
+  return working.files[filePath.value]?.current
+})
 const refStats = computed(() => {
   const file = working.files[filePath.value]
   if (!file) return null
@@ -48,7 +60,11 @@ function openFile() {
     <!-- MSG-2413 执行行：shell 命令 / URL——跑了什么现形（文件路径在下 file-ref 区） -->
     <code v-if="shellCommand" class="tool-cmd">$ {{ shellCommand }}</code>
     <code v-else-if="toolUrl" class="tool-cmd">↗ {{ toolUrl }}</code>
-    <div v-if="isFileTool && filePath" class="file-ref" @click.stop="openFile">
+    <!-- MSG-3233 ③：预览型扩展走 FileCard（图标＋文件名＋行数）；其余走原 .file-ref -->
+    <div v-if="isFileTool && filePath && previewKind" class="file-cards">
+      <FileCard :path="filePath" :content="fileContent" />
+    </div>
+    <div v-else-if="isFileTool && filePath" class="file-ref" @click.stop="openFile">
       <Icon name="copy" :size="12" />
       <span class="file-ref-path">{{ filePath }}</span>
       <span v-if="refStats" class="file-ref-stats">

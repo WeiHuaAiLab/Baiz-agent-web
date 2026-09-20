@@ -72,6 +72,8 @@ export default {
     thoughtChars: '{n} 字',
     toolCall: '调用工具',
     toolResult: '工具结果',
+    // MSG-3233 ②：文件卡片（自上游挑件）——点击打开到右侧面板
+    fileCard: { open: '已在右侧打开' },
     // MSG-2998 修②（DEBT-544 目二）：三分离归组区标
     blockCommands: '执行命令',
     blockResults: '执行结果',

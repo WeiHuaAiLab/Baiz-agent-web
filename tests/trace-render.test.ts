@@ -117,7 +117,26 @@ describe('MSG-2413 思考/执行渲染面', () => {
       },
       global: { plugins: [i18n] },
     })
-    expect(file.find('.file-ref-path').text()).toContain('C:/a/b.rs')
+    // MSG-3233 ③ 改口径：`.rs` 属**预览型扩展** ⇒ ToolRow 现改渲染 FileCard
+    //（原 `.file-ref` 径保留给非预览型——见其下非预览型断言）
+    // shallowMount 会 stub 子组件 ⇒ 此处只断言"走了 FileCard 容器径"（卡片细节另证）
+    expect(file.find('.file-cards').exists()).toBe(true)
+    expect(file.find('.file-ref').exists()).toBe(false)
+
+    const nonPreview = shallowMount(ToolRow, {
+      props: {
+        message: {
+          id: 'f2',
+          conversationId: 'c',
+          kind: 'tool_call',
+          text: '',
+          createdAt: 1,
+          meta: { taskId: 't-f2', toolName: 'fs_read', argsPreview: '{"path":"C:/a/data.bin"}' },
+        } as never,
+      },
+      global: { plugins: [i18n] },
+    })
+    expect(nonPreview.find('.file-ref-path').text()).toContain('C:/a/data.bin')
 
     const url = shallowMount(ToolRow, {
       props: {

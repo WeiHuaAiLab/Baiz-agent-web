@@ -1226,6 +1226,69 @@ button {
   margin: 0;
 }
 
+/* ═══ MSG-3233 ⑤：自 origin/main **摘段**移植的对话骨架屏样式（SkeletonChatView 专用）═══
+   归一（照 DESIGN §10）：圆角 3→4、间距 10→12；色值全 token（color-mix 混 --surface-2/--text）。 */
+.skeleton-chat {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  padding: 16px 0 0;
+  /* 不响应点击：避免用户点到空白处触发无意义行为 */
+  pointer-events: none;
+  background: var(--panel);
+}
+
+.skeleton-chat .message-inner {
+  max-width: 720px;
+  margin: 0 auto;
+  padding-bottom: 12px;
+}
+
+/* 基础占位条：比 --surface-2 深一度，确保在 --bg 上有可见对比 */
+.sk-line {
+  display: block;
+  height: 12px;
+  border-radius: 4px;
+  background: color-mix(in oklab, var(--surface-2) 85%, var(--text));
+}
+
+/* 用户消息：右对齐灰色气泡，与真实 .user-text 同款圆角 */
+.sk-user-bubble {
+  height: 36px;
+  border-radius: 8px;
+  background: var(--user-bg);
+  max-width: 70%;
+}
+
+/* AI 消息骨架：无头像——真实助手消息也是无头像（只有 .msg-head + 正文） */
+.sk-assistant {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.sk-meta {
+  width: 72px;
+  height: 12px;
+  border-radius: 4px;
+  opacity: 0.7;
+}
+
+.sk-assistant-body {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+/* 尊重用户的 prefers-reduced-motion：本版本已是无动画静态占位 */
+@media (prefers-reduced-motion: reduce) {
+  .sk-line,
+  .sk-user-bubble {
+    animation: none;
+  }
+}
+
 .empty-start {
   padding: 8px 20px;
   border-radius: 16px;
