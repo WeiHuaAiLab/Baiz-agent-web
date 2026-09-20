@@ -99,6 +99,20 @@ export default {
     credentialMaskTitle: 'This file may contain credentials',
     credentialMaskDesc: 'Content is masked by default. Confirm to reveal.',
     credentialReveal: 'Reveal content',
+    // MSG-3187 stage 1: sandboxed HTML static preview (UI, not source)
+    htmlRefresh: 'Refresh',
+    htmlRefreshing: 'Refreshing…',
+    htmlOpenInBrowser: 'Open in browser',
+    htmlOpenHint: 'Open in the browser (same sandbox policy; no real serving)',
+    htmlViewSource: 'Read-only source',
+    htmlViewRendered: 'Show render',
+    htmlScriptsOn: 'Sandbox scripts: on',
+    htmlScriptsOff: 'Sandbox scripts: off',
+    htmlLoading: 'Loading and rendering…',
+    htmlPreviewFailed:
+      'Preview failed: the file is outside the authorized directories, or is not renderable HTML text (nothing was written).',
+    htmlOpenUnsupported:
+      'This shell provides no external-open capability and blocked the new window — showing the read-only preview in the panel instead.',
   },
   workspace: { empty: 'No authorized directories', active: 'Active', manage: 'Manage in settings' },
   sidebar: {

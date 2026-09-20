@@ -99,6 +99,19 @@ export default {
     credentialMaskTitle: '此文件可能包含凭据',
     credentialMaskDesc: '为避免泄露，内容默认遮罩——确认后方可查看。',
     credentialReveal: '确认查看内容',
+    // MSG-3187 档一：HTML 静态预览（沙箱 iframe；看到界面不是源码）
+    htmlRefresh: '刷新',
+    htmlRefreshing: '刷新中…',
+    htmlOpenInBrowser: '在浏览器打开',
+    htmlOpenHint: '在浏览器打开（内容仍走同一沙箱策略；不做真运行）',
+    htmlViewSource: '只读来源',
+    htmlViewRendered: '看渲染',
+    htmlScriptsOn: '沙箱内脚本：开',
+    htmlScriptsOff: '沙箱内脚本：关',
+    htmlLoading: '正在读取并渲染…',
+    htmlPreviewFailed:
+      '预览失败：该文件不在授权目录内、或不是可渲染的 HTML 文本（未做任何写入）。',
+    htmlOpenUnsupported: '当前壳未提供"外部打开"能力，且新窗被拦——已在面板内只读预览。',
   },
   workspace: { empty: '暂无授权目录', active: '当前', manage: '在设置中管理' },
   sidebar: {

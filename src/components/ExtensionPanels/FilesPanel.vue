@@ -9,6 +9,8 @@ import type { TreeNode } from '../../utils/tree'
 import { computeLineDiff, diffStats } from '../../utils/diff'
 import FileTreeItem from './files/FileTreeItem.vue'
 import FilePreview from './files/FilePreview.vue'
+import HtmlPreview from './files/HtmlPreview.vue'
+import { isHtmlPath } from '../../utils/htmlPreview'
 import Icon from '../common/Icon.vue'
 import { useUiStore } from '../../stores/ui'
 import type { FileEntry } from '../../bridge'
@@ -35,6 +37,8 @@ const otherFiles = computed(() => working.list.filter((file) => file.path !== ac
 // MSG-2998 修③（DEBT-619）：目录树点件 → 预览（抽屉内预览面；接口未接入时诚实降级）
 const previewPath = ref('')
 const previewName = ref('')
+/** MSG-3187 档一：`.html`／`.htm` 走**沙箱静态预览**（看到界面而非源码）；其余件走源码预览 */
+const previewIsHtml = computed(() => isHtmlPath(previewPath.value))
 
 function openPreview(path: string, name: string) {
   previewPath.value = path
@@ -106,8 +110,16 @@ async function toggleAuthorized(key: string) {
     </header>
     <div class="files-body">
       <!-- MSG-2998 修③：预览面（目录树点件进入）——接口未接入时降级文案由组件内诚实呈现 -->
+      <!-- MSG-3187 档一：HTML 件走沙箱预览（三按钮：刷新／在浏览器打开／只读来源＋脚本开关） -->
+      <HtmlPreview
+        v-if="previewPath && previewIsHtml"
+        :path="previewPath"
+        :name="previewName"
+        :loader="files.previewLoader ?? undefined"
+        @close="closePreview"
+      />
       <FilePreview
-        v-if="previewPath"
+        v-else-if="previewPath"
         :path="previewPath"
         :name="previewName"
         :loader="files.previewLoader ?? undefined"
