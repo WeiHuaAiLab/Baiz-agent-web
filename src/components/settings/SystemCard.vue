@@ -2,10 +2,9 @@
 // 关于模块：品牌信息（slogan / 版本 / 运行环境）与系统状态（连接状态）。
 // 原侧栏「关于我们」弹窗内容已并入此处。
 import { useI18n } from 'vue-i18n'
-// MSG-3203 DEBT-741：更新检查（桥能力门＋本地 toast 面）
-import { detectRuntime, detectVersion, getBridge } from '../../bridge'
+// MSG-3231 ②：更新检查已迁「运行与更新」页（UpdateCard）——本卡只留关于/状态
+import { detectRuntime, detectVersion } from '../../bridge'
 import { useSettingsStore } from '../../stores/settings'
-import { useUiStore } from '../../stores/ui'
 import { onMounted, ref } from 'vue'
 
 const { t } = useI18n()
@@ -18,41 +17,6 @@ onMounted(async () => {
   version.value = await detectVersion()
 })
 
-// **MSG-3203 DEBT-741**（移植 MSG-2726）：更新检查挂点——`updater.check`
-// 能力门（tauri 形态 true；web/mock 形态 false ⇒ 钮不显、不炸）。
-// 检查得新版 ⇒ 提示＋确认后 `install()`（壳侧 updater 被动装，装完重启生效）；
-// 检查失败走人话文案（不静默成功）。
-const bridge = getBridge()
-const ui = useUiStore()
-const updateSupported = bridge.has('updater.check')
-const checking = ref(false)
-// rust-expert MSG-3203 复审 D③：安装面另设闸——downloadAndInstall 消费资源，
-// 二次触发必败；且安装期间用户重复点击无意义。
-const installing = ref(false)
-
-async function checkUpdate() {
-  if (checking.value) return
-  checking.value = true
-  try {
-    const result = await bridge.checkUpdate()
-    if (result?.available) {
-      ui.toast(`${t('settings.updateAvailable')} v${result.version}`, 'info')
-      if (
-        !installing.value &&
-        window.confirm(`${t('settings.updateConfirm')} v${result.version}`)
-      ) {
-        installing.value = true
-        await result.install()
-      }
-    } else {
-      ui.toast(t('settings.updateNone'), 'success')
-    }
-  } catch {
-    ui.toast(t('settings.updateFailed'), 'error')
-  } finally {
-    checking.value = false
-  }
-}
 </script>
 
 <template>
@@ -63,16 +27,7 @@ async function checkUpdate() {
       <span class="row-label">{{ t('settings.version') }}</span>
       <span v-if="version" class="about-version">v{{ version }} · {{ runtime }}</span>
       <span v-else class="about-version">{{ runtime === 'tauri' ? '版本未取到 · tauri' : '本地预览' }}</span>
-      <!-- MSG-3203 DEBT-741：检查更新（tauri 壳形态——updater.check 能力门） -->
-      <button
-        v-if="updateSupported"
-        type="button"
-        class="check-update-btn"
-        :disabled="checking"
-        @click="checkUpdate"
-      >
-        {{ checking ? t('settings.checking') : t('settings.checkUpdate') }}
-      </button>
+      <!-- MSG-3231 ②：检查更新已搬去「运行与更新」页（UpdateCard）——本页只留关于/状态 -->
     </div>
     <div class="settings-row">
       <span class="row-label">{{ t('settings.connection') }}</span>

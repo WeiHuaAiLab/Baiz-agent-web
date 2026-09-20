@@ -232,9 +232,19 @@ export default {
       general: 'General',
       model: 'Model',
       mcp: 'MCP',
-      runtime: 'Runtime',
+      // MSG-3231 ②: tab labels match actual content (memory page was mislabelled "Runtime")
+      memory: 'Memory',
+      runtime: 'Runtime & updates',
       about: 'About',
     },
+    // MSG-3231 ②: Runtime & updates page (version + check for updates)
+    runtimeTitle: 'Runtime & updates',
+    updateHint:
+      'Check for a new version. You will be asked to confirm first; the app restarts after install.',
+    updateUnsupported:
+      'Automatic update checks are not available in this runtime (desktop only) — the current version is shown above.',
+    versionUnknown: 'Version unavailable · {runtime}',
+    localPreview: 'Local preview',
     language: 'Language',
     theme: 'Theme',
     apiKey: 'API Key',
@@ -470,7 +480,8 @@ export default {
     submitting: 'Submitting…',
     submitFailed: 'Submit failed: {msg}',
     retryHint: 'you can retry — the card stays',
-    noReason: '(no reason provided)',
+    // MSG-3231 ③: `noReason` retired — readable fallback instead
+    reasonFallback: 'You need to confirm: {tool} on {summary}',
     noSummary: '(no action summary)',
     fromInbox: 'From a background task',
     scopeThisTime: 'this time',

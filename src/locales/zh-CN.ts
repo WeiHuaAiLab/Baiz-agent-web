@@ -231,9 +231,17 @@ export default {
       general: '通用',
       model: '模型',
       mcp: 'MCP',
+      // MSG-3231 ②：页签名与实内容一致（原 runtime 页装的是记忆设置）
+      memory: '记忆',
       runtime: '运行与更新',
       about: '关于',
     },
+    // MSG-3231 ②：「运行与更新」页（版本＋检查更新）
+    runtimeTitle: '运行与更新',
+    updateHint: '检查是否有新版本；有新版会先请你确认，安装完成后重启生效。',
+    updateUnsupported: '当前形态不支持自动更新检查（桌面端可用）——上面仍显示当前版本。',
+    versionUnknown: '版本未取到 · {runtime}',
+    localPreview: '本地预览',
     language: '语言',
     theme: '主题',
     apiKey: 'API Key',
@@ -467,7 +475,8 @@ export default {
     submitting: '提交中…',
     submitFailed: '提交失败：{msg}',
     retryHint: '可重试，卡不会消失',
-    noReason: '（未提供理由）',
+    // MSG-3231 ③：`noReason` 已废（对用户零信息）——改「需要你确认：<工具> 对 <摘要>」可读兜底
+    reasonFallback: '需要你确认：{tool} 对 {summary}',
     noSummary: '（未提供动作摘要）',
     fromInbox: '来自后台任务',
     scopeThisTime: '本次',

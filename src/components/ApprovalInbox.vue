@@ -67,6 +67,19 @@ function scopeLabel(scope?: string): string {
 }
 
 /** 会话内的卡：跳回原会话（卡在消息流里，就地审批） */
+/**
+ * MSG-3231 ③：理由行——有 `reason`（daemon MSG-3230）⇒ 原样显示；
+ * 缺 ⇒ 可读兜底「需要你确认：<工具> 对 <摘要>」（「未提供理由」已废）。
+ */
+function reasonText(item: PendingApprovalItem): string {
+  const reason = item.reason?.trim()
+  if (reason) return reason
+  return t('approval.reasonFallback', {
+    tool: toolLabel(item.action),
+    summary: item.details?.trim() || t('approval.noSummary'),
+  })
+}
+
 function openConversation(item: PendingApprovalItem) {
   if (item.conversationId) session.select(item.conversationId)
   ui.closeInbox()
@@ -129,6 +142,7 @@ watch(
           >
             <span class="inbox-row-title">{{ conversationTitle(item) }}</span>
             <span class="inbox-row-action">{{ toolLabel(item.action) }}</span>
+            <span class="inbox-row-reason">{{ reasonText(item) }}</span>
             <span class="risk small" :class="normalizeRisk(item.risk)">{{ riskText(item.risk) }}</span>
           </button>
         </section>

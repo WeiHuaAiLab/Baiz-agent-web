@@ -48,12 +48,21 @@ const requestId = computed(() => props.message.meta?.requestId ?? '')
 const toolName = computed(() => props.message.meta?.toolName)
 const toolText = computed(() => toolLabel(toolName.value))
 /** B 理由：主级 15px；缺字段＝显式空态文案（不留白） */
-const reasonText = computed(() => props.message.meta?.reason?.trim() || t('approval.noReason'))
 /** C 动作摘要：人话（禁裸 JSON）；缺字段＝显式空态文案 */
 const summary = computed(() =>
   props.message.meta?.argsPreview
     ? humanizeArgs(toolName.value, props.message.meta.argsPreview)
     : t('approval.noSummary'),
+)
+/**
+ * B 理由（主级 15px）——MSG-3231 ③（对卯 daemon 侧 MSG-3230 的 `reason` 字段）：
+ * 有 `reason` ⇒ **原样显示**；缺 `reason` ⇒ **可读兜底**「需要你确认：<工具> 对 <摘要>」。
+ * 旧口径「（未提供理由）」已废——对用户零信息，令明令该呈现必须消失。
+ */
+const reasonText = computed(
+  () =>
+    props.message.meta?.reason?.trim() ||
+    t('approval.reasonFallback', { tool: toolText.value, summary: summary.value }),
 )
 /** 命令类走等宽块（DESIGN.md §3：等宽仅用于代码／命令／数据） */
 const isCommand = computed(() =>

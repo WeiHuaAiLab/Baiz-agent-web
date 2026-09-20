@@ -85,6 +85,32 @@ export interface BaizClient {
   close(): void
 }
 
+/**
+ * MSG-3231 ①：授权根清单**提供者**（＝面板已授权目录，绝对路径）。
+ * 由引导层（main.ts）注入，避免 `client → stores` 的循环依赖；未注入 ⇒ 不下发该
+ * 字段（旧行为零变）。安全边界不变：daemon 侧仍逐项 canonicalize＋校验（MSG-3228），
+ * 前端**只**上报用户已授权的目录、不放大范围。
+ */
+let authorizedRootsProvider: (() => string[]) | null = null
+
+export function setAuthorizedRootsProvider(provider: (() => string[]) | null): void {
+  authorizedRootsProvider = provider
+}
+
+/** 归一：去空、去首尾空白、按序去重（**不改写路径本身**——逐项与原清单一致） */
+export function resolveAuthorizedRoots(explicit?: string[]): string[] {
+  const roots = explicit ?? authorizedRootsProvider?.() ?? []
+  const seen = new Set<string>()
+  const out: string[] = []
+  for (const raw of roots) {
+    const root = typeof raw === 'string' ? raw.trim() : ''
+    if (!root || seen.has(root)) continue
+    seen.add(root)
+    out.push(root)
+  }
+  return out
+}
+
 export function createClient(transport: RpcTransport): BaizClient {
   const rpc = new RpcClient(transport)
   return {
@@ -150,12 +176,18 @@ export function createClient(transport: RpcTransport): BaizClient {
     scheduleListRuns: (taskId, limit) =>
       rpc.call('schedule.list_runs', { task_id: taskId, limit: limit ?? 20 }),
     // MSG-3014：daemon file.preview（对卯 handler dispatch 同名）
-    previewRead: (params) =>
-      rpc.call<PreviewReadResult>('file.preview', {
+    // MSG-3231 ①：带上**面板已授权目录**（authorized_roots）——daemon（MSG-3228）
+    // 与配置面取并集后逐项 canonicalize；此前从未传 ⇒ 面板里"已授权"的目录对
+    // daemon 仍不可见（越界预览被拒的直接成因）。
+    previewRead: (params) => {
+      const roots = resolveAuthorizedRoots(params.authorized_roots)
+      return rpc.call<PreviewReadResult>('file.preview', {
         path: params.path,
         ...(params.max_bytes !== undefined ? { max_bytes: params.max_bytes } : {}),
         ...(params.workspace ? { workspace: params.workspace } : {}),
-      }),
+        ...(roots.length > 0 ? { authorized_roots: roots } : {}),
+      })
+    },
     // DEBT-743：daemon 1.0.18 的 weknora.get_config／set_config（对卯 handler dispatch 同名；
     // 未实装时 daemon 回 -32601 ⇒ 界面显「服务端未就绪」，绝不静默成功）
     weknoraGetConfig: (params) => rpc.call<WeknoraConfigResult>('weknora.get_config', params ?? {}),

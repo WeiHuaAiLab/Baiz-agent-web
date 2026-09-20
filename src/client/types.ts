@@ -328,6 +328,13 @@ export interface PreviewReadParams {
   max_bytes?: number
   /** 授权根解析用工作区（缺省走 daemon config） */
   workspace?: string
+  /**
+   * MSG-3231 ①：**面板已授权目录**（绝对路径数组）。
+   * daemon `file.preview` 侧（MSG-3228）与配置面**取并集**后逐项 canonicalize——
+   * 即"面板里已授权"的目录对 daemon 也可见；**安全未放宽**（仍逐项校验）。
+   * 缺省 ⇒ 不传该字段（旧行为零变）；**不得**塞入未经用户授权的前缀。
+   */
+  authorized_roots?: string[]
 }
 
 export interface PreviewReadResult {

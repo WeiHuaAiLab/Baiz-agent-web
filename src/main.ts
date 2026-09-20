@@ -16,6 +16,7 @@ import { getClientSetup } from './client/singleton'
 import type { ClientSetup } from './client/singleton'
 import { SseReconnect } from './client/reconnect'
 import { routeFrame } from './client/eventRouter'
+import { setAuthorizedRootsProvider } from './client'
 import { useApprovalStore } from './stores/approval'
 import { useMessageStore } from './stores/message'
 import { useSettingsStore } from './stores/settings'
@@ -78,6 +79,9 @@ function bootApp(pinia: Pinia, setup: ClientSetup): void {
   // MSG-3225 ①：装机径**不再吞败面**——`try/catch → null` 已删，RPC 错误
   // 直上 `createRpcPreviewLoader` 包成 `PreviewLoadError`，界面显人话＋原文。
   const files = useFilesStore(pinia)
+  // MSG-3231 ①：预览接头——把**面板已授权目录**（pickedDirs 的真实路径键）交给
+  // RPC 层随 `file.preview` 下发（daemon 与配置面取并集；安全未放宽）。
+  setAuthorizedRootsProvider(() => Object.keys(files.pickedDirs))
   files.setPreviewLoader(
     createRpcPreviewLoader(async (path, maxBytes) => {
       if (transport.kind === 'mock') return null

@@ -12,12 +12,16 @@ import WorkspaceCard from './WorkspaceCard.vue'
 import SystemCard from './SystemCard.vue'
 import DemoCard from './DemoCard.vue'
 import KbCard from './KbCard.vue'
+import UpdateCard from './UpdateCard.vue'
 
-type TabKey = 'general' | 'model' | 'mcp' | 'runtime' | 'about'
+// MSG-3231 ②（ZCode 走查 [缺陷 3]）：页签按**实内容**归位——
+// 原 `runtime`（名为「运行与更新」）里装的却是记忆设置 ⇒ 改名「记忆」；
+// 另立「运行与更新」承载版本＋检查更新（741 入口落此）。
+type TabKey = 'general' | 'model' | 'mcp' | 'memory' | 'runtime' | 'about'
 
 const { t } = useI18n()
 
-const tabs: TabKey[] = ['general', 'model', 'mcp', 'runtime', 'about']
+const tabs: TabKey[] = ['general', 'model', 'mcp', 'memory', 'runtime', 'about']
 const activeTab = ref<TabKey>('general')
 
 function selectTab(key: TabKey) {
@@ -63,9 +67,15 @@ function selectTab(key: TabKey) {
       </div>
 
       <!-- 运行与更新：记忆设置 + 演示数据 -->
-      <div v-show="activeTab === 'runtime'" class="settings-panel" role="tabpanel">
+      <!-- MSG-3231 ②：本页原名为「运行与更新」而内容为记忆设置 ⇒ 归位为「记忆」 -->
+      <div v-show="activeTab === 'memory'" class="settings-panel" role="tabpanel">
         <MemoryCard />
         <DemoCard />
+      </div>
+
+      <!-- MSG-3231 ②：新「运行与更新」页——版本＋检查更新（741 入口归位） -->
+      <div v-show="activeTab === 'runtime'" class="settings-panel" role="tabpanel">
+        <UpdateCard />
       </div>
 
       <!-- 关于：系统状态 + 版本 -->

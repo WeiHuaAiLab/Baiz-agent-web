@@ -107,9 +107,13 @@ describe('§三 九态：default／loading／error／empty／success（DOM 级�
     expect(wrapper.find('button.approve').attributes('disabled')).toBeUndefined()
   })
 
-  it('empty：无理由/无摘要时显式文案，不留白', () => {
+  it('empty：无理由/无摘要时不留白（MSG-3231 ③：理由改**可读兜底**，摘要仍显式空态）', () => {
     const wrapper = mountCard({ requestId: 'r4', toolName: 'write_file' })
-    expect(wrapper.find('.approval-reason').text()).toBe('（未提供理由）')
+    // 令明令「未提供理由」呈现消失 ⇒ 理由位改「需要你确认：<工具> 对 <摘要>」
+    const reason = wrapper.find('.approval-reason').text()
+    expect(reason).not.toContain('未提供理由')
+    expect(reason).toContain('需要你确认')
+    expect(reason).toContain('写文件')
     expect(wrapper.find('.approval-summary').text()).toBe('（未提供动作摘要）')
   })
 
