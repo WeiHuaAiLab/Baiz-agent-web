@@ -9,8 +9,9 @@ import { TOOL_LABELS_ZH as TOOL_NAMES_ZH } from '../utils/approvalText'
 import { useUiStore } from './ui'
 import { useSettingsStore } from './settings'
 import { useWorkingTreeStore } from './workingTree'
+import { useSessionStore } from './session'
 import { useAuthStore } from './auth'
-import { INBOX_CONVERSATION_ID, isInboxConversation } from '../client/types'
+import { INBOX_CONVERSATION_ID } from '../client/types'
 import type {
   ChatMessage,
   MessageMeta,
@@ -652,8 +653,10 @@ export const useMessageStore = defineStore('message', {
     },
     /**
      * 审批卡入列（标准 v1.0 §A1／§C B1·B5）：
-     * - `conversation_id` 有会话归属 ⇒ 落该会话；无来源（缺省或 `__inbox__`）
-     *   ⇒ 落 `__inbox__` 全局收件箱——**不得丢弃**（治 668/689）；
+     * - 帧内**显式** `conversation_id`（含显式 `__inbox__`）⇒ 照它落该会话／收件箱；
+     *   帧内**根本没有**该字段（1.0.18 装机面 daemon 的 `approval.required` 仅四字段）
+     *   ⇒ 回落 **run 会话 → 当前活动会话 → `__inbox__`**——**不得丢弃、不得让卡看不见**
+     *   （MSG-3213 P0）；
      * - `risk` 直接采信，缺省即「档位未知」（禁默认 medium，§C B8）；
      * - `reason`／`pending_total` 随 meta 落卡（§C B1／B5）。
      * 无 run 的卡（RPC／CLI／定时／探针触发）不造空 run，只落收件箱。
@@ -662,10 +665,17 @@ export const useMessageStore = defineStore('message', {
       this.markRunActive(data.task_id)
       const run = this.runs[data.task_id]
       if (run?.status === 'cancelled') return
-      const hasSession = !isInboxConversation(data.conversation_id)
-      const conversationId = hasSession
+      // MSG-3213 P0（审批卡不渲染）：daemon 的 `approval.required` 现只有四字段
+      // （`request_id/task_id/tool_name/args_preview`，见 `protocol.rs:432`）——**不带
+      // `conversation_id`**；工具循环的 `task_id`（`t-…`）亦可能不等于前端 run 的键
+      // ⇒ 归属取不到。旧行为落 `__inbox__` ⇒ **聊天里看不到卡**（老板三次各等 120s、
+      // 零写入）。新口径：**帧里给了归属就照它**（含显式 `__inbox__`——契约不破）；
+      // **帧里没给 ⇒ 回落 run 会话 → 当前活动会话 → 收件箱**（卡必可见、不丢）。
+      const hasOwnConversation =
+        typeof data.conversation_id === 'string' && data.conversation_id.length > 0
+      const conversationId = hasOwnConversation
         ? (data.conversation_id as string)
-        : run?.conversationId || INBOX_CONVERSATION_ID
+        : run?.conversationId || useSessionStore().activeId || INBOX_CONVERSATION_ID
       const msg = makeMessage(conversationId, 'approval', '', {
         taskId: data.task_id,
         requestId: data.request_id,

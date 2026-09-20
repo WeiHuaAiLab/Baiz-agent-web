@@ -3,6 +3,7 @@ import type { SseFrame } from './sse'
 import type { ApprovalRequiredData } from './types'
 import type { useApprovalStore } from '../stores/approval'
 import type { useMessageStore } from '../stores/message'
+import { useSessionStore } from '../stores/session'
 
 type MessageStore = ReturnType<typeof useMessageStore>
 type ApprovalStore = ReturnType<typeof useApprovalStore>
@@ -33,9 +34,12 @@ export function routeFrame(frame: SseFrame, messages: MessageStore, approvals: A
       // 一并入列（§C B1／B5）。
       const approval = data as unknown as ApprovalRequiredData
       messages.onApprovalRequired(approval)
-      // 会话归属回退：帧缺 `conversation_id` 时用 run 已知会话兜底；
-      // 两者皆无 ⇒ `__inbox__`（无会话来源的卡不得丢弃）
-      const fallbackConversation = messages.conversationOf(approval.task_id) || undefined
+      // 会话归属回退（MSG-3213 P0 修订）：帧缺 `conversation_id` 时按
+      // **run 已知会话 → 当前活动会话** 兜底；再取不到才留空（⇒ 收件箱）。
+      // 与 `stores/message.ts::onApprovalRequired` **同一口径**——卡与待办项
+      // 不得各落一处（旧口径只认 run，取不到即落收件箱 ⇒ 聊天里看不到卡）。
+      const fallbackConversation =
+        messages.conversationOf(approval.task_id) || useSessionStore().activeId || undefined
       approvals.upsert({
         request_id: approval.request_id,
         action: approval.tool_name,
