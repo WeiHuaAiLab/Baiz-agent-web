@@ -91,6 +91,10 @@ export default {
     changesReverted: '已回滚',
     authorizedDirs: '已授权目录',
     authorized: '已授权',
+    // MSG-3218：授权目录树（逐层展开）＋列目录失败人话提示＋二进制兜底出口
+    dirLoading: '读取中…',
+    dirEmpty: '此目录为空',
+    copyPath: '复制文件路径',
     // MSG-2998 修③（DEBT-619）：文件预览 web 面
     previewLoading: '读取中…',
     previewUnavailable: '该文件暂不支持预览',

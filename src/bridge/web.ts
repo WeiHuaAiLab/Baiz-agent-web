@@ -186,7 +186,14 @@ export function createWebBridge(): Bridge {
       },
       async listPickedDirectory(key: string) {
         const handle = pickedDirHandles.get(key)
-        if (!handle) return []
+        if (!handle) {
+          // MSG-3218 ①（同类面）：原 `if (!handle) return []` 把"句柄失效"吞成空目录——
+          // 浏览器形态不持久化目录句柄，重载后必走此径，界面只剩「暂无文件」。
+          // 改为上抛可行动错误（与 tauri 桥同口径）。
+          throw new Error(
+            `目录读取失败：该目录的浏览器授权句柄已失效（授权目录：${key}）——请重新「授权文件夹」后再试`,
+          )
+        }
         const entries: import('./types').FileEntry[] = []
         for await (const entry of handle.values()) {
           entries.push({
