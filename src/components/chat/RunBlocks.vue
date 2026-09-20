@@ -6,61 +6,38 @@
 // 数据源＝run.trace 有序事件（568 六型帧谱在案：text/reasoning/tool.call/
 // tool.result 俱备）——渲染归组、非协议重造。流式态与终态同构（同组件两态）：
 // 流式态思考常显（边想边写可见）、终态思考默认收起（MSG-2413 交互保留）。
-import { computed, onBeforeUnmount, ref, watch } from 'vue'
+import { computed, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import type { RunState, TraceItem } from '../../models'
-import { formatDuration } from '../../utils/time'
 
 const props = defineProps<{ run: RunState; streaming?: boolean }>()
 const { t } = useI18n()
 
 const reasoning = computed(() => props.run.reasoning)
 
-// MSG-3229（老板 2026-09-20 23:0x 口径）：思考区＝**默认折叠的实时流**——
-// ① 流式/终态同一折叠块，**都不自动展开**（对话流里只占一行标题）；
-// ② 标题随 reasoning 增量实时更新（字数＋秒级计时＋跑动指示）⇒ 不展开也看得出在跑；
-// ③ 回合结束（streaming 落 false＝done/settle 面）⇒ 切终态、去指示、**停表**；
-// ④ 整行（热区 ≥44）可点：展开看全文、再点收起，三角方向随态（▸／▾）。
-// 改前口径（MSG-2661）：流式期**常显全文**——已废（老板口径取代）。
+// MSG-3229（折叠单行）＋**MSG-3248（老板 2026-09-21 01:5x 口径修正）**：
+// 思考区＝**默认折叠的实时流**，且折叠行＝**跑马灯式"吐字"**——
+// ① 折叠态固定单行（nowrap＋overflow:hidden，行高恒定，不换行不撑高）；
+// ② ★ 该行实时显示 reasoning **增量文本**：新字从**右端**出现、旧字向左**滚出**
+//    （机制＝尾部窗口截取＋右对齐裁切；令明许"文本尾部截取"为等价判据）；
+// ③ 流式期随帧更新（Vue 渲染调度天然按微任务/帧合并 ⇒ 无额外抖动；单行零重排）；
+// ④ 回合结束（streaming 落 false）⇒ **定格在最后一段文字**（停滚、去跑动指示）；
+//    **不再显示字数/秒数**（老板原话："不是几个数字在滚动"；耗时另有消息头 `.elapsed` 承载）；
+// ⑤ 整行（热区 ≥44）可点：展开看全文、再点收起，三角随态（▸／▾）；正文 message.text 零改；
+// ⑥ 无 reasoning ⇒ 整块不渲染（不留空壳）；
+// ⑦ 本机制**零动画**（纯文本位移）⇒ 天然满足 prefers-reduced-motion（"不滚动·只更新文字"）。
 const thinkingOpen = ref(false)
-const nowTick = ref(Date.now())
-let tickTimer: ReturnType<typeof setInterval> | null = null
-
-const reasoningChars = computed(() => Array.from(reasoning.value).length)
-const reasoningCount = computed(() => reasoningChars.value.toLocaleString('zh-CN'))
-/** 秒级计时：流式期随 tick 走；终态取 run.elapsedMs（无则冻结在停表那刻） */
-const elapsedMs = computed(() =>
-  props.streaming
-    ? Math.max(0, nowTick.value - props.run.startedAt)
-    : (props.run.elapsedMs ?? Math.max(0, nowTick.value - props.run.startedAt)),
-)
-const elapsedText = computed(() => formatDuration(elapsedMs.value))
-
-function startTick() {
-  if (tickTimer !== null) return
-  nowTick.value = Date.now()
-  tickTimer = setInterval(() => {
-    nowTick.value = Date.now()
-  }, 1000)
-}
-
-function stopTick() {
-  if (tickTimer === null) return
-  clearInterval(tickTimer)
-  tickTimer = null
-}
-
-// 只在"流式且有思考"时走表；回合结束/无思考 ⇒ 停表（跑完即止）
-watch(
-  () => props.streaming === true && reasoning.value.length > 0,
-  (live) => {
-    if (live) startTick()
-    else stopTick()
-  },
-  { immediate: true },
-)
-
-onBeforeUnmount(stopTick)
+/** 跑马灯窗口：尾部保留字符数（超出即从左侧滚出）——细调只影响观感，不影响判据 */
+const MARQUEE_WINDOW = 80
+/**
+ * 单行跑马灯文本＝reasoning 的**尾部窗口**（换行折叠为空格 ⇒ 恒为一行）。
+ * 新字从右端进（`endsWith` 最新增量）、旧字向左滚出（超出窗口即被裁掉）。
+ */
+const marqueeText = computed(() => {
+  const flat = reasoning.value.replace(/\s+/g, ' ').trim()
+  if (!flat) return props.streaming ? t('chat.thinkingLive') : ''
+  return flat.length > MARQUEE_WINDOW ? flat.slice(-MARQUEE_WINDOW) : flat
+})
 
 /** MSG-3216：内部决策载荷（决策 JSON）——受控折叠区，默认收起，勿与正文混流 */
 const decision = computed(() => props.run.decision ?? '')
@@ -110,11 +87,13 @@ function toolNameOf(callId?: string): string {
         >
           <span v-if="streaming" class="reasoning-dots live" aria-hidden="true">⋯</span>
           <span class="reasoning-title">
-            {{ streaming ? t('chat.thinkingLive') : t('chat.deepThink') }}
+            {{ t('chat.deepThink') }}
+          </span>
+          <!-- MSG-3248 ★：单行跑马灯吐字——新字右端进、旧字向左滚出（尾部窗口＋右对齐裁切） -->
+          <span class="reasoning-marquee" data-uia="reasoning-marquee">
+            <span class="reasoning-marquee-text">{{ marqueeText }}</span>
           </span>
           <span v-if="!streaming" class="reasoning-done">{{ t('chat.thoughtDone') }}</span>
-          <span class="reasoning-count">{{ t('chat.thoughtChars', { n: reasoningCount }) }}</span>
-          <span class="reasoning-time">{{ elapsedText }}</span>
           <span class="reasoning-toggle">{{ thinkingOpen ? '▾' : '▸' }}</span>
         </button>
         <div

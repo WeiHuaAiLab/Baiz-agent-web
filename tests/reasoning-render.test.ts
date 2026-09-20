@@ -64,15 +64,14 @@ describe('Reasoning 帧 UI 回显', () => {
     await wrapper.vm.$nextTick()
     const block = wrapper.find('.streaming-tail .reasoning-stream')
     expect(block.exists()).toBe(true)
-    // MSG-3229 改口径（老板 2026-09-20）：流式期**默认折叠**——标题行实时（思考中＋字数），
-    // 正文不铺屏；要看全文点标题展开（内容零丢）。
-    expect(wrapper.find('.reasoning-head').text()).toContain('思考中')
-    expect(wrapper.find('.reasoning-head').text()).toContain('6 字')
+    // MSG-3229（折叠单行）＋MSG-3248（跑马灯吐字）：流式期默认折叠，**行内实时出文字**；
+    // 要看全文点标题展开（内容零丢）。
+    expect(wrapper.find('[data-uia="reasoning-marquee"]').text()).toContain('第一步先分析')
     expect(wrapper.find('.reasoning-body').exists()).toBe(false)
 
     routeFrame(reasoningFrame(taskId, '，再设计方案'), messages, approvals)
     await wrapper.vm.$nextTick()
-    expect(wrapper.find('.reasoning-head').text()).toContain('12 字')
+    expect(wrapper.find('[data-uia="reasoning-marquee"]').text()).toContain('再设计方案')
     await wrapper.find('.reasoning-head').trigger('click')
     expect(wrapper.find('.reasoning-body').text()).toBe('第一步先分析，再设计方案')
   })

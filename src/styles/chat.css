@@ -220,15 +220,33 @@
   color: var(--success, #1e7e34);
 }
 
-/* MSG-3229：实时字数与秒级计时（等宽数字防跳动） */
-.reasoning-head .reasoning-count,
-.reasoning-head .reasoning-time {
-  font-variant-numeric: tabular-nums;
-  font-size: 12px;
+/* ═══ MSG-3248 ★：单行跑马灯吐字（思考折叠行）═══════════════════════════
+   机制：尾部窗口文本 + **右对齐 + 左裁切** ⇒ 新字自右端进、旧字向左滚出。
+   单行恒高：nowrap + overflow:hidden + flex 不换行 ⇒ 审批卡/正文零位移。
+   零动画（纯文本位移）⇒ 天然满足 prefers-reduced-motion（不滚动·只更新文字）。 */
+.reasoning-marquee {
+  flex: 1 1 auto;
+  min-width: 0;
+  display: flex;
+  justify-content: flex-end;
+  overflow: hidden;
+  white-space: nowrap;
+  color: var(--muted);
+  font-size: 13px;
+  font-family: 'Cascadia Code', Consolas, monospace;
 }
 
-.reasoning-head .reasoning-count {
-  color: var(--text);
+.reasoning-marquee-text {
+  white-space: nowrap;
+}
+
+/* 弱动效偏好：显式声明"不滚动"（本机制本无动画，此处为口径留痕） */
+@media (prefers-reduced-motion: reduce) {
+  .reasoning-marquee,
+  .reasoning-marquee-text {
+    transition: none;
+    animation: none;
+  }
 }
 
 .reasoning-head .reasoning-toggle {

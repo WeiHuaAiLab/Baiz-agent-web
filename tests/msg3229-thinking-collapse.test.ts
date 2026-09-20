@@ -62,16 +62,17 @@ describe('MSG-3229 思考区：默认折叠的实时流', () => {
 
     run.reasoning = '第一步先分析'
     await wrapper.vm.$nextTick()
-    // 首个增量后：一行标题（跑动指示＋思考中＋字数＋计时＋三角），正文**不现**
+    // 首个增量后：一行（跑动指示＋思考标签＋**跑马灯吐字**＋三角），正文**不现**
+    //（MSG-3248 改口径：该行显示增量文本，不再显示"字数/秒数"）
     expect(wrapper.find('.reasoning-head').exists()).toBe(true)
     expect(wrapper.find('.reasoning-body').exists()).toBe(false)
     expect(wrapper.find('.reasoning-toggle').text()).toBe('▸')
-    expect(wrapper.find('.reasoning-head').text()).toContain('思考中')
-    expect(wrapper.find('.reasoning-head').text()).toContain('6 字')
+    expect(wrapper.find('.reasoning-head').text()).toContain('深度思考')
+    expect(wrapper.find('[data-uia="reasoning-marquee"]').text()).toContain('第一步先分析')
 
     run.reasoning += '，再设计方案'
     await wrapper.vm.$nextTick()
-    expect(wrapper.find('.reasoning-head').text()).toContain('12 字')
+    expect(wrapper.find('[data-uia="reasoning-marquee"]').text()).toContain('再设计方案')
     expect(wrapper.find('.reasoning-body').exists()).toBe(false)
   })
 
@@ -81,7 +82,7 @@ describe('MSG-3229 思考区：默认折叠的实时流', () => {
     const wrapper = mountBlocks(run, true)
     await wrapper.vm.$nextTick()
     expect(wrapper.find('.reasoning-dots.live').exists()).toBe(true)
-    expect(wrapper.find('.reasoning-head').text()).toContain('思考中')
+    expect(wrapper.find('.reasoning-head').text()).toContain('深度思考')
 
     // 回合收口：done/settle 面 ⇒ streaming 落 false
     await wrapper.setProps({ streaming: false })
@@ -89,7 +90,8 @@ describe('MSG-3229 思考区：默认折叠的实时流', () => {
     expect(wrapper.find('.reasoning-dots.live').exists()).toBe(false)
     expect(wrapper.find('.reasoning-head').text()).toContain('深度思考')
     expect(wrapper.find('.reasoning-head').text()).toContain('已完成')
-    expect(wrapper.find('.reasoning-head').text()).not.toContain('思考中')
+    // MSG-3248：终态**定格最后一段文字**（不再有字数/计时数字）
+    expect(wrapper.find('[data-uia="reasoning-marquee"]').text()).toContain('想完了')
 
     // 停表：时间再走 5s，终态标题逐字不变
     const frozen = wrapper.find('.reasoning-head').text()
