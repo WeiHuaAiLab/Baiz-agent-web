@@ -23,6 +23,9 @@ watch(
 )
 
 const reasoning = computed(() => props.run.reasoning)
+/** MSG-3216：内部决策载荷（决策 JSON）——受控折叠区，默认收起，勿与正文混流 */
+const decision = computed(() => props.run.decision ?? '')
+const decisionOpen = ref(false)
 /** 执行命令区：tool.call 事件序列（按发生序） */
 const calls = computed<TraceItem[]>(() =>
   props.run.trace.filter((item) => item.kind === 'tool.call'),
@@ -75,6 +78,21 @@ function toolNameOf(callId?: string): string {
     </template>
 
     <!-- 区二：执行命令（tool.call）——默认收起（解双渲重），点击展开总览 -->
+    <!-- MSG-3216 P0：内部过程（决策载荷）——受控折叠区，与正文严格分流。
+         此处承载原被灌进消息正文的决策 JSON 原文（零丢证），默认收起。 -->
+    <section v-if="decision" class="run-block internal-decision">
+      <button
+        type="button"
+        class="block-head"
+        :class="{ open: decisionOpen }"
+        @click="decisionOpen = !decisionOpen"
+      >
+        <span class="block-title">{{ t('chat.blockInternal') }}</span>
+        <span class="block-toggle">{{ decisionOpen ? '-' : '+' }}</span>
+      </button>
+      <pre v-show="decisionOpen" class="reasoning-body internal-body">{{ decision }}</pre>
+    </section>
+
     <section v-if="calls.length" class="run-block commands">
       <button
         type="button"

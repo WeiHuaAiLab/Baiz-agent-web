@@ -4,6 +4,8 @@ import { db } from '../db'
 import { getClient } from '../client/singleton'
 import type { AttachmentItem } from './files'
 import { mapRpcError } from '../utils/errors'
+import { createDecisionStreamFilter } from '../utils/decisionStream'
+import type { DecisionStreamFilter } from '../utils/decisionStream'
 import { formatFileSize } from '../utils/format'
 import { TOOL_LABELS_ZH as TOOL_NAMES_ZH } from '../utils/approvalText'
 import { useUiStore } from './ui'
@@ -32,6 +34,23 @@ import type {
 // 流式节流：首个 token 即时生效，后续 token 累积到 100ms 窗口统一刷新 UI。
 const tokenBuffers = new Map<string, string>()
 const flushTimers = new Map<string, ReturnType<typeof setTimeout>>()
+// MSG-3216 P0：决策 JSON 分流器（按 task 一份）——内部载荷不得进正文，
+// 改道受控折叠区（run.decision）。终态收流时落定并清理（见 settleDecisionStream）。
+const decisionFilters = new Map<string, DecisionStreamFilter>()
+
+function decisionFilterFor(taskId: string): DecisionStreamFilter {
+  let filter = decisionFilters.get(taskId)
+  if (!filter) {
+    filter = createDecisionStreamFilter()
+    decisionFilters.set(taskId, filter)
+  }
+  return filter
+}
+
+/** token 增量 → { 可进正文段, 内部载荷段 }（分流判据见 utils/decisionStream.ts） */
+function splitTokenDelta(taskId: string, token: string) {
+  return decisionFilterFor(taskId).push(token)
+}
 // 持久化节流：流式期间消息文本 500ms 防抖写库，done 时一次性写最终稿。
 const persistTimers = new Map<string, ReturnType<typeof setTimeout>>()
 const RUNS_LIMIT = 50
@@ -403,6 +422,7 @@ export const useMessageStore = defineStore('message', {
     },
     stopRun(taskId: string) {
       this.flushRun(taskId)
+      this.settleDecisionStream(taskId)
       const run = this.runs[taskId]
       if (!run || run.status !== 'running') return
       // MSG-2318 A-2：停止键接 task.cancel——复用 chatQueueCancel
@@ -460,6 +480,20 @@ export const useMessageStore = defineStore('message', {
       msg.meta = { ...msg.meta, queued: false, queueCancelled: true, status: 'cancelled' }
       msg.text = '已取消排队'
       await db.messages.put(cloneForDb(msg))
+    },
+    /**
+     * MSG-3216 P0：收流落定——分流器余量归位（未闭合候选归正文／未闭合决策归折叠区），
+     * 并清掉 per-task 分流器（防 Map 泄漏）。done/stop/error/终态四处调用，幂等。
+     */
+    settleDecisionStream(taskId: string) {
+      const filter = decisionFilters.get(taskId)
+      if (!filter) return
+      decisionFilters.delete(taskId)
+      const tail = filter.flush()
+      const run = this.runs[taskId]
+      if (!run) return
+      if (tail.body) run.text += tail.body
+      if (tail.internal) run.decision = `${run.decision ?? ''}${tail.internal}`
     },
     flushRun(taskId: string) {
       const timer = flushTimers.get(taskId)
@@ -536,6 +570,7 @@ export const useMessageStore = defineStore('message', {
     /** 终态收口：把 run 的正文落成 assistant 消息（done 帧缺席时的兜底） */
     settleAssistantMessage(run: RunState, status: string) {
       this.flushRun(run.taskId)
+      this.settleDecisionStream(run.taskId)
       if (!run.conversationId) return
       const msg = this.byConversation[run.conversationId]?.find(
         (item) => item.meta?.taskId === run.taskId && item.kind === 'assistant',
@@ -569,17 +604,22 @@ export const useMessageStore = defineStore('message', {
       this.markRunActive(data.task_id)
       if (run.status === 'cancelled') return
       if (!run.conversationId) return
+      // MSG-3216 P0：决策 JSON 分流——内部载荷进受控折叠区，正文只留人话段
+      //（真机 1.0.18 泄漏源：token 帧与正文同路，见 utils/decisionStream.ts 头注）
+      const split = splitTokenDelta(data.task_id, data.token)
+      if (split.internal) run.decision = `${run.decision ?? ''}${split.internal}`
+      if (!split.body) return
       const buffered = tokenBuffers.get(data.task_id)
       if (buffered === undefined) {
         // 首个 token 即时生效，保证首字立刻可见
-        run.text += data.token
+        run.text += split.body
         tokenBuffers.set(data.task_id, '')
         flushTimers.set(
           data.task_id,
           setTimeout(() => this.flushRun(data.task_id), 100),
         )
       } else {
-        tokenBuffers.set(data.task_id, buffered + data.token)
+        tokenBuffers.set(data.task_id, buffered + split.body)
       }
     },
     onReasoning(data: ReasoningData) {
@@ -728,6 +768,7 @@ export const useMessageStore = defineStore('message', {
       const run = this.runs[data.task_id]
       if (!run || run.status === 'cancelled') return
       this.flushRun(data.task_id)
+      this.settleDecisionStream(data.task_id)
       run.status = 'completed'
       run.finishedAt = Date.now()
       run.elapsedMs = run.finishedAt - run.startedAt
@@ -778,6 +819,7 @@ export const useMessageStore = defineStore('message', {
     },
     onError(data: ErrorData) {
       this.flushRun(data.task_id)
+      this.settleDecisionStream(data.task_id)
       this.markRunActive(data.task_id)
       const run = this.runs[data.task_id]
       // MSG-2581 修①a：取消帧识别——主动停止（stopRun 已置 cancelled）后

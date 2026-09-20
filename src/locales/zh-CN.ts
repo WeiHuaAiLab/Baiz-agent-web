@@ -71,6 +71,8 @@ export default {
     // MSG-2998 修②（DEBT-544 目二）：三分离归组区标
     blockCommands: '执行命令',
     blockResults: '执行结果',
+    // MSG-3216 P0：内部过程（决策载荷）折叠块标题
+    blockInternal: '内部过程（已折叠）',
     queuePosition: '排队中 · 第 {n} 位',
     queueCancel: '取消排队',
     queueCancelled: '已取消排队',

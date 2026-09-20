@@ -38,7 +38,8 @@ const running = computed(() => run.value?.status === 'running')
 const showRunBlocks = computed(() => {
   const current = run.value
   if (!current) return false
-  if (current.reasoning === '' && current.trace.length === 0) return false
+  // MSG-3216：内部决策载荷（decision）也算"有过程可看"——只进折叠区不算无输出
+  if (current.reasoning === '' && current.trace.length === 0 && !current.decision) return false
   if (props.message.kind === 'assistant') return true
   return props.message.kind === 'status' && props.message.meta?.status === 'error'
 })
@@ -133,7 +134,7 @@ function cancelQueued() {
     <!-- MSG-2661 目③：content 空而 reasoning 有——思考区即输出面——
          不再显「（无输出）」（真无输出：无正文无思考无 running——照显） -->
     <p
-      v-else-if="message.kind === 'assistant' && !run?.reasoning"
+      v-else-if="message.kind === 'assistant' && !run?.reasoning && !run?.decision"
       class="no-output"
     >
       {{ t('chat.noOutput') }}
