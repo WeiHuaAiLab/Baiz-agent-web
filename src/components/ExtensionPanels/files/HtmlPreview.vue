@@ -14,7 +14,12 @@ import {
   buildPreviewDocument,
   previewSandbox,
 } from '../../../utils/htmlPreview'
-import { decodePreview, highlightPreview, formatBytes } from '../../../utils/filePreview'
+import {
+  decodePreview,
+  highlightPreview,
+  formatBytes,
+  previewFailureKey,
+} from '../../../utils/filePreview'
 import type { PreviewDecode, PreviewLoader } from '../../../utils/filePreview'
 import Icon from '../../common/Icon.vue'
 
@@ -89,7 +94,9 @@ async function load(): Promise<void> {
     html.value = decoded.text
   } catch (error) {
     if (seq !== loadSeq) return
-    errorText.value = error instanceof Error ? error.message : String(error)
+    // MSG-3225 ①：与 FilePreview 同口径——人话＋可行动指引＋服务端原文
+    const raw = error instanceof Error ? error.message : String(error)
+    errorText.value = t(previewFailureKey(raw), { detail: raw })
   } finally {
     if (seq === loadSeq) loading.value = false
   }

@@ -8,6 +8,7 @@ import { createI18n } from 'vue-i18n'
 import FilePreview from '../src/components/ExtensionPanels/files/FilePreview.vue'
 import {
   PREVIEW_MAX_BYTES,
+  PreviewLoadError,
   createRpcPreviewLoader,
 } from '../src/utils/filePreview'
 import type { PreviewRpcResponse } from '../src/utils/filePreview'
@@ -103,15 +104,19 @@ describe('MSG-3014 预览 RPC 接真', () => {
     expect(wrapper.find('.preview-code').text()).toContain('API_KEY=test-not-a-real-key')
   })
 
-  it('败面诚实降级：RPC null／抛错 → loader null → 界面降级文案', async () => {
+  it('败面诚实降级：RPC null／载荷坏 → loader null；RPC 抛错 → 上抛原文（MSG-3225 ①）', async () => {
     const nullLoader = createRpcPreviewLoader(async () => null)
     expect(await nullLoader('/w/x.txt')).toBeNull()
+    // MSG-3225 ①（DEBT-753）：RPC **抛错**径不再吞成 null——上抛 `PreviewLoadError`
+    // （带服务端原文），界面据此显「人话＋可行动指引＋原文」。旧断言
+    // `expect(await throwLoader(...)).toBeNull()` 是"六字裸词"病灶的固化，
+    // 随契约定修订（非忽略、非跳过——同一用例、同一 intent：败面须诚实）。
     const throwLoader = createRpcPreviewLoader(async () => {
       throw new Error('boom')
     })
-    expect(await throwLoader('/w/x.txt')).toBeNull()
+    await expect(throwLoader('/w/x.txt')).rejects.toBeInstanceOf(PreviewLoadError)
     const badB64 = createRpcPreviewLoader(async () => resp({ bytes_b64: '!!!not-base64!!!' }))
-    expect(await badB64('/w/x.txt')).toBeNull()
+        expect(await badB64('/w/x.txt')).toBeNull()
 
     const wrapper = mount(FilePreview, {
       props: { path: '/w/x.txt', name: 'x.txt', loader: nullLoader },

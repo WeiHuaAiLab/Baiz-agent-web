@@ -42,6 +42,8 @@ const riskText = computed(() => {
   }
 })
 const resolved = computed(() => props.message.meta?.approved !== undefined)
+/** MSG-3225 ②：服务端权威清单判定为已终态（未决超期／已被销卡）——非「用户拒绝」 */
+const expired = computed(() => props.message.meta?.expired === true)
 const requestId = computed(() => props.message.meta?.requestId ?? '')
 const toolName = computed(() => props.message.meta?.toolName)
 const toolText = computed(() => toolLabel(toolName.value))
@@ -161,11 +163,11 @@ async function requestEscalation() {
 <template>
   <!-- success（已决）：✓/✗ 一行缩起，留在输出区可回看 -->
   <div v-if="resolved" class="approval-card resolved" data-state="success">
-    <span class="approval-check" :class="{ denied: !message.meta?.approved }">
-      {{ message.meta?.approved ? '✓' : '✗' }}
+    <span class="approval-check" :class="{ denied: !message.meta?.approved && !expired }">
+      {{ expired ? '—' : message.meta?.approved ? '✓' : '✗' }}
     </span>
     <span class="approval-resolved-text">
-      {{ message.meta?.approved ? t('approval.approved') : t('approval.denied') }}{{ scopeSuffix }}
+      {{ expired ? t('approval.expired') : message.meta?.approved ? t('approval.approved') : t('approval.denied') }}{{ scopeSuffix }}
     </span>
     <span class="approval-resolved-tool">{{ toolText }}</span>
   </div>

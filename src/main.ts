@@ -75,15 +75,13 @@ function bootApp(pinia: Pinia, setup: ClientSetup): void {
   // MSG-3014 包131：文件预览接真——previewLoader 调 daemon file.preview
   // （授权目录钉死／服务端截断／原始字节零转码／二进制标记；R8「预览面装机
   // 零执行」销）。mock 演示径不发 RPC——loader 恒 null 走诚实降级（零网面）。
+  // MSG-3225 ①：装机径**不再吞败面**——`try/catch → null` 已删，RPC 错误
+  // 直上 `createRpcPreviewLoader` 包成 `PreviewLoadError`，界面显人话＋原文。
   const files = useFilesStore(pinia)
   files.setPreviewLoader(
     createRpcPreviewLoader(async (path, maxBytes) => {
       if (transport.kind === 'mock') return null
-      try {
-        return await client.previewRead({ path, max_bytes: maxBytes })
-      } catch {
-        return null
-      }
+      return await client.previewRead({ path, max_bytes: maxBytes })
     }),
   )
 

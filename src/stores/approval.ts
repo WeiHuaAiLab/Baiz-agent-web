@@ -39,6 +39,8 @@ export const useApprovalStore = defineStore('approval', {
     /** 最近一次重连补拉是否成功（false ＝ 档位以「未知」呈现，不清真） */
     syncFailed: false,
     syncedAt: 0,
+    /** MSG-3225 ②：最近一次对账收口的已终态卡条数（实测/讫报用） */
+    staleReconciled: 0,
     rules: [] as ApprovalRule[],
     rulesLoaded: false,
     policy: [] as Array<{ name: string; priority: number }>,
@@ -92,6 +94,8 @@ export const useApprovalStore = defineStore('approval', {
      */
     async syncPending(): Promise<boolean> {
       const { client } = getClientSetup()
+      // MSG-3225 ②：对账起点——此**之后**到达的卡不参与本轮收口（防在途帧竞态）
+      const startedAt = Date.now()
       try {
         const { pending } = await client.permissionPending()
         const list = Array.isArray(pending) ? pending : []
@@ -113,6 +117,10 @@ export const useApprovalStore = defineStore('approval', {
         // 断线期间已决（补拉清单里没有）的卡销单——状态可查即不残留
         const gone = this.pending.filter((entry) => !seen.has(entry.request_id))
         for (const entry of gone) this.resolve(entry.request_id)
+        // MSG-3225 ②：同一次对账顺带收口**消息面**（收件箱面板真源是
+        // `messages.list('__inbox__')`，不是本 store 的 pending）——权威清单外
+        // 的旧卡标终态（不删档），已在本地永久留存的幽灵项就此不再展示。
+        this.staleReconciled = useMessageStore().expireStaleApprovals(seen, startedAt)
         this.pendingTotal = Math.max(this.pendingTotal, list.length)
         this.syncFailed = false
         this.syncedAt = Date.now()

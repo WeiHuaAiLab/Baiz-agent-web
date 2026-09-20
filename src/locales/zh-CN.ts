@@ -99,6 +99,16 @@ export default {
     previewLoading: '读取中…',
     previewUnavailable: '该文件暂不支持预览',
     previewFailed: '预览读取失败',
+    // MSG-3225 ①（DEBT-753）：预览败面**人话＋可行动指引＋服务端原文**
+    previewFailOutside:
+      '该文件不在服务端授权目录内，未读取也未写入任何内容。请把该文件所在目录加入授权根（~/.closer/config.toml 的 authorized_roots），或改用工作区内的文件。服务端原文：{detail}',
+    previewFailMissing:
+      '服务端找不到该文件（或路径不可解析），未读取也未写入任何内容。请确认文件仍在原位置。服务端原文：{detail}',
+    previewFailUnreadable:
+      '服务端读取该文件失败（权限／占用／IO 面），未做任何写入。可稍后重试，或先在系统里确认该文件可被当前用户读取。服务端原文：{detail}',
+    previewFailTooBig:
+      '该文件超出预览读取上限（服务端已拒），未做任何写入。可改用系统编辑器打开。服务端原文：{detail}',
+    previewFailGeneric: '预览读取失败（未做任何读取或写入）。服务端原文：{detail}',
     previewTruncated: '已截断：显示前 {shown}（共 {total}）',
     previewBinary: '二进制文件——不可预览',
     previewEmpty: '空文件',
@@ -439,6 +449,9 @@ export default {
     deny: '拒绝',
     approved: '✓ 已批准',
     denied: '✗ 已拒绝',
+    // MSG-3225 ②：按服务端权威挂起清单判定的「已终态」（未决超期／已被销卡）——
+    // 与「用户拒绝」区分（不是 denied——不得给人"你拒绝过"的错觉）
+    expired: '— 已失效（未决超期）',
     highRisk: '高风险',
     mediumRisk: '中风险',
     lowRisk: '低风险',
