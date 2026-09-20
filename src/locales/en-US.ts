@@ -89,6 +89,10 @@ export default {
     changesReverted: 'Changes reverted',
     authorizedDirs: 'Authorized directories',
     authorized: 'Authorized',
+    // MSG-3218: authorized directory tree (per-level expand) + list failure + binary fallback
+    dirLoading: 'Loading…',
+    dirEmpty: 'This directory is empty',
+    copyPath: 'Copy file path',
     // MSG-2998 修③（DEBT-619）：file preview (web)
     previewLoading: 'Loading…',
     previewUnavailable: 'Preview is not available for this file yet',

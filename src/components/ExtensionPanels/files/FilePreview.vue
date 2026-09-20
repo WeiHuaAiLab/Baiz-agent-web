@@ -16,6 +16,7 @@ import {
 } from '../../../utils/filePreview'
 import type { PreviewDecode, PreviewLoader } from '../../../utils/filePreview'
 import Icon from '../../common/Icon.vue'
+import { getBridge } from '../../../bridge'
 
 const props = defineProps<{
   path: string
@@ -31,6 +32,22 @@ const errorText = ref('')
 const decode = ref<PreviewDecode | null>(null)
 /** 凭据件二次确认（安全钉：默认遮罩——确认后方示） */
 const revealed = ref(false)
+// MSG-3218 ③（能力面·兜底）：二进制／视频无内嵌播放，也无"用系统播放器打开"能力
+// （壳侧 `proxy_open_external` 只放行 http/https/mailto，见 host.rs:115-118）——
+// 故给**复制文件路径**兜底出口（用户可粘到播放器/编辑器打开），并如实照录缺失。
+const copiedPath = ref(false)
+
+async function copyPath(): Promise<void> {
+  try {
+    await getBridge().clipboard.writeText(props.path)
+    copiedPath.value = true
+    setTimeout(() => {
+      copiedPath.value = false
+    }, 1200)
+  } catch {
+    /* clipboard unavailable */
+  }
+}
 
 const credential = computed(() => isCredentialFile(props.path))
 const masked = computed(() => credential.value && !revealed.value)
@@ -133,6 +150,10 @@ const highlighted = computed(() => {
       <template v-else>
         <div v-if="decode.kind === 'binary'" class="preview-status">
           {{ t('files.previewBinary') }}
+          <!-- MSG-3218 ③：无系统播放器外开能力（壳侧 scheme 白名单）——给复制路径兜底 -->
+          <button type="button" class="binary-copy" @click="copyPath">
+            {{ copiedPath ? t('common.copied') : t('files.copyPath') }}
+          </button>
         </div>
         <div v-else-if="decode.kind === 'empty'" class="preview-status">
           {{ t('files.previewEmpty') }}

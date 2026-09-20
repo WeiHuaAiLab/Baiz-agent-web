@@ -3,6 +3,7 @@ import { defineStore } from 'pinia'
 import { getBridge } from '../bridge'
 import type { AttachmentPayload, FileEntry } from '../bridge'
 import type { PreviewLoader } from '../utils/filePreview'
+import { dirReadFailedText } from '../utils/errors'
 import { useUiStore } from './ui'
 
 export interface AttachmentItem {
@@ -47,6 +48,13 @@ export const useFilesStore = defineStore('files', {
     loading: false,
     attachments: [] as AttachmentItem[],
     pickedDirs: {} as Record<string, { name: string; path: string }>,
+    /** MSG-3218 ②：授权目录树——逐层取数缓存／展开态／加载态／失败文案
+     *  （改前是面板里的单层 `authorizedEntries`：一层平铺、子目录不可展开） */
+    dirEntries: {} as Record<string, FileEntry[]>,
+    dirOpen: {} as Record<string, boolean>,
+    dirLoading: {} as Record<string, boolean>,
+    /** MSG-3218 ①：列目录失败文案（按路径）——失败须能被界面呈现，禁静默空表 */
+    dirErrors: {} as Record<string, string>,
     /** MSG-2998 修③（DEBT-619）：预览字节读取面（注入）——预览内容接口
      *  属 daemon 侧只读 RPC（另令俟颁），本令只做前端组件与交互、勿擅定
      *  wire；未注入时预览面板诚实降级。 */
@@ -162,13 +170,56 @@ export const useFilesStore = defineStore('files', {
         return null
       }
     },
+    /** 目录优先、其次按名——与壳侧 `proxy_fs_list_dir` 排序口径一致（host.rs:79） */
+    sortEntries(entries: FileEntry[]): FileEntry[] {
+      return [...entries].sort((a, b) => {
+        if (a.isDir !== b.isDir) return a.isDir ? -1 : 1
+        return a.name.localeCompare(b.name)
+      })
+    },
+    /**
+     * MSG-3218 ①：读授权目录一层。
+     * 成功 ⇒ 入缓存并清该路径旧错误；失败 ⇒ **文案入 dirErrors（界面可现）并上抛**
+     * —— 改前 `catch { return [] }` 静默兜空，是"授权目录列表不对＋文件打不开"的成因之一。
+     */
     async loadAuthorizedDir(key: string): Promise<FileEntry[]> {
       const bridge = getBridge()
-      if (!bridge.has('fs.pickDir')) return []
+      const fail = (message: string): never => {
+        const text = dirReadFailedText(key, message)
+        this.dirErrors = { ...this.dirErrors, [key]: text }
+        throw new Error(text)
+      }
+      if (!bridge.has('fs.pickDir')) {
+        fail('当前形态不支持读取本机授权目录（请用桌面端打开）')
+      }
+      this.dirLoading = { ...this.dirLoading, [key]: true }
       try {
-        return await bridge.fs.listPickedDirectory(key)
+        const entries = this.sortEntries(await bridge.fs.listPickedDirectory(key))
+        this.dirEntries = { ...this.dirEntries, [key]: entries }
+        if (this.dirErrors[key]) {
+          const next = { ...this.dirErrors }
+          delete next[key]
+          this.dirErrors = next
+        }
+        return entries
+      } catch (error) {
+        return fail(error instanceof Error ? error.message : String(error))
+      } finally {
+        this.dirLoading = { ...this.dirLoading, [key]: false }
+      }
+    },
+    /**
+     * MSG-3218 ②：授权目录树逐层展开/收起（点击目录 → 首次展开时取该层内容）。
+     * 失败不抛未处理拒绝——文案已入 dirErrors，由面板呈现（禁静默空表）。
+     */
+    async toggleDir(key: string): Promise<void> {
+      const willOpen = !this.dirOpen[key]
+      this.dirOpen = { ...this.dirOpen, [key]: willOpen }
+      if (!willOpen || this.dirEntries[key]) return
+      try {
+        await this.loadAuthorizedDir(key)
       } catch {
-        return []
+        /* 失败文案已入 dirErrors */
       }
     },
     async listDrives(): Promise<string[]> {

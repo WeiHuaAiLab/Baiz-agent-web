@@ -193,8 +193,73 @@
   text-decoration: underline;
 }
 
+/* MSG-3218 ②：目录项改为**可点开**的树节点（原为不可交互 span ⇒ 子目录永不可达） */
 .authorized-dir-entry {
-  opacity: 0.85;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  width: 100%;
+  padding: 3px 4px;
+  border: none;
+  background: none;
+  font: inherit;
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.authorized-dir-entry svg {
+  flex: none;
+  color: var(--muted);
+  transition: transform 150ms;
+}
+
+.authorized-dir-entry svg.open {
+  transform: rotate(90deg);
+}
+
+.authorized-dir-entry:hover {
+  color: var(--text);
+}
+
+.authorized-entry-name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* MSG-3218 ①：加载中／空目录／失败三态——失败必现（禁静默空表／禁「暂无文件」糊弄） */
+.authorized-status {
+  color: var(--muted);
+  font-style: italic;
+}
+
+.authorized-files li.authorized-error {
+  color: var(--danger, #d9483b);
+  white-space: normal;
+  line-height: 1.4;
+  font-family: inherit;
+  font-size: 11px;
+}
+
+/* MSG-3218 ③：二进制／视频兜底出口（复制文件路径） */
+.binary-copy {
+  display: block;
+  margin-top: 8px;
+  padding: 4px 10px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: none;
+  color: inherit;
+  font: inherit;
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.binary-copy:hover {
+  background: var(--hover);
 }
 
 /* MSG-2998 修③：预览面（编码标签/截断明示/二进制/凭据遮罩） */
@@ -365,4 +430,3 @@
   border-radius: 8px;
   background: var(--panel);
 }
-

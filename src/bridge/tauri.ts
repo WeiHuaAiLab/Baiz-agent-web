@@ -1,4 +1,7 @@
 import type { AttachmentPayload, Bridge, CapabilityName, FileEntry } from './types'
+// MSG-3218 ①：列目录失败的可行动文案由 `utils/errors.dirReadFailedText` 统一产出
+//（壳侧原文透传＋补「怎么修」），三处吞错点同形可断言。
+import { dirReadFailedText } from '../utils/errors'
 
 // Tauri 桥接实现：经 Rust 壳 command 转发（fs/剪贴板/通知/对话框）。
 export function createTauriBridge(): Bridge {
@@ -40,8 +43,11 @@ export function createTauriBridge(): Bridge {
         const { invoke } = await import('@tauri-apps/api/core')
         try {
           return await invoke<FileEntry[]>('proxy_fs_list_dir', { path: key })
-        } catch {
-          return []
+        } catch (error) {
+          // MSG-3218 ①：原 `catch { return [] }` 把壳侧错误吞成空表 ⇒ 界面「暂无文件」
+          // 且零提示（真机"授权目录列表不对"的成因之一）。改上抛——由 store 收存、
+          // 由面板呈现人话提示（禁静默兜空）。
+          throw new Error(dirReadFailedText(key, error))
         }
       },
       // DEBT-540-A：tauri 形态附件选择——Rust 壳 proxy_pick_attachment
