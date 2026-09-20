@@ -247,11 +247,30 @@ async function requestEscalation() {
 
     <!-- F 按钮区：同意（--accent 实心）／拒绝（中性描边·**非红**） -->
     <div class="approval-actions">
-      <button type="button" class="approve" :disabled="working" @click="decide(true)">
+      <!-- MSG-3236 ①：稳定 id/name/data-*——UIA／自动化可直接定位「同意/拒绝」 -->
+      <button
+        type="button"
+        class="approve"
+        :id="`approval-${requestId}-approve`"
+        name="approval-approve"
+        :data-approval-request-id="requestId"
+        :data-uia="'approval-approve'"
+        :disabled="working"
+        @click="decide(true)"
+      >
         <span v-if="working" class="approval-spinner" aria-hidden="true" />
         {{ working ? t('approval.submitting') : t('approval.approve') }}
       </button>
-      <button type="button" class="deny" :disabled="working" @click="decide(false)">
+      <button
+        type="button"
+        class="deny"
+        :id="`approval-${requestId}-deny`"
+        name="approval-deny"
+        :data-approval-request-id="requestId"
+        :data-uia="'approval-deny'"
+        :disabled="working"
+        @click="decide(false)"
+      >
         {{ t('approval.deny') }}
       </button>
     </div>

@@ -255,7 +255,14 @@ function send() {
  */
 async function sendWith(text: string) {
     const trimmed = text.trim();
+    // MSG-3236 ④：空文本属"用户没输入"（非拒发），保持静默；其余一律不得静默吞。
     if (!trimmed) return;
+    // MSG-3236 ④：收件箱遮罩在途时，发送曾被**静默吞掉**（mask 吃掉指点事件）。
+    // 这里先让路（关收件箱＋回焦点），**并给人话提示**——要发就真发出去，绝不静默。
+    if (ui.inboxOpen) {
+        ui.closeInbox();
+        ui.toast(t("chat.inboxClosedForSend"), "info");
+    }
     const attachments = [...files.attachments];
     void files.clearAttachments();
     void session.touch(activeId.value);

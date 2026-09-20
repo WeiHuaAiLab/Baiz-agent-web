@@ -364,6 +364,21 @@
   color: var(--muted);
   font-family: 'Cascadia Code', Consolas, monospace;
 }
+
+/* ═══ MSG-3236 ①：未决审批卡**常驻区**（不入虚拟滚动 ⇒ UIA/自动化可稳定命中）═══
+   间距一律 4 倍数（DESIGN §10 机判）。 */
+.pending-approvals {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 8px 12px;
+}
+
+.pending-approval-slot {
+  max-width: 720px;
+  width: 100%;
+  margin: 0 auto;
+}
 .run-blocks {
   display: flex;
   flex-direction: column;

@@ -74,6 +74,8 @@ export default {
     toolResult: '工具结果',
     // MSG-3233 ②：文件卡片（自上游挑件）——点击打开到右侧面板
     fileCard: { open: '已在右侧打开' },
+    // MSG-3236 ④：收件箱遮罩在途时的发送让路提示（禁静默吞发）
+    inboxClosedForSend: '已关闭待办收件箱，消息已发出',
     // MSG-2998 修②（DEBT-544 目二）：三分离归组区标
     blockCommands: '执行命令',
     blockResults: '执行结果',

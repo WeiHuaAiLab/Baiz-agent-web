@@ -5,7 +5,8 @@
 // - 会话内的卡一键跳回原会话（卡本身仍在消息流里）；
 // - 角标「另有 N 张卡」＝ daemon 帧 `pending_total` 与本地可见数之差；
 // - 「已记住的规则」区可撤销（`approval.revoke`）——撤销后必重弹。
-import { computed, onMounted, watch } from 'vue'
+import { computed, nextTick, onMounted, ref, watch } from 'vue'
+import type { ComponentPublicInstance } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useApprovalStore } from '../stores/approval'
 import { useMessageStore } from '../stores/message'
@@ -35,6 +36,27 @@ const rules = computed(() => approvals.rules)
 /** 面板表头计数：daemon 全库数与本机可见卡数取大（两处都不虚报） */
 const visibleCount = computed(() =>
   Math.max(approvals.badgeCount, inboxCards.value.length + sessionItems.value.length),
+)
+
+// MSG-3236 ②：新卡到达时**稳定聚焦当前卡**——不直写 scrollTop，走元素 API
+//（`scrollIntoView` 让浏览器/虚拟滚动本体自己记账），并把焦点落到最新未决卡上，
+// 便于 UIA／键盘用户直接点「同意/拒绝」。
+const latestCardEl = ref<HTMLElement | null>(null)
+const latestRequestId = computed(() => inboxCards.value.at(-1)?.meta?.requestId ?? '')
+
+function bindLatestCard(el: Element | ComponentPublicInstance | null, requestId?: string) {
+  if (requestId && requestId === latestRequestId.value) latestCardEl.value = (el as HTMLElement) ?? null
+}
+
+watch(
+  () => inboxCards.value.length,
+  async () => {
+    await nextTick()
+    const el = latestCardEl.value
+    if (!el) return
+    el.scrollIntoView?.({ block: 'nearest' })
+    el.focus?.()
+  },
 )
 
 function riskText(risk?: string): string {
@@ -125,7 +147,16 @@ watch(
         <section class="inbox-section">
           <h4 class="inbox-section-title">{{ t('approval.inboxNoSource') }}</h4>
           <p v-if="inboxCards.length === 0" class="inbox-empty">{{ t('approval.inboxEmpty') }}</p>
-          <div v-for="card in inboxCards" :key="card.id" class="inbox-card">
+          <div
+            v-for="card in inboxCards"
+            :key="card.id"
+            class="inbox-card"
+            :id="`inbox-approval-${card.meta?.requestId ?? card.id}`"
+            :data-approval-request-id="card.meta?.requestId ?? ''"
+            data-uia="inbox-approval"
+            tabindex="-1"
+            :ref="(el) => bindLatestCard(el, card.meta?.requestId)"
+          >
             <ApprovalCard :message="card" />
           </div>
         </section>

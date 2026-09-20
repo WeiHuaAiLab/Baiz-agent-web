@@ -74,6 +74,8 @@ export default {
     toolResult: 'Result',
     // MSG-3233 ②: file card (ported from upstream) — click opens it in the side panel
     fileCard: { open: 'Opened in panel' },
+    // MSG-3236 ④: hint when the inbox overlay yields to a send (no silent drop)
+    inboxClosedForSend: 'Inbox closed — your message was sent',
     // MSG-2998 修②（DEBT-544 part 2）：three-way split block labels
     blockCommands: 'Commands',
     blockResults: 'Results',

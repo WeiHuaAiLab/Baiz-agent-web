@@ -1415,9 +1415,14 @@ button {
   display: flex;
   justify-content: flex-end;
   z-index: 130;
+  /* MSG-3236 ④：遮罩**不吃事件**——原 inset:0 + z-index:130 把聊天输入区（.input-wrap
+     z-index:10/20）整个盖住 ⇒ 点击/回车被静默吞。改 pointer-events:none，交互只留面板本体。 */
+  pointer-events: none;
 }
 
 .inbox-panel {
+  /* MSG-3236 ④：面板本体恢复可交互（点按、滚动、按钮皆不受影响） */
+  pointer-events: auto;
   display: flex;
   flex-direction: column;
   width: 420px;

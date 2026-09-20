@@ -121,7 +121,9 @@ export const useApprovalStore = defineStore('approval', {
         // `messages.list('__inbox__')`，不是本 store 的 pending）——权威清单外
         // 的旧卡标终态（不删档），已在本地永久留存的幽灵项就此不再展示。
         this.staleReconciled = useMessageStore().expireStaleApprovals(seen, startedAt)
-        this.pendingTotal = Math.max(this.pendingTotal, list.length)
+        // MSG-3236 ③：计数**以 daemon 权威清单为准**（原 `Math.max(...)` 只增不减 ⇒
+        // 超时/已决/被销卡后角标仍停旧值「待办 2」）。权威清单缩小时计数同轮下降。
+        this.pendingTotal = list.length
         this.syncFailed = false
         this.syncedAt = Date.now()
         return true

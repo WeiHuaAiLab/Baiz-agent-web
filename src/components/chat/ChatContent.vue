@@ -46,12 +46,25 @@ let scrollEl: HTMLElement | null = null
 // scrollTop=scrollHeight 会停在旧高度，循环可保证始终贴住真实底部。
 let pinRafId = 0
 
+/**
+ * MSG-3236 ②：定位一律走**组件 API**（`scrollToItem`），**禁直写 `scrollTop`**
+ *（直写绕过 virtual scroller 的高度记账 ⇒ 定位不稳/回旧偏移——定位件原话）。
+ */
+function scrollToItemIndex(index: number, align: 'start' | 'end' | 'center' | 'nearest' = 'end') {
+  if (index < 0) return
+  scroller.value?.scrollToItem(index, { align } as ScrollToOptions)
+}
+
+function scrollToLatest() {
+  scrollToItemIndex(displayItems.value.length - 1, 'end')
+}
+
 function startPinLoop() {
-  if (pinRafId || !pinned.value || !scrollEl) return
+  if (pinRafId || !pinned.value) return
   const tick = () => {
     pinRafId = 0
-    if (!pinned.value || !scrollEl) return
-    scrollEl.scrollTop = scrollEl.scrollHeight
+    if (!pinned.value) return
+    scrollToLatest()
     pinRafId = requestAnimationFrame(tick)
   }
   pinRafId = requestAnimationFrame(tick)
@@ -65,7 +78,20 @@ function stopPinLoop() {
 }
 
 const activeId = computed(() => session.activeId)
-const displayItems = computed<ChatMessage[]>(() => [...messages.list(activeId.value)])
+/** MSG-3236 ①：未决审批卡（`kind==='approval'` 且未决）——判定与展示分离 */
+function isPendingApproval(m: ChatMessage): boolean {
+  return m.kind === 'approval' && m.meta?.approved === undefined
+}
+/**
+ * MSG-3236 ①：未决卡**脱离虚拟滚动复用**——虚拟列表只收普通消息，
+ * 未决卡改由常驻区渲染（DOM 常在＋稳定 id/data-*）⇒ UIA／自动化可稳定命中「同意/拒绝」。
+ */
+const pendingApprovals = computed<ChatMessage[]>(() =>
+  messages.list(activeId.value).filter(isPendingApproval),
+)
+const displayItems = computed<ChatMessage[]>(() =>
+  messages.list(activeId.value).filter((m) => !isPendingApproval(m)),
+)
 const streamingRuns = computed(() => messages.activeRuns(activeId.value))
 // MSG-3233 ④：消息加载态——**加载中且消息为空**时盖骨架（免空帧闪 empty-state）
 const loadingMessages = ref(false)
@@ -85,7 +111,8 @@ watch(
     // 等虚拟滚动容器渲染、scrollEl 绑定完成（scroller 的 watch 为 post flush，
     // 在 nextTick 回调之前已执行），再强制贴底
     await nextTick()
-    if (scrollEl) scrollEl.scrollTop = scrollEl.scrollHeight
+    // MSG-3236 ②：走组件 API（索引定位），禁直写 scrollTop
+    scrollToLatest()
   },
   { immediate: true },
 )
@@ -135,7 +162,7 @@ watch(
     // 直接将 scrollTop 设为 scrollHeight，绕过 virtual scroller 的
     // scrollToItem 索引计算（虚拟滚动中 item 高度尚未 layout 时会被下一次的 render
     // 覆盖回旧的偏移，表现为「滚到底但没真的到底」）
-    if (scrollEl) scrollEl.scrollTop = scrollEl.scrollHeight
+    scrollToLatest()
   },
 )
 
@@ -146,7 +173,7 @@ watch(
     if (count === 0 && prev > 0) {
       stopPinLoop()
       emit('content-changed')
-      if (pinned.value && scrollEl) scrollEl.scrollTop = scrollEl.scrollHeight
+      if (pinned.value) scrollToLatest()
     }
   },
 )
@@ -159,7 +186,7 @@ function scrollToBottom() {
     return
   }
   void nextTick(() => {
-    if (scrollEl) scrollEl.scrollTop = scrollEl.scrollHeight
+    scrollToLatest()
   })
 }
 // 暴露 scroller：外层 OverlayScrollArea 通过 target 绑定滚动容器，绘制悬浮滚动条
@@ -231,16 +258,38 @@ async function onStreamingClick(event: MouseEvent) {
 
     <!-- MSG-3233 ④：加载中且空 ⇒ 骨架；否则走空态（两者互斥） -->
     <SkeletonChatView
-      v-if="loadingMessages && displayItems.length === 0 && streamingRuns.length === 0"
+      v-if="
+        loadingMessages &&
+        displayItems.length === 0 &&
+        pendingApprovals.length === 0 &&
+        streamingRuns.length === 0
+      "
     />
     <div
-      v-else-if="displayItems.length === 0 && streamingRuns.length === 0"
+      v-else-if="
+        displayItems.length === 0 && pendingApprovals.length === 0 && streamingRuns.length === 0
+      "
       class="empty-state"
     >
       <p class="empty">{{ t('chat.empty') }}</p>
       <button type="button" class="empty-start" @click="ui.openCreate('session')">
         {{ t('chat.emptyStart') }}
       </button>
+    </div>
+
+    <!-- MSG-3236 ①：未决审批卡常驻区（**独立于虚拟滚动**，与消息流并存）
+         —— 稳定 id/data-* ⇒ UIA／自动化可稳定命中「同意/拒绝」 -->
+    <div v-if="pendingApprovals.length" class="pending-approvals" data-uia="pending-approvals">
+      <div
+        v-for="card in pendingApprovals"
+        :key="card.id"
+        class="pending-approval-slot"
+        :id="`approval-${card.meta?.requestId ?? card.id}`"
+        :data-approval-request-id="card.meta?.requestId ?? ''"
+        data-uia="pending-approval"
+      >
+        <MessageItem :message="card" />
+      </div>
     </div>
 
     <div v-if="displayItems.length > 0" class="message-scroll">
