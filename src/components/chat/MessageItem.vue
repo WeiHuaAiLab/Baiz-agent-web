@@ -22,6 +22,7 @@ const settings = useSettingsStore()
 
 const showTrace = ref(false)
 // MSG-2413 思考过程折叠块：run.reasoning 累积渲染——WorkBuddy 式可折叠「深度思考」
+// 默认收起，用户点击 head 手动展开/折叠。
 const showReasoning = ref(false)
 const copied = ref(false)
 

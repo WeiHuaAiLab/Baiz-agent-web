@@ -63,6 +63,49 @@ const activeId = computed(() => session.activeId)
 const displayItems = computed<ChatMessage[]>(() => [...messages.list(activeId.value)])
 const streamingRuns = computed(() => messages.activeRuns(activeId.value))
 
+// 流式尾条思考过程折叠：默认展开（实时查看推理），reasoning 帧停止增长 2 秒后自动折叠，
+// 用户点击 head 可手动切换；进入历史消息（无活跃 run）不参与此状态。
+const reasoningShowMap = ref<Record<string, boolean>>({})
+const reasoningTimers = new Map<string, number>()
+
+function scheduleReasoningFold(taskId: string) {
+  const existing = reasoningTimers.get(taskId)
+  if (existing !== undefined) window.clearTimeout(existing)
+  const timer = window.setTimeout(() => {
+    reasoningShowMap.value = { ...reasoningShowMap.value, [taskId]: false }
+    reasoningTimers.delete(taskId)
+  }, 2000)
+  reasoningTimers.set(taskId, timer)
+}
+
+watch(
+  () => streamingRuns.value.map((run) => ({ id: run.taskId, reasoning: run.reasoning })),
+  (runs) => {
+    // 新帧到达：默认展开 + 重置自动折叠定时器
+    for (const run of runs) {
+      reasoningShowMap.value = { ...reasoningShowMap.value, [run.id]: true }
+      scheduleReasoningFold(run.id)
+    }
+  },
+  { deep: true, immediate: true },
+)
+
+function toggleReasoning(taskId: string) {
+  const current = reasoningShowMap.value[taskId]
+  reasoningShowMap.value = { ...reasoningShowMap.value, [taskId]: !current }
+  // 用户手动操作时取消自动折叠——手动展开就保持展开，折叠就保持折叠
+  const timer = reasoningTimers.get(taskId)
+  if (timer !== undefined) {
+    window.clearTimeout(timer)
+    reasoningTimers.delete(taskId)
+  }
+}
+
+onBeforeUnmount(() => {
+  for (const timer of reasoningTimers.values()) window.clearTimeout(timer)
+  reasoningTimers.clear()
+})
+
 watch(
   activeId,
   async (id) => {
@@ -234,9 +277,13 @@ async function onStreamingClick(event: MouseEvent) {
       <div v-for="run in streamingRuns" :key="run.taskId" class="msg assistant streaming-block">
         <!-- MSG-2661 目④：reasoning 帧流式增量渲染——思考过程随帧长（区标
              「思考过程」——与正文分离——终态后同源折叠于 MessageItem） -->
-        <div v-if="run.reasoning" class="reasoning-stream">
-          <div class="reasoning-stream-head">⋯ {{ t('chat.reasoningLabel') }}</div>
-          <pre class="reasoning-stream-body">{{ run.reasoning }}</pre>
+        <div v-if="run.reasoning" class="reasoning-stream" :class="{ folded: !reasoningShowMap[run.taskId] }">
+          <div class="reasoning-stream-head" @click.stop="toggleReasoning(run.taskId)">
+            <span class="reasoning-stream-dots">⋯</span>
+            {{ t('chat.reasoningLabel') }}
+            <span class="reasoning-stream-toggle">{{ reasoningShowMap[run.taskId] ? '▾' : '▸' }}</span>
+          </div>
+          <pre v-show="reasoningShowMap[run.taskId] !== false" class="reasoning-stream-body">{{ run.reasoning }}</pre>
         </div>
         <div class="activity-line">
           <span class="activity-dot" />

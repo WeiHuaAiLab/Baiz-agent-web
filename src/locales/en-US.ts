@@ -63,6 +63,12 @@ export default {
     reasoningLabel: 'Thinking',
     toolCall: 'Tool',
     toolResult: 'Result',
+    fileCard: {
+      run: 'Run',
+      open: 'Open in panel',
+      runNoContent: 'No content to run',
+      runBlocked: 'Popup blocked by the browser',
+    },
   },
   files: {
     title: 'Files',
@@ -78,6 +84,8 @@ export default {
     changesReverted: 'Changes reverted',
     authorizedDirs: 'Authorized directories',
     authorized: 'Authorized',
+    preview: 'Preview',
+    previewEmpty: 'No content yet (fills in as SSE arrives)',
   },
   workspace: { empty: 'No authorized directories', active: 'Active', manage: 'Manage in settings' },
   sidebar: {

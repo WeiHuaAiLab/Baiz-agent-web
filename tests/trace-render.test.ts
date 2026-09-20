@@ -101,6 +101,7 @@ describe('MSG-2413 思考/执行渲染面', () => {
   })
 
   it('ToolRow 执行行：文件工具 path 现形＋URL 工具 ↗ 现形', () => {
+    // 注：b.bin 是非预览型扩展——命中 .file-ref 路径（其它预览型如 .rs/.html 现在走 FileCard）
     const file = shallowMount(ToolRow, {
       props: {
         message: {
@@ -109,12 +110,12 @@ describe('MSG-2413 思考/执行渲染面', () => {
           kind: 'tool_call',
           text: '',
           createdAt: 1,
-          meta: { taskId: 't-f', toolName: 'fs_read', argsPreview: '{"path":"C:/a/b.rs"}' },
+          meta: { taskId: 't-f', toolName: 'fs_read', argsPreview: '{"path":"C:/a/b.bin"}' },
         } as never,
       },
       global: { plugins: [i18n] },
     })
-    expect(file.find('.file-ref-path').text()).toContain('C:/a/b.rs')
+    expect(file.find('.file-ref-path').text()).toContain('C:/a/b.bin')
 
     const url = shallowMount(ToolRow, {
       props: {
@@ -130,5 +131,31 @@ describe('MSG-2413 思考/执行渲染面', () => {
       global: { plugins: [i18n] },
     })
     expect(url.find('.tool-cmd').text()).toContain('https://kb.ruiac.net/')
+  })
+
+  it('ToolRow 执行行：fs.write HTML 路径走 FileCard（图标＋运行按钮）', () => {
+    const wrapper = shallowMount(ToolRow, {
+      props: {
+        message: {
+          id: 'h1',
+          conversationId: 'c',
+          kind: 'tool_call',
+          text: '',
+          createdAt: 1,
+          meta: {
+            taskId: 't-h',
+            toolName: 'fs.write',
+            argsPreview: '{"path":"dist/index.html","content":"<!doctype html>"}',
+          },
+        } as never,
+      },
+      global: { plugins: [i18n] },
+    })
+    const card = wrapper.findComponent({ name: 'FileCard' })
+    expect(card.exists()).toBe(true)
+    expect(card.props('path')).toBe('dist/index.html')
+    expect(card.props('content')).toBe('<!doctype html>')
+    // 非预览型不应再渲染 file-ref
+    expect(wrapper.find('.file-ref').exists()).toBe(false)
   })
 })

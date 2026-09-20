@@ -20,7 +20,10 @@ const session = useSessionStore()
 const ui = useUiStore()
 
 // 扩展面板（抽屉）配置：默认打开，内容为 FilesPanel；类型可在 ExtensionPanelType 中扩展
-const extensionOpen = ref(true)
+const extensionOpen = computed({
+  get: () => ui.extensionOpen,
+  set: (value: boolean) => ui.setExtensionOpen(value),
+})
 const extensionType = ref<ExtensionPanelType>('files')
 const contentRef = ref<InstanceType<typeof ChatContent>>()
 // 外层 OverlayScrollArea 实例（用于内容变化后手动 sync 滑块）

@@ -767,6 +767,32 @@ button {
   padding: 6px 0;
 }
 
+/* 预览模式：FileCard 落 preview 的纯内容展示，无 diff 标记、无接受/回滚 */
+.preview-lines {
+  flex: 1;
+  overflow-y: auto;
+  padding: 6px 0;
+}
+
+.preview-lines .code-line {
+  background: transparent;
+}
+
+.preview-lines .code-line .cl-no {
+  width: 42px;
+}
+
+.preview-tag {
+  flex: none;
+  margin-left: 8px;
+  padding: 2px 8px;
+  border-radius: 10px;
+  background: var(--hover);
+  color: var(--muted);
+  font-size: 11px;
+  letter-spacing: 0.04em;
+}
+
 .code-line {
   display: flex;
   align-items: stretch;

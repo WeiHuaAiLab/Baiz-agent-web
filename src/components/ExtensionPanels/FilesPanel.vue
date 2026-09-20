@@ -1,68 +1,31 @@
 <script setup lang="ts">
-// 文件面板（抽屉内容）：工作区文件树 + 当前文件 diff 预览与行级变更，支持授权目录浏览外部文件。
+// 文件面板（抽屉内容）：工作区文件树 + 当前文件视图；active 存在时按 preview 语义
+// 分流到 diff / preview 两个 viewer 子组件，无 active 时显示文件树与授权目录。
 import { computed, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useFilesStore } from '../../stores/files'
 import { useWorkingTreeStore } from '../../stores/workingTree'
 import { buildTree } from '../../utils/tree'
 import type { TreeNode } from '../../utils/tree'
-import { computeLineDiff, diffStats } from '../../utils/diff'
 import FileTreeItem from './files/FileTreeItem.vue'
+import FileDiffViewer from './files/FileDiffViewer.vue'
+import FilePreviewViewer from './files/FilePreviewViewer.vue'
 import Icon from '../common/Icon.vue'
-import { useUiStore } from '../../stores/ui'
 import type { FileEntry } from '../../bridge'
 
 const { t } = useI18n()
 const files = useFilesStore()
 const working = useWorkingTreeStore()
-const ui = useUiStore()
 
 const emit = defineEmits<{ close: [] }>()
 
 const treeRoots = computed<TreeNode[]>(() => buildTree(working.list))
 const active = computed(() => working.active)
-const stats = computed(() =>
-  active.value ? diffStats(active.value.original, active.value.current) : null,
-)
-const lines = computed(() =>
-  active.value ? computeLineDiff(active.value.original, active.value.current) : [],
-)
-const pathOpen = ref(false)
+// 预览模式判定：FileCard 落 preview 时把 original 留空——与「写过但未落原版」语义一致。
+const previewMode = computed(() => active.value?.original === '')
+
 const authorizedOpen = ref<Record<string, boolean>>({})
 const authorizedEntries = ref<Record<string, FileEntry[]>>({})
-const otherFiles = computed(() => working.list.filter((file) => file.path !== active.value?.path))
-
-function dirname(path: string): string {
-  const index = path.lastIndexOf('/')
-  return index === -1 ? '' : path.slice(0, index)
-}
-
-function basename(path: string): string {
-  const index = path.lastIndexOf('/')
-  return index === -1 ? path : path.slice(index + 1)
-}
-
-function pickFile(path: string) {
-  working.selectFile(path)
-  pathOpen.value = false
-}
-
-function backToTree() {
-  working.closeViewer()
-  pathOpen.value = false
-}
-
-function applyChanges() {
-  if (!active.value) return
-  working.applyChanges(active.value.path)
-  ui.toast(t('files.changesApplied'), 'success')
-}
-
-function revertChanges() {
-  if (!active.value) return
-  working.revertChanges(active.value.path)
-  ui.toast(t('files.changesReverted'), 'info')
-}
 
 async function toggleAuthorized(key: string) {
   const willOpen = !authorizedOpen.value[key]
@@ -90,56 +53,8 @@ async function toggleAuthorized(key: string) {
       </div>
     </header>
     <div class="files-body">
-      <template v-if="active">
-        <div class="code-viewer">
-          <div class="viewer-head">
-            <div class="viewer-path-wrap">
-              <button type="button" class="viewer-path" @click.stop="pathOpen = !pathOpen">
-                <span class="viewer-path-text">{{ active.path }}</span>
-                <Icon name="chevron" :size="12" :class="{ open: pathOpen }" />
-              </button>
-              <div v-if="pathOpen" class="path-menu">
-                <div class="path-menu-title">{{ t('files.pathFiles') }}</div>
-                <button
-                  v-for="file in otherFiles"
-                  :key="file.path"
-                  type="button"
-                  class="path-menu-item"
-                  @click="pickFile(file.path)"
-                >
-                  <span class="pm-name">{{ basename(file.path) }}</span>
-                  <span class="pm-dir">{{ dirname(file.path) }}</span>
-                </button>
-                <button type="button" class="path-menu-tree" @click="backToTree">
-                  {{ t('files.backToTree') }}
-                </button>
-              </div>
-            </div>
-            <span v-if="stats" class="viewer-stats">
-              <span class="stat-add">+{{ stats.added }}</span>
-              <span class="stat-del">−{{ stats.removed }}</span>
-            </span>
-            <div
-              v-if="stats && (stats.added > 0 || stats.removed > 0)"
-              class="viewer-actions"
-            >
-              <button type="button" class="apply-btn" @click="applyChanges">
-                {{ t('files.applyChanges') }}
-              </button>
-              <button type="button" class="revert-btn" @click="revertChanges">
-                {{ t('files.revertChanges') }}
-              </button>
-            </div>
-          </div>
-          <div class="viewer-lines">
-            <div v-for="(line, i) in lines" :key="i" class="code-line" :class="line.type">
-              <span class="cl-marker">{{ line.type === 'added' ? '+' : line.type === 'removed' ? '−' : '' }}</span>
-              <span class="cl-no">{{ line.newNo ?? line.oldNo ?? '' }}</span>
-              <span class="cl-text">{{ line.text }}</span>
-            </div>
-          </div>
-        </div>
-      </template>
+      <FileDiffViewer v-if="active && !previewMode" :active="active" />
+      <FilePreviewViewer v-else-if="active" :active="active" />
       <template v-else>
         <div v-for="node in treeRoots" :key="node.path" class="tree-root">
           <FileTreeItem :node="node" :depth="0" @select="working.selectFile($event)" />
@@ -162,6 +77,5 @@ async function toggleAuthorized(key: string) {
         <p v-if="treeRoots.length === 0" class="placeholder">{{ t('files.empty') }}</p>
       </template>
     </div>
-    <div v-if="pathOpen" class="menu-mask" @click="pathOpen = false" />
   </aside>
 </template>

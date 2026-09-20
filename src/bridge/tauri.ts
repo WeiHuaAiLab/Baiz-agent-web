@@ -3,11 +3,12 @@ import type { AttachmentPayload, Bridge, CapabilityName, FileEntry } from './typ
 // Tauri 桥接实现：经 Rust 壳 command 转发（fs/剪贴板/通知/对话框）。
 export function createTauriBridge(): Bridge {
   // 能力集必须诚实：Rust 壳尚未注册的命令不声明为可用，避免 has() 误报
+  // 已注册：proxy_fs_read_text / proxy_fs_list_dir（相对路径以 Tauri 进程 CWD 为基）
   // 待注册契约：
   //   proxy_fs_list_drives(): string[]            —— 枚举 Windows 盘符（如 ["C:\\","D:\\"]）
   //   proxy_fs_create_dir(parent, name): string   —— 在 parent 下新建文件夹，返回完整路径
   // 注册后需在此声明 'fs.drives' 与 'fs.createDir'，前端即自动启用"新建空白项目"落盘。
-  const capabilities = new Set<CapabilityName>(['window.control', 'fs.pickDir', 'fs.pickAttachment'])
+  const capabilities = new Set<CapabilityName>(['window.control', 'fs.read', 'fs.pickDir', 'fs.pickAttachment'])
   const SAFE_PROTOCOL = /^(https?:|mailto:)/i
 
   return {

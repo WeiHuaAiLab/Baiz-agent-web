@@ -63,6 +63,12 @@ export default {
     reasoningLabel: '思考过程',
     toolCall: '调用工具',
     toolResult: '工具结果',
+    fileCard: {
+      run: '运行',
+      open: '在面板中打开',
+      runNoContent: '暂无可运行内容',
+      runBlocked: '浏览器拦截了新窗口',
+    },
   },
   files: {
     title: '文件',
@@ -78,6 +84,8 @@ export default {
     changesReverted: '已回滚',
     authorizedDirs: '已授权目录',
     authorized: '已授权',
+    preview: '预览',
+    previewEmpty: '暂无内容（内容随 SSE 到达陆续补齐）',
   },
   workspace: { empty: '暂无授权目录', active: '当前', manage: '在设置中管理' },
   sidebar: {
