@@ -178,6 +178,8 @@
   align-items: center;
   gap: 8px;
   width: 100%;
+  /* MSG-3229：整行可点（老板口径「点右边的三角形按钮展开」）——热区 ≥44 */
+  min-height: 44px;
   padding: 8px 12px;
   border: none;
   background: var(--code-bg, rgba(0, 0, 0, 0.04));
@@ -191,6 +193,42 @@
   color: var(--accent, var(--accent));
   font-weight: 700;
   letter-spacing: 1px;
+}
+
+/* MSG-3229：跑动指示只在流式期（终态去掉——「跑完即止」的可见判据） */
+.reasoning-head .reasoning-dots.live {
+  animation: reasoning-pulse 1.2s ease-in-out infinite;
+}
+
+@keyframes reasoning-pulse {
+  0%,
+  100% {
+    opacity: 0.35;
+  }
+
+  50% {
+    opacity: 1;
+  }
+}
+
+.reasoning-head .reasoning-title {
+  color: var(--text);
+}
+
+.reasoning-head .reasoning-done {
+  font-size: 12px;
+  color: var(--success, #1e7e34);
+}
+
+/* MSG-3229：实时字数与秒级计时（等宽数字防跳动） */
+.reasoning-head .reasoning-count,
+.reasoning-head .reasoning-time {
+  font-variant-numeric: tabular-nums;
+  font-size: 12px;
+}
+
+.reasoning-head .reasoning-count {
+  color: var(--text);
 }
 
 .reasoning-head .reasoning-toggle {

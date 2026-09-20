@@ -71,6 +71,10 @@ describe('MSG-2998 修② 三分离渲染（流式态）', () => {
     await wrapper.vm.$nextTick()
     const block = wrapper.find('.run-block.thinking')
     expect(block.exists()).toBe(true)
+    // MSG-3229 改口径：流式期思考区**默认折叠**——标题在、全文需点开看
+    expect(block.find('.reasoning-head').exists()).toBe(true)
+    expect(block.find('.reasoning-body').exists()).toBe(false)
+    await block.find('.reasoning-head').trigger('click')
     expect(block.text()).toContain('先看目录结构')
     void conversationId
   })
@@ -118,6 +122,8 @@ describe('MSG-2998 修② 三分离渲染（流式态）', () => {
     expect(commands.exists()).toBe(true)
     expect(results.exists()).toBe(true)
     // 分域钉：思考文本只在思考区；命令只在命令区；结果只在结果区
+    // MSG-3229 改口径：思考区默认折叠——先展开，再验"只有思考文本"（分组不混入）
+    await thinking.find('.reasoning-head').trigger('click')
     expect(thinking.text()).toContain('思考中：检查依赖')
     expect(thinking.text()).not.toContain('list_dir')
     expect(commands.text()).toContain('list_dir')

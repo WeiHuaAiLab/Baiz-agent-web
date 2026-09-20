@@ -66,6 +66,10 @@ export default {
     thinking: '思考',
     deepThink: '深度思考',
     reasoningLabel: '思考过程',
+    // MSG-3229（老板口径）：思考区＝默认折叠的实时流——标题随增量走，跑完即止
+    thinkingLive: '思考中…',
+    thoughtDone: '已完成',
+    thoughtChars: '{n} 字',
     toolCall: '调用工具',
     toolResult: '工具结果',
     // MSG-2998 修②（DEBT-544 目二）：三分离归组区标

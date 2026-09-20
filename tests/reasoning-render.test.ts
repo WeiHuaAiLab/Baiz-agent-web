@@ -64,14 +64,17 @@ describe('Reasoning 帧 UI 回显', () => {
     await wrapper.vm.$nextTick()
     const block = wrapper.find('.streaming-tail .reasoning-stream')
     expect(block.exists()).toBe(true)
-    expect(wrapper.find('.reasoning-stream-head').text()).toContain('思考过程')
-    expect(wrapper.find('.reasoning-stream-body').text()).toContain('第一步先分析')
+    // MSG-3229 改口径（老板 2026-09-20）：流式期**默认折叠**——标题行实时（思考中＋字数），
+    // 正文不铺屏；要看全文点标题展开（内容零丢）。
+    expect(wrapper.find('.reasoning-head').text()).toContain('思考中')
+    expect(wrapper.find('.reasoning-head').text()).toContain('6 字')
+    expect(wrapper.find('.reasoning-body').exists()).toBe(false)
 
     routeFrame(reasoningFrame(taskId, '，再设计方案'), messages, approvals)
     await wrapper.vm.$nextTick()
-    expect(wrapper.find('.reasoning-stream-body').text()).toBe(
-      '第一步先分析，再设计方案',
-    )
+    expect(wrapper.find('.reasoning-head').text()).toContain('12 字')
+    await wrapper.find('.reasoning-head').trigger('click')
+    expect(wrapper.find('.reasoning-body').text()).toBe('第一步先分析，再设计方案')
   })
 
   it('目③ 终态豁免：content 空而 reasoning 有——不再显「（无输出）」——思考块承载输出面', async () => {
@@ -117,7 +120,9 @@ describe('Reasoning 帧 UI 回显', () => {
     await wrapper.vm.$nextTick()
     await new Promise((resolve) => setTimeout(resolve, 160)) // token flush 100ms 窗
     await wrapper.vm.$nextTick()
-    expect(wrapper.find('.reasoning-stream-body').text()).toContain('边想边写')
+    // MSG-3229：流式期折叠——展开后可见思考全文（内容零丢）
+    await wrapper.find('.reasoning-head').trigger('click')
+    expect(wrapper.find('.reasoning-body').text()).toContain('边想边写')
     // token 正文照渲（StreamingMarkdownView 区在——run.text 累积）
     const run = useMessageStore().runs[taskId]
     expect(run.text).toBe('你好，世界')

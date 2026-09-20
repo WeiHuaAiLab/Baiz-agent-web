@@ -6,23 +6,62 @@
 // 数据源＝run.trace 有序事件（568 六型帧谱在案：text/reasoning/tool.call/
 // tool.result 俱备）——渲染归组、非协议重造。流式态与终态同构（同组件两态）：
 // 流式态思考常显（边想边写可见）、终态思考默认收起（MSG-2413 交互保留）。
-import { computed, ref, watch } from 'vue'
+import { computed, onBeforeUnmount, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import type { RunState, TraceItem } from '../../models'
+import { formatDuration } from '../../utils/time'
 
 const props = defineProps<{ run: RunState; streaming?: boolean }>()
 const { t } = useI18n()
 
-// 终态思考默认收起；流式态常显（流式期间用户要看到思考实时累积）
-const thinkingOpen = ref(!!props.streaming)
+const reasoning = computed(() => props.run.reasoning)
+
+// MSG-3229（老板 2026-09-20 23:0x 口径）：思考区＝**默认折叠的实时流**——
+// ① 流式/终态同一折叠块，**都不自动展开**（对话流里只占一行标题）；
+// ② 标题随 reasoning 增量实时更新（字数＋秒级计时＋跑动指示）⇒ 不展开也看得出在跑；
+// ③ 回合结束（streaming 落 false＝done/settle 面）⇒ 切终态、去指示、**停表**；
+// ④ 整行（热区 ≥44）可点：展开看全文、再点收起，三角方向随态（▸／▾）。
+// 改前口径（MSG-2661）：流式期**常显全文**——已废（老板口径取代）。
+const thinkingOpen = ref(false)
+const nowTick = ref(Date.now())
+let tickTimer: ReturnType<typeof setInterval> | null = null
+
+const reasoningChars = computed(() => Array.from(reasoning.value).length)
+const reasoningCount = computed(() => reasoningChars.value.toLocaleString('zh-CN'))
+/** 秒级计时：流式期随 tick 走；终态取 run.elapsedMs（无则冻结在停表那刻） */
+const elapsedMs = computed(() =>
+  props.streaming
+    ? Math.max(0, nowTick.value - props.run.startedAt)
+    : (props.run.elapsedMs ?? Math.max(0, nowTick.value - props.run.startedAt)),
+)
+const elapsedText = computed(() => formatDuration(elapsedMs.value))
+
+function startTick() {
+  if (tickTimer !== null) return
+  nowTick.value = Date.now()
+  tickTimer = setInterval(() => {
+    nowTick.value = Date.now()
+  }, 1000)
+}
+
+function stopTick() {
+  if (tickTimer === null) return
+  clearInterval(tickTimer)
+  tickTimer = null
+}
+
+// 只在"流式且有思考"时走表；回合结束/无思考 ⇒ 停表（跑完即止）
 watch(
-  () => props.streaming,
-  (isStreaming) => {
-    if (isStreaming) thinkingOpen.value = true
+  () => props.streaming === true && reasoning.value.length > 0,
+  (live) => {
+    if (live) startTick()
+    else stopTick()
   },
+  { immediate: true },
 )
 
-const reasoning = computed(() => props.run.reasoning)
+onBeforeUnmount(stopTick)
+
 /** MSG-3216：内部决策载荷（决策 JSON）——受控折叠区，默认收起，勿与正文混流 */
 const decision = computed(() => props.run.decision ?? '')
 const decisionOpen = ref(false)
@@ -54,26 +93,35 @@ function toolNameOf(callId?: string): string {
 
 <template>
   <div class="run-blocks">
-    <!-- 区一：思考（reasoning） -->
+    <!-- 区一：思考（reasoning）——MSG-3229：**默认折叠的实时流**（流式/终态同一块）
+         标题行：跑动指示（流式）＋思考中…／深度思考 已完成＋实时字数＋秒级计时＋右侧三角 -->
     <template v-if="reasoning">
-      <!-- 流式态：常显（原 MSG-2661 reasoning-stream 面） -->
-      <section v-if="streaming" class="run-block thinking reasoning-stream">
-        <div class="reasoning-stream-head">⋯ {{ t('chat.reasoningLabel') }}</div>
-        <pre class="reasoning-stream-body">{{ reasoning }}</pre>
-      </section>
-      <!-- 终态：折叠块（原 MSG-2413 交互——默认收起→点击展开） -->
-      <section v-else class="run-block thinking reasoning-block">
+      <section
+        class="run-block thinking reasoning-block"
+        :class="{ 'reasoning-stream': streaming }"
+      >
         <button
           type="button"
           class="reasoning-head"
-          :class="{ open: thinkingOpen }"
+          :class="{ open: thinkingOpen, live: streaming }"
+          :aria-expanded="thinkingOpen"
+          :title="t('chat.reasoningLabel')"
           @click="thinkingOpen = !thinkingOpen"
         >
-          <span class="reasoning-dots">⋯</span>
-          <span>{{ t('chat.deepThink') }}</span>
+          <span v-if="streaming" class="reasoning-dots live" aria-hidden="true">⋯</span>
+          <span class="reasoning-title">
+            {{ streaming ? t('chat.thinkingLive') : t('chat.deepThink') }}
+          </span>
+          <span v-if="!streaming" class="reasoning-done">{{ t('chat.thoughtDone') }}</span>
+          <span class="reasoning-count">{{ t('chat.thoughtChars', { n: reasoningCount }) }}</span>
+          <span class="reasoning-time">{{ elapsedText }}</span>
           <span class="reasoning-toggle">{{ thinkingOpen ? '▾' : '▸' }}</span>
         </button>
-        <div v-if="thinkingOpen" class="reasoning-body">{{ reasoning }}</div>
+        <div
+          v-if="thinkingOpen"
+          class="reasoning-body"
+          :class="{ 'reasoning-stream-body': streaming }"
+        >{{ reasoning }}</div>
       </section>
     </template>
 

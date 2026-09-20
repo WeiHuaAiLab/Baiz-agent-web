@@ -66,6 +66,10 @@ export default {
     thinking: 'Thinking',
     deepThink: 'Deep think',
     reasoningLabel: 'Thinking',
+    // MSG-3229: thinking block stays collapsed by default and streams live
+    thinkingLive: 'Thinking…',
+    thoughtDone: 'Done',
+    thoughtChars: '{n} chars',
     toolCall: 'Tool',
     toolResult: 'Result',
     // MSG-2998 修②（DEBT-544 part 2）：three-way split block labels
