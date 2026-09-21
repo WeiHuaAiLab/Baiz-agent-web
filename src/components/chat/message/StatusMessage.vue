@@ -18,6 +18,12 @@ function goSettings() {
   void router.push('/settings')
 }
 
+/** MSG-3340 A3-②：走**未登录也可达**的「连接知识库」独立页——会话刚失效（-32002 邻域）
+ *  时 `/settings` 会被登录闸弹回，而该页恒可达 ⇒ 错误入口在任何登录态下都真的能到。 */
+function goKbSetup() {
+  void router.push({ name: 'kb-setup' })
+}
+
 /** DEBT-742：会话失效 ⇒ 明确入口回到登录页（自愈已在 store 侧清 token） */
 function goLogin() {
   void router.push('/login')
@@ -74,6 +80,16 @@ function cancelQueued() {
       @click="goSettings"
     >
       {{ t('errors.goSettings') }}
+    </button>
+    <!-- MSG-3340（1.0.20 批 A · A3-②）：-32010（知识库未配置）**不再只报不说去哪**——
+         与 unauthorized 同律给可点入口（设置页「通用」内含连接知识库卡）。 -->
+    <button
+      v-if="message.meta?.errorKey === 'kbNotConfigured'"
+      type="button"
+      class="retry-btn status-kb-entry"
+      @click="goKbSetup"
+    >
+      {{ t('errors.goKbSetup') }}
     </button>
     <button
       v-if="message.meta?.errorKey === 'sessionExpired'"

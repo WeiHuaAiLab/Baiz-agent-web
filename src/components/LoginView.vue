@@ -36,6 +36,14 @@
           {{ auth.loading ? "登录中…" : "登录" }}
         </button>
       </form>
+      <!-- MSG-3340（1.0.20 批 A · A3-①）：未登录态**可达**「连接知识库」——
+           干净机开箱路径：没有 token 也要能填域名＋API Key（否则 -32010 死循环）。
+           路由侧只放行 kb-setup 一条，其余非登录路由未登录仍弹回本页。 -->
+      <p class="login-kb-entry-row">
+        <button type="button" class="login-kb-entry" @click="goKbSetup">
+          {{ t('errors.goKbSetup') }}
+        </button>
+      </p>
     </div>
   </div>
 </template>
@@ -59,6 +67,11 @@ async function submit() {
   if (ok) {
     void router.push("/");
   }
+}
+
+/** MSG-3340 A3-①：去「连接知识库」独立页（未登录可达；不放行设置页其余面） */
+function goKbSetup() {
+  void router.push({ name: "kb-setup" });
 }
 </script>
 
@@ -142,6 +155,22 @@ async function submit() {
   margin: 0;
   font-size: 13px;
   color: var(--danger);
+}
+.login-kb-entry-row {
+  margin: 16px 0 0;
+  text-align: center;
+}
+.login-kb-entry {
+  padding: 2px 4px;
+  border: none;
+  background: none;
+  color: var(--accent);
+  font-size: 13px;
+  text-decoration: underline;
+  cursor: pointer;
+}
+.login-kb-entry:hover {
+  color: var(--accent-hover);
 }
 .login-submit {
   min-height: 36px;

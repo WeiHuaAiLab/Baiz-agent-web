@@ -1,5 +1,12 @@
 import { createRouter, createWebHashHistory } from 'vue-router'
 
+/**
+ * MSG-3340（1.0.20 批 A · A3-①）：**未登录态唯一放行的非登录路由**。
+ * 干净机开箱路径＝无 token 也要能填「知识库域名＋API Key」⇒ 只放行「连接知识库」目标路由；
+ * 其余非登录路由（chat／working／settings）未登录**一律弹回 /login**（对照断言钉死）。
+ */
+export const LOGOUT_ALLOWED_ROUTE_NAMES: readonly string[] = ['kb-setup']
+
 export const router = createRouter({
   history: createWebHashHistory(),
   routes: [
@@ -18,6 +25,13 @@ export const router = createRouter({
       path: '/settings',
       name: 'settings',
       component: () => import('../components/settings/SettingsView.vue'),
+    },
+    {
+      // MSG-3340（1.0.20 批 A · A3-①）：未登录态**唯一**可达的设置类路由——
+      // 只装「连接知识库」卡（KbSetupView），不装设置页其余卡 ⇒ 放宽面最小。
+      path: '/kb-setup',
+      name: 'kb-setup',
+      component: () => import('../components/settings/KbSetupView.vue'),
     },
     {
       path: '/working',
@@ -48,8 +62,15 @@ export const router = createRouter({
 
 // MSG-2287 需求乙：登录闸——未登录态全功能面拦截（登录页除外），
 // 提示词照堂钉「请使用 https://kb.ruiac.net/ 的账号登录」勿自撰。
+//
+// MSG-3340（1.0.20 批 A · A3-①）：**开一条最小口**——未登录态放行
+// 「连接知识库」目标路由（`kb-setup`，白名单见 `LOGOUT_ALLOWED_ROUTE_NAMES`）。
+// 动因：干净机开箱是"未登录 ⇒ 配不了知识库 ⇒ 登录撞 -32010 ⇒ 拿不到 token"死循环。
+// **紧致**：白名单只此一条，其余非登录路由（chat／working／settings）未登录仍弹回
+// /login——删掉这条闸会让"对照断言"立刻变红（见 MSG-3340 红证 ②）。
 router.beforeEach(async (to) => {
   if (to.name === 'login') return true
+  if (typeof to.name === 'string' && LOGOUT_ALLOWED_ROUTE_NAMES.includes(to.name)) return true
   const { useAuthStore } = await import('../stores/auth')
   const auth = useAuthStore()
   if (!auth.sessionToken) {

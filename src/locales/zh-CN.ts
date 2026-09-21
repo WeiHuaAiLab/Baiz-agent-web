@@ -383,6 +383,9 @@ export default {
       reload: '重新读取',
       loading: '读取中…',
       retry: '重试',
+      /** MSG-3340 A3：独立页「连接知识库」的返回行（按登录态分流） */
+      backToLogin: '返回登录',
+      backToChat: '返回聊天',
       notReady: '服务端未就绪：本机 daemon 尚未提供知识库配置接口（1.0.18 契约先行）。',
       invalid: {
         invalidUrl: '请填写以 http:// 或 https:// 开头的域名（不要带 /api/v1）。',
@@ -443,6 +446,8 @@ export default {
     internal: '服务内部错误',
     unknown: '请求失败',
     goSettings: '去设置',
+    /** MSG-3340 A3：未登录态也有一条到「连接知识库」的可点入口 */
+    goKbSetup: '去配置知识库',
   },
   palette: {
     placeholder: '搜索命令…',

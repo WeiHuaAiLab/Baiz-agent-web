@@ -387,6 +387,9 @@ export default {
       reload: 'Reload',
       loading: 'Loading…',
       retry: 'Retry',
+      /** MSG-3340 A3: back row on the standalone "Knowledge base connection" page */
+      backToLogin: 'Back to sign in',
+      backToChat: 'Back to chat',
       notReady: 'Service not ready: this daemon does not expose the knowledge-base config RPC yet.',
       invalid: {
         invalidUrl: 'Enter a host starting with http:// or https:// (no /api/v1).',
@@ -449,6 +452,8 @@ export default {
     internal: 'Internal server error',
     unknown: 'Request failed',
     goSettings: 'Open settings',
+    /** MSG-3340 A3: reachable entry to "Knowledge base connection" while signed out */
+    goKbSetup: 'Configure knowledge base',
   },
   palette: {
     placeholder: 'Search commands…',
