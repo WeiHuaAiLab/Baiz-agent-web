@@ -8,6 +8,13 @@ import { createDecisionStreamFilter } from '../utils/decisionStream'
 import type { DecisionStreamFilter } from '../utils/decisionStream'
 import { createProtocolLeakFilter } from '../utils/protocolLeak'
 import type { ProtocolLeakFilter } from '../utils/protocolLeak'
+import {
+  attachmentDigestSource,
+  buildAttachmentEnvelope,
+  newAttachmentNonce,
+  sha256Hex,
+} from '../utils/attachment'
+import type { AttachmentWire } from '../utils/attachment'
 import { formatFileSize } from '../utils/format'
 import { TOOL_LABELS_ZH as TOOL_NAMES_ZH } from '../utils/approvalText'
 import { useUiStore } from './ui'
@@ -253,33 +260,22 @@ export const useMessageStore = defineStore('message', {
       mode?: string,
     ) {
       let effective = text
+      // MSG-3270 P0：结构化附件（含 sha256）——与行内信封**同源同载荷**，供 daemon 侧对卯
+      let wireAttachments: AttachmentWire[] | undefined
       if (attachments && attachments.length > 0) {
-        const blocks = attachments.map((attachment) => {
-          // DEBT-542A（MSG-2861）：附件元信息块——名/mime/尺寸人话齐——
-          // 模型有可答面不空回（旧形态仅文件名块，dataUrl/content 与
-          // 模型入参脱钩）。图 dataUrl 在握但现模型文本档不读图内容——
-          // 诚实文案明示（勿假装看图——视觉档未启勿造能）；文本附件
-          // 照旧拼前 4000 字符（0 膨胀——元信息不入正文 token 爆）
-          const meta = [attachment.mimeType, formatFileSize(attachment.size)]
-            .filter(Boolean)
-            .join(' · ')
-          const suffix = meta ? `（${meta}）` : ''
-          if (attachment.kind === 'image') {
-            return (
-              `\n\n\`\`\`\n[图片：${attachment.name}${suffix}]\n` +
-              `图已随消息附呈会话；当前模型为文本档不读图内容——需看图请直接查看会话中的图片\n\`\`\``
-            )
-          }
-          // MSG-2893 DEBT-597 目②：超限截断携「已截断」告知（勿静默吞
-          // ——与壳 read_text_with_fallback 同口径——模型知为何只此段）
-          const raw = attachment.content ?? ''
-          const truncated = raw.length > 4000
-          const body = truncated
-            ? `${raw.slice(0, 4000)}…（附件内容超限已截断——如需全文请缩小文件范围）`
-            : raw
-          return `\n\n\`\`\`\n[附件：${attachment.name}${suffix}]${body ? `\n${body}` : ''}\n\`\`\``
-        })
-        effective = `${text}${blocks.join('')}`
+        wireAttachments = await Promise.all(
+          attachments.map(async (att) => ({
+            name: att.name,
+            kind: att.kind,
+            mimeType: att.mimeType,
+            size: att.size,
+            sha256: await sha256Hex(attachmentDigestSource(att)),
+            ...(att.content !== undefined ? { content: att.content } : {}),
+            ...(att.dataUrl !== undefined ? { dataUrl: att.dataUrl } : {}),
+          })),
+        )
+        // 信封头与结构化字段**同源**（同一 wire 对象）⇒ sha256 在两侧必然一致（可对卯）
+        effective = text + buildAttachmentEnvelope(wireAttachments ?? [], newAttachmentNonce())
       }
       // 附件随消息 meta 一起入列：消息区渲染缩略图 / 文件概要；
       // 发送给后端的仍是 effective（拼接附件正文），两处各司其职。
@@ -318,6 +314,10 @@ export const useMessageStore = defineStore('message', {
           // MSG-2893 DEBT-597 目①：首图 dataUrl 直送（daemon image_data_
           // url——图文混合轮——视觉档模型可读——勿只本地缩略图）
           ...(firstImage?.dataUrl ? { image_data_url: firstImage.dataUrl } : {}),
+          // MSG-3270 P0：**结构化附件上送**（name/mimeType/size/kind/sha256；文本带 content，
+          // 图片带 dataUrl）——正本 §1.3.1。daemon 侧当前 serde 静默丢弃该字段（八号组已录），
+          // 落地后即可与行内信封头 sha256 逐字节对卯；现在下发亦无害（未知字段默认忽略）。
+          ...(wireAttachments && wireAttachments.length > 0 ? { attachments: wireAttachments } : {}),
         })
         if (result.task_id && result.task_id !== clientTaskId) {
           const run = this.runs[clientTaskId]

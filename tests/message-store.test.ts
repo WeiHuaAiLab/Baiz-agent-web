@@ -280,7 +280,9 @@ describe('DEBT-542A 附件元信息块', () => {
       },
     ])
     const sent = captured[0].message ?? ''
-    expect(sent).toContain('[图片：photo.png（image/png · 512.0 KB）]')
+    // MSG-3270 改口径：行内块改**随机 nonce 信封**（fence 免疫）＋头部带 sha256；
+    // 元信息（mime·尺寸）与"不读像素"的诚实文案原样保留。
+    expect(sent).toMatch(/\[附件1：photo\.png（image\/png · 512\.0 KB） sha256=[0-9A-F]+\]/)
     expect(sent).toContain('不读图内容')
     expect(sent).toContain('查看会话中的图片')
     // 诚实面：dataUrl/base64 零入正文（防 token 膨胀）
@@ -302,7 +304,7 @@ describe('DEBT-542A 附件元信息块', () => {
       },
     ])
     const sent = captured[0].message ?? ''
-    expect(sent).toContain('[附件：notes.txt（text/plain · 1.50 KB）]')
+    expect(sent).toMatch(/\[附件1：notes\.txt（text\/plain · 1\.50 KB） sha256=[0-9A-F]+\]/)
     expect(sent).toContain('第一行\n第二行')
   })
 
@@ -315,11 +317,11 @@ describe('DEBT-542A 附件元信息块', () => {
     ])
     const sent = captured[0].message ?? ''
     // 空 mime → 尺寸兜底照出；零 size → 0 B
-    expect(sent).toContain('[图片：a.png（0 B）]')
-    expect(sent).toContain('[附件：data.bin（42 B）]')
+    expect(sent).toMatch(/\[附件1：a\.png（0 B） sha256=/)
+    expect(sent).toMatch(/\[附件2：data\.bin（42 B） sha256=/)
     // 两附件块并存（image 诚实文案只现于图块）
     expect(sent).toContain('不读图内容')
-    expect(sent.indexOf('[图片：') < sent.indexOf('[附件：')).toBe(true)
+    expect(sent.indexOf('[附件1：a.png') < sent.indexOf('[附件2：data.bin')).toBe(true)
   })
 })
 

@@ -8,6 +8,7 @@ import { useSettingsStore } from '../../stores/settings'
 import { getBridge } from '../../bridge'
 import { formatDuration, formatTime } from '../../utils/time'
 import { formatFileSize, shortMime } from '../../utils/format'
+import { firstLineOf } from '../../utils/attachment'
 import MarkdownView from '../markdown/MarkdownView.vue'
 import ToolRow from './ToolRow.vue'
 import ApprovalCard from './ApprovalCard.vue'
@@ -160,6 +161,10 @@ function cancelQueued() {
           <div v-else class="att-meta">
             <div class="att-name" :title="att.name">{{ att.name }}</div>
             <div class="att-tag">{{ shortMime(att.mimeType) }} · {{ formatFileSize(att.size) }}</div>
+            <!-- MSG-3270 ②：首行预览——上传后当场可确认"送出去的到底是哪份"（杜绝错配无感知） -->
+            <div v-if="firstLineOf(att.content)" class="att-preview" :title="firstLineOf(att.content)">
+              {{ firstLineOf(att.content) }}
+            </div>
           </div>
         </div>
       </div>

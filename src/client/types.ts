@@ -64,6 +64,19 @@ export interface TaskResumeResult {
 
 export interface ChatSendParams {
   message: string
+  /**
+   * MSG-3270 P0：**结构化附件**（正本 §1.3.1）——name/kind/mimeType/size/sha256；
+   * 文本带 `content`、图片带 `dataUrl`。daemon 侧落地前为未知字段（默认忽略）。
+   */
+  attachments?: Array<{
+    name: string
+    kind: 'image' | 'file'
+    mimeType: string
+    size: number
+    sha256: string
+    content?: string
+    dataUrl?: string
+  }>
   workspace?: string
   conversation_id?: string
   client_task_id?: string
