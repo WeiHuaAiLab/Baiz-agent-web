@@ -1119,17 +1119,23 @@ button {
   display: flex;
   flex-direction: column;
   position: relative;
+  padding-left: 9px;
 }
  
 .message-scroll>.vue-recycle-scroller {
   flex: 1;
   min-height: 0;
   width: 100%;
+  /* 滚动条策略：overlay（Chromium/WebKit），滚动条盖在内容上方、不占布局空间。
+     这样 .message-inner 的 900px 始终基于滚动容器 100% 宽度居中，与下方
+     .chat-input > .composer 的 900px 内容体严格对齐；不会出现"滚动条占位 8px
+     把消息列挤左、输入框没挤"导致的错位。
+     注意：overlay 在 Firefox 会回退为 auto（占 8px），但本项目 Tauri 默认 Chromium
+     内核，Windows/macOS 体验一致；因此不再搭配 scrollbar-gutter: stable。 */
   overflow-y: overlay;
-  scrollbar-gutter: stable;
   scrollbar-width: thin;
   scrollbar-color: var(--scrollbar-thumb) transparent;
-} 
+}
 .measurement-mask {
   position: absolute;
   inset: 0;

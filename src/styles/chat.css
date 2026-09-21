@@ -431,12 +431,12 @@
 /* 流式尾条：DynamicScroller 的 after 槽内容（.vue-recycle-scroller__slot），
    在滚动容器内部、item-wrapper 之后——是滚动内容的一部分，随列表一起滚动，
    不再是「被 flex 压扁在滚动区外」的兄弟节点。
-   宽度/居中/底部呼吸全部对齐消息条目（.message-inner = 720px 居中 + padding-bottom
+   宽度/居中/底部呼吸全部对齐消息条目（.message-inner = var(--chat-content-width) 居中 + padding-bottom
    10px；间距走 padding 而非 margin，因为滚动区末端的 margin 不计入 scrollHeight），
    尾条因此与真实消息逐像素同位——落定时内容不位移。 */
 .streaming-tail {
   width: 100%;
-  max-width: 720px;
+  max-width: var(--chat-content-width);
   margin: 0 auto;
 }
 
@@ -481,14 +481,14 @@
   display: flex;
   flex-direction: column;
   width: 100%;
-  max-width: 720px;
+  max-width: var(--chat-content-width);
   margin: 0 auto;
   /* 顶部 8px 呼吸；底部 0——下沿间距已由 .chat-input 的 padding-bottom 承担 */
   padding: 8px 0 0;
 }
 
 .composer.centered {
-  max-width: 720px;
+  max-width: var(--chat-content-width);
 }
 
 /* 居中创建（新建会话/任务）：整体 shell 增强外阴影，字号略大。
