@@ -38,7 +38,16 @@ function exportCurrent(format: 'md' | 'json') {
     messages.list(conversation.id),
     format,
   )
-  downloadText(filename, content)
+  // MSG-3263 ②：命令面板导出同源回显（成功/失败俱有提示，禁静默）
+  try {
+    const done = downloadText(filename, content)
+    ui.toast(t('chat.exportDone', { name: done.filename, dir: done.hint }), 'success')
+  } catch (error) {
+    ui.toast(
+      t('chat.exportFailed', { msg: error instanceof Error ? error.message : String(error) }),
+      'error',
+    )
+  }
 }
 
 function baseCommands(): Command[] {

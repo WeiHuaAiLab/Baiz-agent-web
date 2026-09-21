@@ -76,6 +76,9 @@ export default {
     fileCard: { open: '已在右侧打开' },
     // MSG-3236 ④：收件箱遮罩在途时的发送让路提示（禁静默吞发）
     inboxClosedForSend: '已关闭待办收件箱，消息已发出',
+    // MSG-3263 ②：导出回显（成功报文件名＋落点；失败报明确原因——禁静默）
+    exportDone: '已导出「{name}」（在{dir}里找）',
+    exportFailed: '导出失败：{msg}',
     // MSG-2998 修②（DEBT-544 目二）：三分离归组区标
     blockCommands: '执行命令',
     blockResults: '执行结果',
@@ -90,6 +93,9 @@ export default {
     upload: '上传',
     collapse: '收起文件区',
     empty: '暂无文件',
+    // MSG-3263 ①：空态语义化（本面板列的是什么、去哪看盘面文件）——不再用「暂无文件」盖过事实
+    emptyWorkingTree:
+      '本栏显示本次会话有改动的文件；当前无改动。要看工作区里的文件，请在设置 → 通用里配置工作区（或点上方「授权文件夹」）。',
     webUnsupported: 'Web 形态暂不支持本机目录',
     pathFiles: '项目文件',
     backToTree: '返回文件树',

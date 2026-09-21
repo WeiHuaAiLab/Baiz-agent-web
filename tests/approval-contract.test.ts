@@ -338,11 +338,12 @@ describe('§C B1~B4／B8：审批卡面', () => {
     expect(wrapper.find('.approval-body').text()).not.toMatch(/[{}\[\]]/)
   })
 
-  it('档位未知不伪装：无 risk ⇒ 显示「档位未知」而非中风险', () => {
+  it('档位未知不伪装：无 risk ⇒ **不显档位徽章**（MSG-3263 ④：旧「档位未知」文案已废），且绝不伪装中风险', () => {
     const wrapper = mountCard({ requestId: 'r2', toolName: 'write_file', argsPreview: '{"path":"a.txt"}' })
-    expect(wrapper.find('.risk').text()).toBe('档位未知')
-    expect(wrapper.find('.risk').text()).not.toBe('中风险')
-    expect(wrapper.find('.risk').classes()).toContain('unknown')
+    // 令（ZCode UX 走查 P2-6）：卡上不再出现「档位未知」（对用户零信息）
+    expect(wrapper.find('.risk').exists()).toBe(false)
+    expect(wrapper.text()).not.toContain('档位未知')
+    expect(wrapper.text()).not.toContain('中风险')
   })
 
   it('档位下拉默认「一次」高亮；「记住这条」在「一次」档下禁用；被拒可「申请放行」', async () => {

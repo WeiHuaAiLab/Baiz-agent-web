@@ -185,7 +185,9 @@ async function requestEscalation() {
     <!-- A 头部：工具名（13px 次级）＋ 风险徽章（11px） -->
     <div class="approval-head">
       <span class="approval-tool">{{ toolText }}</span>
-      <span class="risk" :class="riskLevel">{{ riskText }}</span>
+      <!-- MSG-3263 ④（P2-6）：档位取不到时**不再显「档位未知」**（对用户零信息，
+          与 MSG-3231 理由位同源口径）——只在拿到真实档位时显徽章 -->
+      <span v-if="riskLevel !== 'unknown'" class="risk" :class="riskLevel">{{ riskText }}</span>
     </div>
 
     <div class="approval-body">

@@ -53,7 +53,10 @@ export const useSettingsStore = defineStore('settings', {
     memoryScope: readLocal('baiz.memoryScope', 'recent') as MemoryScope,
     autoDistill: readLocal('baiz.autoDistill', '1') === '1',
     // 人话字幕：把工具调用翻译成白话的展示开关——默认隐藏（设置中可开启）
-    showHuman: readLocal('baiz.showHuman', '0') === '1',
+    // MSG-3263 ③（ZCode UX 走查 P2-5）：人话字幕＝面向小白用户的核心差异化功能，
+    // **默认改开**（旧默认关 ⇒ 核心功能默认不可见）；显式关过的用户（存 '0'）**照旧关**
+    // ——只改缺省值，不覆写用户选择。
+    showHuman: readLocal('baiz.showHuman', '1') === '1',
   }),
   actions: {
     setLocale(locale: Locale) {

@@ -36,7 +36,16 @@ function doExport(format: 'md' | 'json') {
     messages.list(session.activeId),
     format,
   )
-  downloadText(filename, content)
+  // MSG-3263 ②：导出**必须有回显**——成功报「文件名＋去哪儿找」，失败报明确原因（禁静默）
+  try {
+    const done = downloadText(filename, content)
+    ui.toast(t('chat.exportDone', { name: done.filename, dir: done.hint }), 'success')
+  } catch (error) {
+    ui.toast(
+      t('chat.exportFailed', { msg: error instanceof Error ? error.message : String(error) }),
+      'error',
+    )
+  }
   exportOpen.value = false
 }
 </script>

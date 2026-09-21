@@ -76,6 +76,9 @@ export default {
     fileCard: { open: 'Opened in panel' },
     // MSG-3236 ④: hint when the inbox overlay yields to a send (no silent drop)
     inboxClosedForSend: 'Inbox closed — your message was sent',
+    // MSG-3263 ②: export feedback (success shows file + where; failure shows the reason)
+    exportDone: 'Exported "{name}" (look in {dir})',
+    exportFailed: 'Export failed: {msg}',
     // MSG-2998 修②（DEBT-544 part 2）：three-way split block labels
     blockCommands: 'Commands',
     blockResults: 'Results',
@@ -90,6 +93,9 @@ export default {
     upload: 'Upload',
     collapse: 'Collapse files panel',
     empty: 'No files',
+    // MSG-3263 ①: semantic empty state (what this pane lists, where to find disk files)
+    emptyWorkingTree:
+      'This pane lists files changed in the current session — none right now. To browse workspace files, set a workspace in Settings → General (or use "Authorize folder").',
     webUnsupported: 'Local directory is unavailable in web mode',
     pathFiles: 'Project files',
     backToTree: 'Back to file tree',

@@ -185,8 +185,10 @@ describe('§四／§五：极端情况与可机判项（样式源级）', () => 
       inbox: true,
     })
     expect(wrapper.find('.approval-from-inbox').text()).toBe('来自后台任务')
-    expect(wrapper.find('.risk.unknown').text()).toBe('档位未知')
-    expect(scopedCss).toMatch(/\.risk\.unknown \{[\s\S]*?--risk-unknown-text/)
+    // MSG-3263 ④ 改口径（ZCode UX 走查 P2-6）：卡上**不再显「档位未知」**——
+    // 无档位 ⇒ 徽章不渲染（旧 `.risk.unknown` 文案面）
+    expect(wrapper.find('.risk').exists()).toBe(false)
+    expect(wrapper.text()).not.toContain('档位未知')
   })
 
   it('§四#1 超长命令：等宽块单行截断＋展开后最大高 240 内滚', () => {

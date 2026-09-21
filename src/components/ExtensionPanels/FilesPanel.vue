@@ -2,7 +2,7 @@
 // 文件面板（工作区右栏）：工作树 diff 预览＋已授权目录浏览＋外部文件预览。
 // MSG-3218：授权目录面改为「逐层可展开的树」（原为单层平铺、目录项不可点开），
 // 且列目录失败一律给人话提示（禁静默兜空／禁「暂无文件」糊弄）。
-import { computed, ref } from 'vue'
+import { computed, onMounted, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useFilesStore } from '../../stores/files'
 import { useWorkingTreeStore } from '../../stores/workingTree'
@@ -16,15 +16,32 @@ import AuthorizedEntry from './files/AuthorizedEntry.vue'
 import { isHtmlPath } from '../../utils/htmlPreview'
 import Icon from '../common/Icon.vue'
 import { useUiStore } from '../../stores/ui'
+import { useSettingsStore } from '../../stores/settings'
 
 const { t } = useI18n()
 const files = useFilesStore()
 const working = useWorkingTreeStore()
 const ui = useUiStore()
+const settings = useSettingsStore()
 
 const emit = defineEmits<{ close: [] }>()
 
 const treeRoots = computed<TreeNode[]>(() => buildTree(working.list))
+/**
+ * MSG-3263 ①（ZCode UX 走查 P1-2）：根因＝本面板只列**本次会话有改动的文件**
+ * （数据源 `working.list`），工作区根里那 8+ 个未改动文件**从来不在其中**
+ * ⇒ 旧代码 `treeRoots.length === 0` 便直跳「暂无文件」，与盘面事实相悖（空态误判）。
+ * 修：① 有配置工作区时**自动并入授权目录树**（`bindDir` ⇒ 走 `proxy_fs_list_dir` 真列目录，
+ * 无需重新授权）；② 空态只在"工作树空 **且** 无任何授权目录"时显示，且文案改为**语义化**
+ * （说清列的是什么、去哪看别处）——不再用一句「暂无文件」盖过盘面事实。
+ */
+const workspaceRoot = computed(() => settings.activeWorkspace ?? '')
+const hasAuthorizedDirs = computed(() => Object.keys(files.pickedDirs).length > 0)
+const showEmptyState = computed(() => treeRoots.value.length === 0 && !hasAuthorizedDirs.value)
+onMounted(() => {
+  // 自动绑定工作区（幂等：bindDir 内部已存在即跳过）
+  if (workspaceRoot.value) files.bindDir(workspaceRoot.value, basename(workspaceRoot.value))
+})
 const active = computed(() => working.active)
 const stats = computed(() =>
   active.value ? diffStats(active.value.original, active.value.current) : null,
@@ -208,7 +225,8 @@ function toggleAuthorized(key: string) {
             </ul>
           </div>
         </div>
-        <p v-if="treeRoots.length === 0" class="placeholder">{{ t('files.empty') }}</p>
+        <!-- MSG-3263 ①：空态**语义化＋判定收窄**（仅"工作树空且无授权目录"才显） -->
+        <p v-if="showEmptyState" class="placeholder">{{ t('files.emptyWorkingTree') }}</p>
       </template>
     </div>
     <div v-if="pathOpen" class="menu-mask" @click="pathOpen = false" />

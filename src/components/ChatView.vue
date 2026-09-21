@@ -4,6 +4,7 @@
 import { computed, nextTick, onBeforeUnmount, onMounted, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useSessionStore } from '../stores/session'
+import { useApprovalStore } from '../stores/approval'
 import { useUiStore } from '../stores/ui'
 import CreateChat from './chat/CreateChat.vue'
 import ChatHeader from './chat/ChatHeader.vue'
@@ -18,6 +19,7 @@ import ExtensionPanel, {
 const { t } = useI18n()
 const session = useSessionStore()
 const ui = useUiStore()
+const approvals = useApprovalStore()
 
 // 扩展面板（抽屉）配置：默认打开，内容为 FilesPanel；类型可在 ExtensionPanelType 中扩展
 const extensionOpen = ref(true)
@@ -66,6 +68,9 @@ function syncScroll() {
 
 onMounted(() => {
     window.addEventListener('keydown', onKeydown);
+    // MSG-3263 ④（P2-6）：**进来自动对卯一次**——角标以 daemon 权威清单
+    // （`permission.pending`）为准，不再只等开关收件箱/帧；失败 fail-honest 保留本地值。
+    void approvals.syncPending();
 });
 
 onBeforeUnmount(() => {
