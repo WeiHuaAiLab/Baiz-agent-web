@@ -193,7 +193,10 @@ function cancelQueued() {
       <template v-else>{{ message.text }}</template>
       <button
         v-if="
-          message.meta?.statusKey === 'sendFailed' || message.meta?.statusKey === 'taskError'
+          message.meta?.statusKey === 'sendFailed' ||
+          message.meta?.statusKey === 'taskError' ||
+          // MSG-3266 ②：协议泄漏兜底后的**可见重试**入口（禁静默）
+          message.meta?.statusKey === 'protocolLeak'
         "
         type="button"
         class="retry-btn"

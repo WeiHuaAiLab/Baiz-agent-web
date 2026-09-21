@@ -6,6 +6,8 @@ import type { AttachmentItem } from './files'
 import { mapRpcError } from '../utils/errors'
 import { createDecisionStreamFilter } from '../utils/decisionStream'
 import type { DecisionStreamFilter } from '../utils/decisionStream'
+import { createProtocolLeakFilter } from '../utils/protocolLeak'
+import type { ProtocolLeakFilter } from '../utils/protocolLeak'
 import { formatFileSize } from '../utils/format'
 import { TOOL_LABELS_ZH as TOOL_NAMES_ZH } from '../utils/approvalText'
 import { useUiStore } from './ui'
@@ -38,6 +40,20 @@ const flushTimers = new Map<string, ReturnType<typeof setTimeout>>()
 // MSG-3216 P0：决策 JSON 分流器（按 task 一份）——内部载荷不得进正文，
 // 改道受控折叠区（run.decision）。终态收流时落定并清理（见 settleDecisionStream）。
 const decisionFilters = new Map<string, DecisionStreamFilter>()
+// MSG-3266 P0：DSML 协议块过滤器（按 task 一份）——未解析的协议文本**不得进正文**，
+// 被剥离原文零丢证归受控折叠区；终态收流落定并清理。
+const protocolFilters = new Map<string, ProtocolLeakFilter>()
+/** MSG-3266 ②：本轮是否剥到过协议文本（用于收口时的**可见重试**提示） */
+const protocolLeakSeen = new Map<string, number>()
+
+function protocolFilterFor(taskId: string): ProtocolLeakFilter {
+  let filter = protocolFilters.get(taskId)
+  if (!filter) {
+    filter = createProtocolLeakFilter()
+    protocolFilters.set(taskId, filter)
+  }
+  return filter
+}
 
 function decisionFilterFor(taskId: string): DecisionStreamFilter {
   let filter = decisionFilters.get(taskId)
@@ -488,13 +504,32 @@ export const useMessageStore = defineStore('message', {
      */
     settleDecisionStream(taskId: string) {
       const filter = decisionFilters.get(taskId)
-      if (!filter) return
+      const protocol = protocolFilters.get(taskId)
+      if (!filter && !protocol) return
       decisionFilters.delete(taskId)
-      const tail = filter.flush()
+      protocolFilters.delete(taskId)
       const run = this.runs[taskId]
+      const tail = filter?.flush() ?? { body: '', internal: '' }
+      const leakTail = protocol?.flush() ?? { body: '', suppressed: '' }
+      const leakBytes = protocolLeakSeen.get(taskId) ?? 0
+      protocolLeakSeen.delete(taskId)
       if (!run) return
       if (tail.body) run.text += tail.body
       if (tail.internal) run.decision = `${run.decision ?? ''}${tail.internal}`
+      // MSG-3266：未闭合的协议残块**不进正文**，零丢证归折叠区（收口时兜底）
+      if (leakTail.suppressed) run.decision = `${run.decision ?? ''}${leakTail.suppressed}`
+      if (leakTail.body) run.text += leakTail.body
+      // MSG-3266 ②：剥到过协议文本 ⇒ **必须给可见交代＋重试入口**（禁静默吞）
+      if (leakBytes + leakTail.suppressed.length > 0 && run.conversationId) {
+        void this.push(
+          run.conversationId,
+          makeMessage(run.conversationId, 'status', '', {
+            statusKey: 'protocolLeak',
+            status: 'error',
+            taskId,
+          }),
+        )
+      }
     },
     flushRun(taskId: string) {
       const timer = flushTimers.get(taskId)
@@ -610,17 +645,25 @@ export const useMessageStore = defineStore('message', {
       const split = splitTokenDelta(data.task_id, data.token)
       if (split.internal) run.decision = `${run.decision ?? ''}${split.internal}`
       if (!split.body) return
+      // MSG-3266 P0：**DSML 协议块**分流（另一类载荷，与决策 JSON 同层兜底）——
+      // 未解析的 `<｜｜DSML｜｜invoke…>` 一律不进正文；被剥离原文零丢证归折叠区。
+      const leak = protocolFilterFor(data.task_id).push(split.body)
+      if (leak.suppressed) {
+        run.decision = `${run.decision ?? ''}${leak.suppressed}`
+        protocolLeakSeen.set(data.task_id, (protocolLeakSeen.get(data.task_id) ?? 0) + leak.suppressed.length)
+      }
+      if (!leak.body) return
       const buffered = tokenBuffers.get(data.task_id)
       if (buffered === undefined) {
         // 首个 token 即时生效，保证首字立刻可见
-        run.text += split.body
+        run.text += leak.body
         tokenBuffers.set(data.task_id, '')
         flushTimers.set(
           data.task_id,
           setTimeout(() => this.flushRun(data.task_id), 100),
         )
       } else {
-        tokenBuffers.set(data.task_id, buffered + split.body)
+        tokenBuffers.set(data.task_id, buffered + leak.body)
       }
     },
     onReasoning(data: ReasoningData) {

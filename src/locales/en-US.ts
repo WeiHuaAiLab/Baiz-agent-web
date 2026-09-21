@@ -423,6 +423,9 @@ export default {
     disconnectedReconnect: 'Disconnected, reconnecting…',
     sendFailed: 'Send failed',
     taskError: 'Task error',
+    // MSG-3266 ②: unparsed tool-protocol text was stripped from the body — say so and offer retry
+    protocolLeak:
+      'The model emitted tool-protocol text that could not be parsed; it was stripped from the reply. Click Retry to try again.',
     demo: 'Demo mode (offline)',
     chars: 'chars',
   },
