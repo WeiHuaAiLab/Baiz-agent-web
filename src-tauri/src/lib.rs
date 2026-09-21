@@ -20,8 +20,10 @@
 //! 设计纪律：proxy 不感知业务语义（透传）；失败降级 Err(String)
 //! 不 panic；无 unwrap / 无 unsafe（baiz lint 铁律）。
 
+use serde::Serialize;
 use serde_json::{json, Value};
 use std::collections::HashMap;
+use std::path::{Path, PathBuf};
 use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::{Arc, Mutex};
 use tauri::{AppHandle, Emitter, State};
@@ -451,6 +453,74 @@ async fn proxy_abort(state: State<'_, DaemonState>) -> Result<(), String> {
     Ok(())
 }
 
+// DEBT-540-F：Tauri 形态本地 FS proxy 命令（前端 bridge/tauri.ts 契约）
+// 相对路径统一以 Tauri 进程当前工作目录为基；agent/daemon 与 GUI 同目录启动时
+// 与 daemon 写盘路径对卯。
+
+/// 将用户给的路径解析为绝对路径：
+///   - 绝对路径直接用；
+///   - 相对路径先以 current_dir 为基；若不存在再以 exe 目录为基（打包场景兜底）；
+///   - 两者都不存在时仍返回 cwd 拼接结果，让后续 IO 报清晰错误。
+fn resolve_path(path: &str) -> Result<PathBuf, String> {
+    let p = Path::new(path);
+    if p.is_absolute() {
+        return Ok(p.to_path_buf());
+    }
+    let cwd = std::env::current_dir().map_err(|e| format!("获取当前目录失败: {e}"))?;
+    let cwd_resolved = cwd.join(p);
+    if cwd_resolved.exists() {
+        return Ok(cwd_resolved);
+    }
+    if let Ok(exe) = std::env::current_exe() {
+        if let Some(exe_dir) = exe.parent() {
+            let exe_resolved = exe_dir.join(p);
+            if exe_resolved.exists() {
+                return Ok(exe_resolved);
+            }
+        }
+    }
+    Ok(cwd_resolved)
+}
+
+#[derive(Serialize)]
+struct FileEntry {
+    name: String,
+    path: String,
+    #[serde(rename = "isDir")]
+    is_dir: bool,
+}
+
+#[tauri::command]
+async fn proxy_fs_read_text(path: String) -> Result<String, String> {
+    tokio::task::spawn_blocking(move || {
+        let resolved = resolve_path(&path)?;
+        std::fs::read_to_string(&resolved)
+            .map_err(|e| format!("读取文件失败 ({}): {e}", resolved.display()))
+    })
+    .await
+    .map_err(|e| format!("读取任务异常: {e}"))?
+}
+
+#[tauri::command]
+async fn proxy_fs_list_dir(path: String) -> Result<Vec<FileEntry>, String> {
+    tokio::task::spawn_blocking(move || {
+        let resolved = resolve_path(&path)?;
+        let mut entries = Vec::new();
+        for entry in std::fs::read_dir(&resolved)
+            .map_err(|e| format!("读取目录失败 ({}): {e}", resolved.display()))?
+        {
+            let entry = entry.map_err(|e| format!("目录项读取失败: {e}"))?;
+            let name = entry.file_name().to_string_lossy().to_string();
+            let path = entry.path().to_string_lossy().to_string();
+            let is_dir = entry.file_type().map(|t| t.is_dir()).unwrap_or(false);
+            entries.push(FileEntry { name, path, is_dir });
+        }
+        Ok(entries)
+    })
+    .await
+    .map_err(|e| format!("目录读取任务异常: {e}"))?
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     let builder = tauri::Builder::default()
@@ -459,7 +529,9 @@ pub fn run() {
             proxy_rpc,
             proxy_subscribe,
             proxy_unsubscribe,
-            proxy_abort
+            proxy_abort,
+            proxy_fs_read_text,
+            proxy_fs_list_dir
         ]);
     // 轻红修向（裁1015④）：错误上达零 panic——expect 同族禁
     if let Err(e) = builder.run(tauri::generate_context!()) {

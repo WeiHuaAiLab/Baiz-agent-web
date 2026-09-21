@@ -46,6 +46,8 @@ export const useUiStore = defineStore('ui', {
     showOnboarding: !onboardingSeen,
     pendingPrompt: '',
     sidebarCollapsed: false,
+    // 右侧扩展面板（FilesPanel 等抽屉）开关状态
+    extensionOpen: true,
     // 创建项目完成后的回归上下文 + 待自动选中的项目 id（CreateChat 重新挂载时消费）
     createReturn: null as CreateReturn | null,
     pendingProjectId: '',
@@ -126,6 +128,10 @@ export const useUiStore = defineStore('ui', {
     /** 展开/收起左侧侧栏 */
     toggleSidebar() {
       this.sidebarCollapsed = !this.sidebarCollapsed
+    },
+    /** 设置右侧扩展面板（FilesPanel 抽屉）开关 */
+    setExtensionOpen(open: boolean) {
+      this.extensionOpen = open
     },
   },
 })

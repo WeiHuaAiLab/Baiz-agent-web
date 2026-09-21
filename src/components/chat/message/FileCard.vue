@@ -15,10 +15,10 @@
 // → workingTree.files[path].current → 桥接层读盘兜底。
 import { computed, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { useWorkingTreeStore } from '../../stores/workingTree'
-import { useUiStore } from '../../stores/ui'
-import { getBridge } from '../../bridge'
-import { classifyFile, basenameOf } from '../../utils/fileCard'
+import { useWorkingTreeStore } from '../../../stores/workingTree'
+import { useUiStore } from '../../../stores/ui'
+import { getBridge } from '../../../bridge'
+import { classifyFile, basenameOf } from '../../../utils/fileCard'
 
 const props = defineProps<{
   path: string

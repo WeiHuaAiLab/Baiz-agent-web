@@ -14,7 +14,8 @@ import { getBridge } from '../../bridge'
 import type { ChatMessage, RunState } from '../../models'
 import MessageItem from './MessageItem.vue'
 import SkeletonChatView from './SkeletonChatView.vue'
-import RunBlocks from './RunBlocks.vue'
+// MSG-3335 G-4：RunBlocks 随 kind 分发迁入 chat/message/（本件随迁改 import，行为零改）
+import RunBlocks from './message/RunBlocks.vue'
 import StreamingMarkdownView from '../markdown/StreamingMarkdownView.vue'
 import Icon from '../common/Icon.vue'
 
@@ -95,6 +96,22 @@ const displayItems = computed<ChatMessage[]>(() =>
 const streamingRuns = computed(() => messages.activeRuns(activeId.value))
 // MSG-3233 ④：消息加载态——**加载中且消息为空**时盖骨架（免空帧闪 empty-state）
 const loadingMessages = ref(false)
+/**
+ * main f793908 口径（本令摘段移植）：加载中＝`byConversation[id] === undefined`。
+ * 与「加载完且为空」区分——后者说明这是**合法空会话**（用户清空了消息），应走
+ * empty-state 而不是骨架屏。只按 displayItems === 0 判会把骨架吞成空态（反向亦然）。
+ * 我方保留条件：未决审批卡常驻区在场时不盖骨架（见模板 v-if）。
+ */
+const isLoadingMessages = computed(() => {
+  const id = activeId.value
+  if (!id) return false
+  // 两口径同时成立才盖骨架：
+  //   ① 我方 MSG-3233 ④：load **在途**（loadingMessages，可被测试显式控制起止）；
+  //   ② main f793908：数据**尚未载入**（`byConversation[id] === undefined`）。
+  // 只留 ① 会在「键已存在但为空」的合法空会话上误盖骨架（main 新增用例 B 反证）；
+  // 只留 ② 会在 load 已收口但键仍缺（如 load 被替身/失败）时永远盖着（我方 MSG-3233 ③ 反证）。
+  return loadingMessages.value && messages.byConversation[id] === undefined
+})
 
 watch(
   activeId,
@@ -259,7 +276,7 @@ async function onStreamingClick(event: MouseEvent) {
     <!-- MSG-3233 ④：加载中且空 ⇒ 骨架；否则走空态（两者互斥） -->
     <SkeletonChatView
       v-if="
-        loadingMessages &&
+        isLoadingMessages &&
         displayItems.length === 0 &&
         pendingApprovals.length === 0 &&
         streamingRuns.length === 0

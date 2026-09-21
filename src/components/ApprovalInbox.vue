@@ -14,7 +14,8 @@ import { useSessionStore } from '../stores/session'
 import { useUiStore } from '../stores/ui'
 import { INBOX_CONVERSATION_ID } from '../client/types'
 import { normalizeRisk, toolLabel } from '../utils/approvalText'
-import ApprovalCard from './chat/ApprovalCard.vue'
+// MSG-3335 G-4：审批卡按上游结构迁至 chat/message/（本件随迁改 import，行为零改）
+import ApprovalCard from './chat/message/ApprovalCard.vue'
 import Icon from './common/Icon.vue'
 import type { PendingApprovalItem } from '../stores/approval'
 

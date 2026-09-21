@@ -383,8 +383,10 @@ export function demoHandle(req: RpcRequest): { result?: unknown; frames?: SseFra
   if (req.method === 'a2a.status') return { result: { enabled: false, tasks: 0 } }
   if (req.method === 'auth.provide_key') return { result: { stored: true } }
   if (req.method === 'auth.login') {
-    // mock 登录：演示模式任意账号密码放行，返回会话 token（hydrate 续登录态用）
-    const params = req.params as { email?: string } | undefined
+    // mock 登录：演示模式正常账号密码放行；遇密码 'wrong' 模拟登录失败，
+    // 供测试验证败面通用拒词零泄词（DEBT-398 例）。
+    const params = req.params as { email?: string; password?: string } | undefined
+    if (params?.password === 'wrong') return null
     return {
       result: {
         session_token: `mock-${Date.now().toString(36)}`,

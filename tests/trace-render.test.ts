@@ -8,7 +8,8 @@ import { useApprovalStore } from '../src/stores/approval'
 import { useMessageStore } from '../src/stores/message'
 import { router } from '../src/router'
 import MessageItem from '../src/components/chat/MessageItem.vue'
-import ToolRow from '../src/components/chat/ToolRow.vue'
+// MSG-3335 G-4：ToolRow 按上游结构迁至 chat/message/（测试随迁改 import，断言零改）
+import ToolRow from '../src/components/chat/message/ToolRow.vue'
 import zhCN from '../src/locales/zh-CN'
 
 const i18n = createI18n({

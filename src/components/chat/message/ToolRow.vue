@@ -3,14 +3,14 @@
 // MSG-3233 ③（自 origin/main 挑件）：文件类工具的 path 命中**预览型扩展**
 // （HTML/JS/CSS/Vue/TS/SVG/MD…）时改用 FileCard 渲染；其余扩展保留原 `.file-ref`（最小侵入）。
 import { computed, ref } from 'vue'
-import type { ChatMessage } from '../../models'
-import { useWorkingTreeStore } from '../../stores/workingTree'
-import { useSettingsStore } from '../../stores/settings'
-import { diffStats } from '../../utils/diff'
-import { translateTool } from '../../utils/commandTranslator'
-import { extractFilePath, extractShellCommand, extractUrl, parseTraceArgs } from '../../utils/traceText'
-import { classifyFile } from '../../utils/fileCard'
-import Icon from '../common/Icon.vue'
+import type { ChatMessage } from '../../../models'
+import { useWorkingTreeStore } from '../../../stores/workingTree'
+import { useSettingsStore } from '../../../stores/settings'
+import { diffStats } from '../../../utils/diff'
+import { translateTool } from '../../../utils/commandTranslator'
+import { extractFilePath, extractShellCommand, extractUrl, parseTraceArgs } from '../../../utils/traceText'
+import { classifyFile } from '../../../utils/fileCard'
+import Icon from '../../common/Icon.vue'
 import FileCard from './FileCard.vue'
 
 const props = defineProps<{ message: ChatMessage }>()
@@ -60,7 +60,11 @@ function openFile() {
     <!-- MSG-2413 执行行：shell 命令 / URL——跑了什么现形（文件路径在下 file-ref 区） -->
     <code v-if="shellCommand" class="tool-cmd">$ {{ shellCommand }}</code>
     <code v-else-if="toolUrl" class="tool-cmd">↗ {{ toolUrl }}</code>
-    <!-- MSG-3233 ③：预览型扩展走 FileCard（图标＋文件名＋行数）；其余走原 .file-ref -->
+    <!-- MSG-3233 ③：预览型扩展走 FileCard（图标＋文件名＋行数，点击进右侧面板预览）；
+         其余走原 .file-ref。多卡场景容器 flex 自动换行。
+         ★ 本件 FileCard 取**我方口径**——不带上游的「运行」按钮（Blob 新窗跑 HTML，
+         与我方 MSG-3187 沙箱策略双轨），故上游此处关于「可运行按钮／index.html 默认直接跑」
+         的注释不适用，按我方口径照录。 -->
     <div v-if="isFileTool && filePath && previewKind" class="file-cards">
       <FileCard :path="filePath" :content="fileContent" />
     </div>

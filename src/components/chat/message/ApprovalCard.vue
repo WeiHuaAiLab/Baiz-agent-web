@@ -6,12 +6,12 @@
 // 契约面（《前端协作标准 v1.0》§A1／§B／§C）不动：requestId／scope／escalate／已决态。
 import { computed, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { useApprovalStore } from '../../stores/approval'
+import { useApprovalStore } from '../../../stores/approval'
 import DiffView from './DiffView.vue'
-import { humanizeArgs, normalizeRisk, toolLabel } from '../../utils/approvalText'
-import type { ChatMessage } from '../../models'
-import type { DiffLine } from '../../utils/diff'
-import type { ApprovalScope } from '../../client/types'
+import { humanizeArgs, normalizeRisk, toolLabel } from '../../../utils/approvalText'
+import type { ChatMessage } from '../../../models'
+import type { DiffLine } from '../../../utils/diff'
+import type { ApprovalScope } from '../../../client/types'
 
 const props = defineProps<{ message: ChatMessage }>()
 const { t } = useI18n()

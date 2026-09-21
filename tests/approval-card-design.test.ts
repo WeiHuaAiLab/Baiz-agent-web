@@ -6,7 +6,8 @@ import { readFileSync } from 'node:fs'
 import { createPinia, setActivePinia } from 'pinia'
 import { flushPromises, mount } from '@vue/test-utils'
 import { createI18n } from 'vue-i18n'
-import ApprovalCard from '../src/components/chat/ApprovalCard.vue'
+// MSG-3335 G-4：审批卡按上游结构迁至 chat/message/（测试随迁改 import，断言零改）
+import ApprovalCard from '../src/components/chat/message/ApprovalCard.vue'
 import { getClientSetup, resetClientForTests } from '../src/client/singleton'
 import { useApprovalStore } from '../src/stores/approval'
 import zhCN from '../src/locales/zh-CN'
@@ -20,7 +21,7 @@ const i18n = createI18n({
 })
 
 // 样式源级断言：直接读组件源（vitest cwd＝仓根）
-const cardSource = readFileSync('src/components/chat/ApprovalCard.vue', 'utf8')
+const cardSource = readFileSync('src/components/chat/message/ApprovalCard.vue', 'utf8')
 const scopedCss = /<style scoped>([\s\S]*?)<\/style>/.exec(cardSource)?.[1] ?? ''
 
 function mountCard(meta: MessageMeta) {
