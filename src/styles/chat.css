@@ -98,7 +98,8 @@
   color: var(--danger);
 }
 
-/* 审批卡样式：已迁至 src/components/chat/ApprovalCard.vue 的 <style scoped>
+/* 审批卡样式：已迁至 src/components/chat/message/ApprovalCard.vue 的 <style scoped>
+   （MSG-3335 G-4 随上游路径迁移，仅注释指向更新，样式零改）
    （MSG-3145 · DESIGN.md §8 专件 ＝《审批卡设计规格 v1.0》）。下方仅留
    会话内待办横幅与队列条——二者不属卡内样式。 */
 
