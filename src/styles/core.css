@@ -16,6 +16,9 @@
   --sidebar-bg: #f8f8f8;
   --sidebar-hover: #eeeeee;
   --sidebar-active: #e2e2e2;
+  /* 聊天内容区最大宽度：消息列 / 头部 / 输入区 / 骨架屏共用——
+     900px 在中等窗口（≥1200px）下比 720px 更舒展，同时仍保持阅读友好 */
+  --chat-content-width: 900px;
 }
 
 :root[data-theme='dark'] {
@@ -1037,7 +1040,7 @@ button {
   background: var(--panel);
 }
 
-/* 头部占满 100% 宽度，内部内容体与消息列一致（720px 居中） */
+/* 头部占满 100% 宽度，内部内容体与消息列一致（var(--chat-content-width) 居中） */
 .chat-header {
   display: flex;
   align-items: center;
@@ -1048,7 +1051,7 @@ button {
 
 .chat-header-inner {
   width: 100%;
-  max-width: 720px;
+  max-width: var(--chat-content-width);
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -1165,9 +1168,9 @@ button {
   opacity: 0;
 }
 
-/* 消息内容容器：滚动区占满整宽，内容限宽 720px 居中（滚动条贴边、阅读宽度友好） */
+/* 消息内容容器：滚动区占满整宽，内容限宽 var(--chat-content-width) 居中（滚动条贴边、阅读宽度友好） */
 .message-inner {
-  max-width: 720px;
+  max-width: var(--chat-content-width);
   margin: 0 auto;
   /* 消息间距改由 padding 承担：虚拟滚动（DynamicScroller）按 item 的 border-box
      测量高度，.msg 的 margin-bottom 不计入会导致间距被下一个消息覆盖（叠在一起）。
@@ -1197,18 +1200,10 @@ button {
   margin: 0;
 }
 
-/* ── 对话骨架屏（MSG-2662）：会话切换/初次加载消息时占位 ──
-   容器宽度/居中/底部呼吸全部对齐 .message-inner（720px 居中 + padding-bottom 10px）——
-   落定后骨架被替换为真实消息时不发生纵向位移。
-   视觉参考：用户消息为右对齐灰色圆角气泡；AI 消息为左对齐 .msg-head 短条 + 多行段落。
-   与真实 AssistantMessage 同构（无头像），骨架正文左边缘与真实消息完全对齐——
-   之前有 avatar 时骨架正文右偏 34px，肉眼可辨，故移除。
-   占位色使用 color-mix 混入少量 --text，让 --surface-2 在浅色/深色背景下都可见，
-   避免原来 "一片白" 的丑陋感。整体风格干净、无代码块、无强烈 shimmer。 */
+/* ── 对话骨架屏（MSG-2662）：会话切换/初次加载消息时占位  */
 .skeleton-chat {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
+  width:100%;
+  min-width: 720px; 
   overflow: hidden;
   padding: 16px 0 0;
   /* 不响应点击：避免用户点到空白处触发无意义行为 */
@@ -1217,53 +1212,108 @@ button {
 }
 
 .skeleton-chat .message-inner {
-  max-width: 720px;
+  max-width: var(--chat-content-width);
   margin: 0 auto;
   padding-bottom: 10px;
 }
 
-/* 基础占位条：比 --surface-2 深一度，确保在 --bg 上有可见对比 */
-.sk-line {
+/* 基础占位条：比 --surface-2 深一度，确保在 --bg 上有可见对比。  */
+.skeleton-chat .sk-line {
   display: block;
-  height: 12px;
+  height: 20px;
   border-radius: 4px;
-  background: color-mix(in oklab, var(--surface-2) 85%, var(--text));
+  background: color-mix(in oklab, var(--sidebar-bg) 95%, var(--text));
 }
 
-/* 用户消息：右对齐灰色气泡，与真实 .user-text 同款圆角/内边距 */
-.sk-user-bubble {
-  height: 36px;
-  border-radius: 8px;
+/* AI 消息 .msg-head 里"⏱ 耗时 3.5s"占位：与真实 .elapsed 同尺寸
+   （display: inline-block; font-size 12px; padding 2px 6px; min-height 26px）——
+   保证 .msg-head 左侧高度与右侧 26px 按钮行一致。 */
+.skeleton-chat .sk-elapsed {
+  display: inline-block;
+  width: 200px;
+  min-height: 26px;
+  padding: 2px 6px;
+  border-radius: 4px;
+  box-sizing: border-box;
+  vertical-align: middle;
+}
+
+/* 操作按钮占位：与真实 .msg-actions .icon-btn 同款 26×26 / radius 6px
+   ——保证 .msg-head 行高稳定，"骨架 / 真实"切换不发生纵向位移。 */
+.skeleton-chat .sk-action-btn {
+  display: inline-block;
+  width: 26px;
+  height: 26px;
+  border-radius: 6px;
+  background: color-mix(in oklab, var(--surface-2) 80%, var(--text));
+  vertical-align: middle;
+}
+
+/* 用户消息 .msg-head.user-head 左侧：真实组件里是个空 <span>。骨架里放一个
+   透明占位以维持 head 行高与"无按钮时也撑得起来"的视觉。 */
+.skeleton-chat .sk-spacer {
+  display: inline-block;
+  width: 1px;
+  height: 26px;
+}
+
+/* AI 段落占位容器：替代真实 MarkdownView（块级 + 段落 gap 8px）。
+   显式 width: 100% 确保内部百分比宽度以整列为基准，避免 flex 收缩导致
+   占位条被压短；段落行之间的呼吸感与真实 Markdown 段落一致。 */
+.skeleton-chat .sk-content {
+  display: block;
+  width: 100%;
+}
+
+.skeleton-chat .sk-content .sk-line + .sk-line {
+  margin-top: 8px;
+}
+
+/* 用户气泡占位：复用真实 .user-text 的圆角/内边距/灰底（display:
+   inline-block + background: var(--user-bg) + radius: 8px + padding: 8px 12px），
+   替换时气泡的形状/尺寸完全一致。里面的 .sk-line 用 block 强制每行独立，
+   两行之间的 margin 由 gap 控制而非 line-height 误差——视觉接近真实
+   "换行"的文本布局。 */
+.skeleton-chat .sk-user-text {
+  display: inline-flex;
+  flex-direction: column;
+  gap: 6px;
   background: var(--user-bg);
+  border-radius: 8px;
+  padding: 8px 12px;
+  margin: 0;
+  align-items: flex-start;
+  /* 给气泡一个最小宽度，让内部 .sk-line 的百分比宽度有稳定基准；
+     max-width: 70% 与真实用户气泡同款：长文本自然换行不会拉满整行 */
+  min-width: 160px;
   max-width: 70%;
 }
 
-/* AI 消息骨架：无头像——真实 AssistantMessage 也是无头像（只有 .msg-head + 正文），
-   去掉之前的 padding-left: 34px，让骨架正文左边缘与真实消息完全对齐。
-   结构对应：.sk-meta ↔ .msg-head（耗时/操作行）、.sk-assistant-body ↔ MarkdownView */
-.sk-assistant {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
-
-.sk-meta {
-  width: 72px;
-  height: 10px;
+/* 时间戳占位：与真实 .msg-time 同款 margin-top: 6px / font-size: 11px。
+   AI 消息里时间戳真实靠右（.msg-time text-align: right），骨架用 margin-left: auto
+   把 36px 占位条推到右侧；用户消息里则继承 .msg.user flex-end 右端对齐。 */
+.skeleton-chat .sk-msg-time {
+  width: 36px;
+  height: 11px;
   border-radius: 3px;
-  opacity: 0.7;
+  margin-top: 6px;
+  background: color-mix(in oklab, var(--surface-2) 80%, var(--text));
+  opacity: 0.5;
 }
-
-.sk-assistant-body {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
+.skeleton-chat .msg.assistant .sk-msg-time {
+  margin-left: auto;
+}
+/* 用户消息时间戳：右对齐（与真实 .msg-time text-align: right 一致） */
+.skeleton-chat .msg.user .sk-msg-time {
+  align-self: flex-end;
 }
 
 /* 尊重用户的 prefers-reduced-motion：无需额外处理，本版本已是无动画静态占位 */
 @media (prefers-reduced-motion: reduce) {
-  .sk-line,
-  .sk-user-bubble {
+  .skeleton-chat .sk-line,
+  .skeleton-chat .sk-action-btn,
+  .skeleton-chat .sk-user-text,
+  .skeleton-chat .sk-msg-time {
     animation: none;
   }
 }
@@ -1280,7 +1330,7 @@ button {
 .reconnect-banner {
   flex: none;
   width: 100%;
-  max-width: 720px;
+  max-width: var(--chat-content-width);
   margin: 8px auto 0;
   padding: 6px 14px;
   border-radius: 8px;

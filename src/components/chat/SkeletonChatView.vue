@@ -1,54 +1,49 @@
 <script setup lang="ts">
 // 对话骨架屏（MSG-2662）：会话切换/初次加载消息时占位，避免空帧闪 empty-state。
-//
-// 设计原则：
-// 1. 宽度/居中/底部呼吸全部复用真实消息的 .message-inner（720px 居中 + padding-bottom
-//    10px），落定后骨架被替换成真实消息时不发生位移。
-// 2. 真实 AssistantMessage 的结构是 .msg-head（耗时 + 操作）+ 正文——没有头像。
-//    骨架也跟着去掉头像、去掉 .sk-assistant-body 的 padding-left，保证正文左边缘
-//    与真实消息完全对齐（之前有 avatar 时骨架正文右偏 34px，肉眼可辨）。
-// 3. 占位块使用比 --surface-2 更深一度的灰色（color-mix 混入少量 --text），
-//    在浅色/深色背景下都有可见对比，避免原来"一片白"的丑陋感。
-// 4. 仅占视觉，不响应交互：aria-busy="true" + aria-label，鼠标事件全部吞掉。
 </script>
 
 <template>
-  <div class="skeleton-chat" aria-busy="true" aria-label="加载会话中">
-    <div class="message-inner">
-      <div class="msg user">
-        <div class="user-text">
-          <div class="sk-line sk-user-bubble" />
+    <div class="skeleton-chat" aria-busy="true" aria-label="加载会话中">
+        <!-- 1. 用户消息：右对齐灰色气泡（单条短问） -->
+        <div class="message-inner">
+            <div class="msg user">
+                <span class="sk-line sk-elapsed" style="width: 32%" />
+            </div>
         </div>
-      </div>
-    </div>
+        <!-- 2. AI 消息：左对齐 .msg-head + 段落 + 时间戳 -->
+        <div class="message-inner">
+            <div class="msg assistant">
+                <div class="msg-head">
+                    <span class="sk-line sk-elapsed" />
+                </div>
+                <div class="sk-content">
+                    <span class="sk-line" style="width: 92%" />
+                    <span class="sk-line" style="width: 80%" />
+                    <span class="sk-line" style="width: 66%" />
+                </div>
+                <div class="sk-msg-time" />
+            </div>
+        </div>
 
-    <div class="message-inner">
-      <div class="msg assistant sk-assistant">
-        <div class="sk-line sk-meta" style="width: 72px" />
-        <div class="sk-assistant-body">
-          <div class="sk-line" style="width: 92%" />
-          <div class="sk-line" style="width: 78%" />
-          <div class="sk-line" style="width: 64%" />
+        <!-- 1. 用户消息：右对齐灰色气泡（单条短问） -->
+        <div class="message-inner">
+            <div class="msg user">
+                <span class="sk-line sk-elapsed" style="width: 32%" />
+            </div>
         </div>
-      </div>
-    </div>
-
-    <div class="message-inner">
-      <div class="msg assistant sk-assistant">
-        <div class="sk-line sk-meta" style="width: 72px" />
-        <div class="sk-assistant-body">
-          <div class="sk-line" style="width: 88%" />
-          <div class="sk-line" style="width: 55%" />
+        <!-- 2. AI 消息：左对齐 .msg-head + 段落 + 时间戳 -->
+        <div class="message-inner">
+            <div class="msg assistant">
+                <div class="msg-head">
+                    <span class="sk-line sk-elapsed" />
+                </div>
+                <div class="sk-content">
+                    <span class="sk-line" style="width: 92%" />
+                    <span class="sk-line" style="width: 80%" />
+                    <span class="sk-line" style="width: 66%" />
+                </div>
+                <div class="sk-msg-time" />
+            </div>
         </div>
-      </div>
     </div>
-
-    <div class="message-inner">
-      <div class="msg user">
-        <div class="user-text">
-          <div class="sk-line sk-user-bubble" />
-        </div>
-      </div>
-    </div>
-  </div>
 </template>
