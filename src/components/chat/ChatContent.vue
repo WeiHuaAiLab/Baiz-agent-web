@@ -198,6 +198,7 @@ function toggleReasoning(taskId: string) {
 onBeforeUnmount(() => {
   for (const timer of reasoningTimers.values()) window.clearTimeout(timer)
   reasoningTimers.clear()
+  streamingReasoningBodies.clear()
 })
 
 watch(
@@ -346,6 +347,70 @@ watch(
   },
 )
 
+// 流式 reasoning 局部贴底：.reasoning-body 是 max-height 320px 的滚动区，
+// 思考过程逐帧追加时须保持底部跟随。与外层 ChatContent 主滚动区的贴底循环
+// 一致——"在底部附近则软贴底，不在则不动"：
+//   · 用户在底部（gap ≤ REASONING_PIN_EPS）→ scrollTop = scrollHeight，让最新追加可见
+//   · 用户主动上滚查看更早内容（gap > EPS）→ 不动，尊重阅读位置，不打断追溯
+// v-for 下多个活跃 run，用 taskId 索引各自的 reasoning-body 元素；
+// 流式期 reasoningShowMap 控制展开/折叠，折叠→展开时也要贴底。
+const streamingReasoningBodies = new Map<string, HTMLElement>()
+const REASONING_PIN_EPS = 24
+
+function setStreamingReasoningBody(taskId: string, el: unknown) {
+  if (el instanceof HTMLElement) {
+    streamingReasoningBodies.set(taskId, el)
+  } else {
+    streamingReasoningBodies.delete(taskId)
+  }
+}
+
+watch(
+  () =>
+    streamingRuns.value.map((run) => ({
+      id: run.taskId,
+      reasoning: run.reasoning ?? '',
+    })),
+  (runs) => {
+    // reasoning 文本变化（流式增长）：等 Vue 渲染 + 浏览器完成一次 layout 再读
+    // scrollHeight（文本 wrap 是异步计算的，flush: post 后下一帧才稳定）。
+    nextTick(() => {
+      for (const run of runs) {
+        const el = streamingReasoningBodies.get(run.id)
+        if (!el || !run.reasoning) continue
+        const gap = el.scrollHeight - el.clientHeight - el.scrollTop
+        if (gap <= REASONING_PIN_EPS) {
+          el.scrollTop = el.scrollHeight
+        }
+      }
+    })
+  },
+  { flush: 'post' },
+)
+
+// 折叠→展开转换：v-show false→true 后容器从「无尺寸」回到「有尺寸」，
+// 这一帧的 scrollHeight 就绪后直接贴底（用户手动展开通常是想看完整）
+watch(
+  () =>
+    streamingRuns.value.map((run) => ({
+      id: run.taskId,
+      open: reasoningOpen(run.taskId),
+    })),
+  (runs, prev) => {
+    const prevOpen = new Map(prev?.map((p) => [p.id, p.open]) ?? [])
+    for (const run of runs) {
+      if (!run.open) continue
+      if (prevOpen.get(run.id) === true) continue // 一直展开着由 grow watcher 覆盖
+      const el = streamingReasoningBodies.get(run.id)
+      if (!el) continue
+      nextTick(() => {
+        el.scrollTop = el.scrollHeight
+      })
+    }
+  },
+  { flush: 'post' },
+)
+
 function scrollToBottom() {
   pinned.value = true
   if (streamingRuns.value.length > 0) {
@@ -482,7 +547,11 @@ async function onStreamingClick(event: MouseEvent) {
                   <span>{{ t('chat.deepThink') }}</span>
                   <span class="reasoning-toggle">{{ reasoningOpen(run.taskId) ? '▾' : '▸' }}</span>
                 </button>
-                <div v-show="reasoningOpen(run.taskId)" class="reasoning-body">{{ run.reasoning }}</div>
+                <div
+                  v-show="reasoningOpen(run.taskId)"
+                  :ref="(el) => setStreamingReasoningBody(run.taskId, el)"
+                  class="reasoning-body"
+                >{{ run.reasoning }}</div>
               </div>
 
               <StreamingMarkdownView :text="run.text" />
