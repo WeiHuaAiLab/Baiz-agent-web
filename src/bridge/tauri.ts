@@ -130,6 +130,9 @@ export function createTauriBridge(): Bridge {
       return {
         available: true,
         version: update.version,
+        // MSG-3301：更新说明随 `Update.body` 带出（插件自 `latest.json.notes`
+        // 映射）——缺字段即 null（界面显式兜底，勿造内容）
+        notes: typeof update.body === 'string' ? update.body : null,
         async install() {
           if (consumed) {
             throw new Error('该更新对象已消费——请重新检查更新')

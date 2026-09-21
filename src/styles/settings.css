@@ -603,10 +603,13 @@
 
 /* MSG-3203 DEBT-741（移植 MSG-2726）：关于页「检查更新」钮——版本行内嵌 */
 .check-update-btn {
-  margin-left: 10px;
-  padding: 2px 10px;
-  font-size: 12px;
-  color: var(--accent, #4d8dff);
+  /* MSG-3301 连带修订（同一卡样式块·原属 MSG-3203/DEBT-741 面）：
+     原值违反 DESIGN.md §10 四条机判（裸 hex＝1／字号 12 不在档／间距 10、2 非 4 倍数）
+     ⇒ 归一：间距入 4 倍数、字号入档、色值走 token（零视觉意图变更）。 */
+  margin-left: 12px;
+  padding: 4px 12px;
+  font-size: 13px;
+  color: var(--accent);
   background: transparent;
   border: 1px solid currentColor;
   border-radius: 4px;
@@ -618,4 +621,95 @@
   cursor: default;
 }
 
+/* MSG-3301：更新内容区（服务端 notes——纯文本、默认展开、超长可滚）
+   四条机判：零裸 hex（只用 token）／圆角 8／字号 13·11／间距全 4 倍数 */
+.update-notes {
+  margin-top: 12px;
+  padding: 8px 12px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--surface-2);
+}
+
+.update-notes-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  padding: 4px 0;
+  font-size: 13px;
+  color: var(--text-primary);
+  background: transparent;
+  border: 0;
+  cursor: pointer;
+}
+
+.update-notes-head .update-notes-toggle {
+  font-size: 11px;
+  color: var(--text-secondary);
+}
+
+.update-notes-panel {
+  padding-top: 4px;
+}
+
+.update-notes-body {
+  max-height: 240px;
+  margin: 0;
+  padding: 8px;
+  overflow: auto;
+  font-family: var(--font-sans);
+  font-size: 13px;
+  line-height: 1.6;
+  color: var(--text-primary);
+  white-space: pre-wrap;
+  word-break: break-word;
+  background: var(--surface);
+  border-radius: 8px;
+}
+
+.update-notes-empty {
+  margin: 0;
+  padding: 8px;
+  font-size: 13px;
+  color: var(--text-secondary);
+}
+
+.update-notes-trunc {
+  margin: 4px 0 0;
+  font-size: 11px;
+  color: var(--text-secondary);
+}
+
+.update-notes-actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.update-now-btn,
+.update-later-btn {
+  padding: 8px 16px;
+  font-size: 13px;
+  border-radius: 8px;
+  cursor: pointer;
+}
+
+.update-now-btn {
+  color: var(--accent-contrast);
+  background: var(--accent);
+  border: 1px solid var(--accent);
+}
+
+.update-later-btn {
+  color: var(--text-secondary);
+  background: transparent;
+  border: 1px solid var(--border-strong);
+}
+
+.update-now-btn:disabled,
+.update-later-btn:disabled {
+  opacity: 0.55;
+  cursor: default;
+}
 

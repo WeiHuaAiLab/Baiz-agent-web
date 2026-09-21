@@ -279,6 +279,13 @@ export default {
     updateConfirm: 'Download and install now? A restart is needed afterwards:',
     updateNone: 'You are on the latest version',
     updateFailed: 'Update check failed. Please try again later.',
+    // MSG-3301: make update notes visible (server notes — plain text + 4KB cap + explicit fallback)
+    updateWhatsNew: "What's new",
+    updateNoNotes: 'No release notes were provided for this update',
+    updateNow: 'Update now',
+    updateLater: 'Later',
+    updateInstalling: 'Updating…',
+    updateNotesTruncated: '…(truncated, showing the first 4096 characters)',
     appearance: 'Appearance',
     appearanceHint: 'Language and theme apply instantly',
     themeLight: 'Light',

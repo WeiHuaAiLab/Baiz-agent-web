@@ -77,6 +77,10 @@ export interface OpenExternalBridge {
 export interface UpdateCheckResult {
   available: boolean
   version?: string
+  /** MSG-3301：服务端更新说明（`latest.json` 的 `notes`——tauri 插件侧为
+   *  `Update.body`）。**服务端可控文本**：渲染面按纯文本处理（禁 v-html）。
+   *  形态不支持或服务端未给 ⇒ `null`（界面显式兜底，**勿造假**）。 */
+  notes?: string | null
   /** 下载并安装（tauri 插件 downloadAndInstall——被动装） */
   install(): Promise<void>
 }

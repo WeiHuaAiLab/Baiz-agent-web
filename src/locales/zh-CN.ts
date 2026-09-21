@@ -276,6 +276,13 @@ export default {
     updateConfirm: '是否现在下载并安装？安装完成后重启生效：',
     updateNone: '已是最新版本',
     updateFailed: '检查更新失败，请稍后重试',
+    // MSG-3301：更新内容可见化（服务端 notes——纯文本渲染＋4KB 闸＋无则显式兜底）
+    updateWhatsNew: '更新内容',
+    updateNoNotes: '本次更新未提供说明',
+    updateNow: '现在更新',
+    updateLater: '稍后',
+    updateInstalling: '正在更新…',
+    updateNotesTruncated: '…（已截断，仅显示前 4096 字）',
     appearance: '外观',
     appearanceHint: '界面语言与主题即时生效',
     themeLight: '亮',
