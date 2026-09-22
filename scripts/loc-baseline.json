@@ -1,0 +1,10 @@
+{
+  "_note": "MSG-3417 web 面行数基线（自测于 beac29cd·口径见 scripts/loc-scan.mjs 头注）。基线**只准减不准增**。",
+  "_convention": "lines = count('\\n') + (末行非空 ? 1 : 0)；范围 src/**（排除 dist/node_modules）；测试件单列不入门禁",
+  "_measuredAt": "2026-09-22 (feat/web-1.0.21-loc-gate @ beac29cd)",
+  "_command": "node scripts/loc-scan.mjs --json",
+  "files": {
+    "src/stores/message.ts": 980,
+    "src/components/chat/message/ApprovalCard.vue": 693
+  }
+}
