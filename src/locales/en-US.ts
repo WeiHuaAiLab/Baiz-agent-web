@@ -402,6 +402,8 @@ export default {
     tasks: 'Tasks',
     scheduled: 'Scheduled',
     extensions: 'Extensions',
+    // MSG-3375 U-4: visible tab bar in the workspace
+    tabsLabel: 'Workspace tabs',
     tasksHint: 'One-off tasks: enter a name and instruction, run on demand',
     newTask: 'New task',
     reset: 'Reset',

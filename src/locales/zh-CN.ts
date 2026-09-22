@@ -398,6 +398,8 @@ export default {
     tasks: '普通任务',
     scheduled: '定时任务',
     extensions: '能力扩展',
+    // MSG-3375 U-4：工作区可见页签栏（无障碍标签）
+    tabsLabel: '工作区页签',
     tasksHint: '一次性任务：填写名称与指令后手动触发执行',
     newTask: '新建任务',
     reset: '重置',

@@ -418,3 +418,57 @@
   font-size: 13px;
   color: var(--muted);
 }
+
+/* MSG-3375 U-4：工作区**可见页签栏**（与设置页同一视觉语言）。
+   四条机判：零裸 hex（只用 token）／无 borderRadius 声明（避免 0 出档）／
+   字号 13／间距全 4 倍数；热区用 ::after 扩到 44px，**不撑视觉高度**。 */
+.working-tabs {
+  display: flex;
+  gap: 8px;
+  margin: 0 0 16px;
+  border-bottom: 1px solid var(--border);
+}
+
+.working-tab {
+  position: relative;
+  padding: 8px 12px;
+  font-size: 13px;
+  color: var(--text-secondary);
+  text-decoration: none;
+}
+
+/* 热区 ≥44×44：视觉尺寸不变，命中区上下各扩到 44px */
+.working-tab::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 50%;
+  height: 44px;
+  transform: translateY(-50%);
+}
+
+.working-tab:hover {
+  color: var(--text-primary);
+  background: var(--hover);
+}
+
+.working-tab:focus-visible {
+  outline: none;
+  box-shadow: var(--shadow-focus);
+}
+
+.working-tab.active {
+  color: var(--accent);
+}
+
+/* 选中态下划线（不占用布局高度：绝对定位压在 border 上） */
+.working-tab.active::before {
+  content: '';
+  position: absolute;
+  left: 8px;
+  right: 8px;
+  bottom: -1px;
+  height: 2px;
+  background: var(--accent);
+}
