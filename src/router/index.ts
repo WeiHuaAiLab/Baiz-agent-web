@@ -1,4 +1,5 @@
 import { createRouter, createWebHashHistory } from 'vue-router'
+import { readWorkingTab, workingTabPath } from '../utils/workingTabs'
 
 /**
  * MSG-3340（1.0.20 批 A · A3-①）：**未登录态唯一放行的非登录路由**。
@@ -37,7 +38,9 @@ export const router = createRouter({
       path: '/working',
       name: 'working',
       component: () => import('../components/working/WorkingView.vue'),
-      redirect: '/working/scheduled',
+      // MSG-3375 U-4：进入 /working 落**上次页签**（无记忆／记忆非法 ⇒ 定时任务，
+      // 即保持既有默认面）。页签可见性与记忆写入在 `WorkingView.vue`。
+      redirect: () => workingTabPath(readWorkingTab()),
       children: [
         // 普通任务页暂时不展示（默认进入定时任务页），恢复时取消注释即可
         // {
