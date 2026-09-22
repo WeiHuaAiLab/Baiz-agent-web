@@ -1,0 +1,19 @@
+{
+  "_note": "MSG-3417 拆刀清单数据源（**清单由 scripts/loc-scan.mjs --split 渲染，禁手抄**）。",
+  "items": [
+    {
+      "file": "src/stores/message.ts",
+      "tier": "黄档（≥600）",
+      "split": "按四块分文件：①store 状态机（runs/status）②SSE 分帧与归组 ③附件与错误分流 ④持久化（db 读写）",
+      "priority": "P1",
+      "reason": "全仓最大生产件（近千行）；承载发送链/帧路由/持久化三条独立关注点，后续每刀都要在此处落地 ⇒ 冲突面最宽"
+    },
+    {
+      "file": "src/components/chat/message/ApprovalCard.vue",
+      "tier": "黄档（≥600）",
+      "split": "三件拆：①卡片壳（布局/热区）②九态渲染 ③动作按钮区（档位下拉＋同意/拒绝）",
+      "priority": "P1",
+      "reason": "1.0.17 设计规格九态全在此件；**与壳侧审批契约逐字对齐 ⇒ 拆时不许改契约**（只搬结构不改字段/文案）"
+    }
+  ]
+}
