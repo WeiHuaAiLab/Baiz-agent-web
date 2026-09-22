@@ -10,6 +10,7 @@ import {
   TYPECHECK_ARGS,
   countTypeErrors,
   judge,
+  looksLikeNoInput,
 } from '../scripts/typecheck-gate.mjs'
 
 describe('MSG-3381 类型门禁口径', () => {
@@ -41,5 +42,23 @@ describe('MSG-3381 类型门禁口径', () => {
     expect(judge(TS_BASELINE + 1).exitCode).toBe(1)
     // 存量变少（修复）也 PASS（只可下调，不因变好而红）
     expect(judge(TS_BASELINE - 3).ok).toBe(true)
+  })
+
+  it('③b 反空跑闸：**0 条错而基线非零 ⇒ FAIL**（拒"清空 include／换回裸 --noEmit／|| true"）', () => {
+    const v = judge(0)
+    expect(v.ok).toBe(false)
+    expect(v.exitCode).toBe(1)
+    expect(v.reason).toContain('空跑')
+    // 基线降到 0（存量真修完）后，0 才合法
+    expect(judge(0, 0).ok).toBe(true)
+  })
+
+  it('③c 反空跑闸·第二式：`TS18003 No inputs` ⇒ 判可疑（拒"清空 include"）', () => {
+    const out =
+      "error TS18003: No inputs were found in config file 'tsconfig.app.json'. Specified 'include' paths were '[]'"
+    expect(looksLikeNoInput(out)).toBe(true)
+    // 正常输出不得命中
+    expect(looksLikeNoInput('src/a.ts(1,1): error TS2322: x')).toBe(false)
+    expect(looksLikeNoInput('')).toBe(false)
   })
 })
