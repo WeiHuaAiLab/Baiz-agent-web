@@ -161,6 +161,7 @@ export default {
     noTasks: 'No scheduled tasks',
     noExtensions: 'No extensions',
     feedback: 'Feedback',
+    logout: 'Sign out',
     feedbackTitle: 'Feedback',
     feedbackPlaceholder: 'Tell us your suggestions or issues…',
     feedbackSend: 'Send',

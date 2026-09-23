@@ -79,6 +79,11 @@ router.beforeEach(async (to) => {
   if (!auth.sessionToken) {
     auth.hydrate()
   }
+  // MSG-3509 P1③④：会话态零命中时**再问一次壳侧持久身份**（系统凭据库）——
+  // 命中即放行（自动更新/重启后仍登录）；桥未通/未命中 ⇒ 照旧回登录页。
+  if (!auth.loggedIn) {
+    await auth.hydrateAsync()
+  }
   if (!auth.loggedIn) {
     return { name: 'login' }
   }

@@ -1,8 +1,17 @@
 // MSG-2287 备胎计划：登录态 store——token 仅 sessionStorage 内存态
 // （关窗即清，非明文落盘；零日志零打印——安全面自守）。
 // 拒词面照 DEBT-398 例：败面通用提示零泄词（不泄账号存在性/后端 detail）。
+//
+// MSG-3509 P1/P2：**持久登录 ＋ 显式退出**
+//   · 持久化**在壳侧**：壳把"可撤销的登录令牌"存进**系统凭据库**
+//     （`identity_store`／Windows 凭据管理器）——前端**零令牌**（拿不到也存不下）；
+//   · 启动 `hydrateAsync()` 问壳一次 `identity_status`（只回 loggedIn/userId）
+//     ⇒ 命中即直接进主界面（**自动更新/重启后仍登录**）；
+//   · `logout()`：先清本地会话态，再让壳**清凭据库条目＋清壳内存**
+//     （清后必须重登，**不得自动复登**）。
 import { defineStore } from "pinia";
 import { createDefaultClient } from "../client/factory";
+import { getBridge } from "../bridge";
 
 const TOKEN_KEY = "baiz_session_token";
 
@@ -27,10 +36,12 @@ export const useAuthStore = defineStore("auth", {
     sessionExpired: false as boolean,
     /** DEBT-743：daemon 判"知识库未配置"（-32010）——UI 据此引导去设置页填域名＋Key */
     kbNotConfigured: false as boolean,
+    /** MSG-3509 P1：壳侧**持久身份**命中（本会话无 token 亦视为已登录）。 */
+    persisted: false as boolean,
   }),
   getters: {
     loggedIn(state): boolean {
-      return state.sessionToken.length > 0;
+      return state.sessionToken.length > 0 || state.persisted;
     },
   },
   actions: {
@@ -38,6 +49,24 @@ export const useAuthStore = defineStore("auth", {
     hydrate() {
       this.sessionToken = readStoredToken();
       return this.sessionToken.length > 0;
+    },
+    /** **MSG-3509 P1③④**：启动恢复（持久面）——问壳"有没有持久身份"。
+     *  壳侧令牌只进系统凭据库，**本函数拿不到令牌值**；桥未通/未命中 ⇒
+     *  诚实未登录（壳侧 fail-closed，不造假）。 */
+    async hydrateAsync(): Promise<boolean> {
+      if (!this.sessionToken) this.hydrate();
+      if (this.loggedIn) return true;
+      try {
+        const st = await getBridge().identity.status();
+        if (st && st.loggedIn) {
+          this.persisted = true;
+          this.userId = st.userId ?? "";
+          return true;
+        }
+      } catch {
+        /* 桥未通（旧壳／纯 web）⇒ 未登录 */
+      }
+      return false;
     },
     /** 登录：账号/密码 → auth.login（经乙径 proxy→daemon 9876）。
      * 败面通用拒词（DEBT-398 例）——零泄词零 detail。 */
@@ -55,6 +84,7 @@ export const useAuthStore = defineStore("auth", {
         const result = await client.authLogin({ email, password });
         this.sessionToken = result.session_token;
         this.userId = result.user_id;
+        this.persisted = false;
         try {
           sessionStorage.setItem(TOKEN_KEY, result.session_token);
         } catch {
@@ -84,17 +114,24 @@ export const useAuthStore = defineStore("auth", {
         this.loading = false;
       }
     },
-    /** 登出：清 token 回落单主（零残留）。 */
-    logout() {
+    /** 登出：清 token 回落单主（零残留）。
+     *  **MSG-3509 P2**：并让壳**清系统凭据库条目＋清壳内存**（清后必须重登）。 */
+    async logout() {
       this.sessionToken = "";
       this.userId = "";
       this.error = "";
       this.sessionExpired = false;
       this.kbNotConfigured = false;
+      this.persisted = false;
       try {
         sessionStorage.removeItem(TOKEN_KEY);
       } catch {
         /* storage 不可用零残留面已清 */
+      }
+      try {
+        await getBridge().identity.logout();
+      } catch {
+        /* 桥未通：本地已清 ⇒ 等价"未登录"（无自动复登面） */
       }
     },
     /**
@@ -103,7 +140,7 @@ export const useAuthStore = defineStore("auth", {
      * 都同样失败」的循环；由调用方引导重登（路由跳登录页）。
      */
     expireSession() {
-      this.logout();
+      void this.logout();
       this.sessionExpired = true;
     },
   },

@@ -72,6 +72,16 @@ export interface OpenExternalBridge {
   open(url: string): Promise<void>
 }
 
+/** **MSG-3509 P1/P2**：持久登录／显式退出的**壳侧**面。
+ *
+ * 硬口径：**零令牌输出**——`status()` 只回"是否已登录＋账号 id"，
+ * 令牌只进**系统凭据库**（壳侧 `identity_store`）与壳内存，前端拿不到、存不下。
+ * 非 tauri 形态（纯 web）诚实回"未登录"／空操作（**不造假**）。 */
+export interface IdentityBridge {
+  status(): Promise<{ loggedIn: boolean; userId: string }>
+  logout(): Promise<void>
+}
+
 // MSG-3203 DEBT-741（移植 MSG-2726）：自动更新检查结果
 // （tauri 形态——无新版/web 形态 null）
 export interface UpdateCheckResult {
@@ -101,6 +111,8 @@ export interface Bridge {
   readonly dialog: DialogBridge
   readonly windowControl: WindowControlBridge
   readonly openExternal: OpenExternalBridge
+  /** MSG-3509：持久登录探询／退出（tauri 形态真调壳 command；其余诚实回空） */
+  readonly identity: IdentityBridge
   /** MSG-3203：自动更新检查（tauri 形态真检——无新版返 available:false——
    *  非 tauri 形态返 null（has('updater.check') 前置门控） */
   checkUpdate(): Promise<UpdateCheckResult | null>

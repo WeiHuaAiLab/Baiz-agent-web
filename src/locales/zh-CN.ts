@@ -164,6 +164,7 @@ export default {
     feedbackPlaceholder: '告诉我们你的建议或问题…',
     feedbackSend: '发送',
     feedbackSent: '已收到，感谢反馈！',
+    logout: '退出登录',
   },
   skills: {
     requirement: '需求分析',
