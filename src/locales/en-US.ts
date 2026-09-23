@@ -391,6 +391,9 @@ export default {
       apiKeyPlaceholderSet: 'Configured (paste a new key to replace)',
       configured: 'Configured',
       notConfigured: 'Not configured',
+      /** DEBT-875 (MSG-3502·A8): "cannot read" ≠ "never configured" — kept apart */
+      stateReadFailed: 'Read failed (retryable)',
+      stateNotReady: 'Service not ready (read failed · retryable)',
       keyFp: 'fingerprint {fp}',
       source: { env: 'source: env', file: 'source: local file', none: '' },
       save: 'Save',
