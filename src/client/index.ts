@@ -65,6 +65,8 @@ export interface BaizClient {
   a2aStatus(): Promise<A2aStatusResult>
   // DEBT-546 定时任务真链：schedule.* 五方法（daemon 侧调度注册表/RPC 在案）
   scheduleCreate(params: ScheduleCreateParams): Promise<{ id: string }>
+  /** **MSG-3528**：编辑既有定时任务（`schedule.update`——服务端钉 `id`／归属／`created_at`） */
+  scheduleUpdate(params: ScheduleCreateParams & { id: string }): Promise<{ id: string }>
   scheduleList(): Promise<ScheduleTask[]>
   scheduleToggle(taskId: string, enabled: boolean): Promise<{ ok: boolean }>
   scheduleDelete(taskId: string): Promise<{ ok: boolean }>
@@ -170,6 +172,8 @@ export function createClient(transport: RpcTransport): BaizClient {
     a2aStatus: () => rpc.call('a2a.status'),
     // DEBT-546：daemon schedule.* 五方法（对卯 handler dispatch 同名）
     scheduleCreate: (params) => rpc.call('schedule.create', params),
+    // **MSG-3528**：编辑径（daemon `schedule.update`；未实装时回 -32601 ⇒ 界面给人话）
+    scheduleUpdate: (params) => rpc.call('schedule.update', params),
     scheduleList: () => rpc.call('schedule.list'),
     scheduleToggle: (taskId, enabled) => rpc.call('schedule.toggle', { task_id: taskId, enabled }),
     scheduleDelete: (taskId) => rpc.call('schedule.delete', { task_id: taskId }),

@@ -86,8 +86,18 @@ async function toggleTask(task: TaskItem) {
   }
 }
 
-/** 删除：接 daemon（成功后从列表摘除） */
+/** **MSG-3528**：编辑既有任务（复用 CreateTask 弹窗·编辑态 ⇒ `schedule.update`） */
+function editTask(task: TaskItem) {
+  ui.openScheduleEdit(task)
+}
+
+/** 删除：接 daemon（成功后从列表摘除）。
+ *
+ * **MSG-3528**：**须先确认**（`window.confirm` 带任务名）——**不得一键无声删**；
+ * **二次校验**＝daemon 侧 `guard_owner`（空账号拒＋仅本账号任务可删）。 */
 async function removeTask(id: string) {
+  const name = scheduledTasks.value.find((item) => item.id === id)?.title ?? id
+  if (!window.confirm(t('working.deleteConfirm', { name }))) return
   try {
     await getClient().scheduleDelete(id)
     remoteTasks.value = remoteTasks.value.filter((item) => item.id !== id)
@@ -177,6 +187,14 @@ onBeforeUnmount(() => {
             >
               <Icon name="list" :size="13" />
               <span>{{ t('working.runsLabel') }}</span>
+            </button>
+            <button
+              type="button"
+              class="task-edit"
+              :title="t('working.taskEdit')"
+              @click="editTask(task as TaskItem)"
+            >
+              <Icon name="pen" :size="14" />
             </button>
             <button
               type="button"

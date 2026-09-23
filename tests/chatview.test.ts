@@ -146,6 +146,9 @@ describe('ChatView 消息流渲染', () => {
   it('项目选择器：下拉选择项目，创建任务时携带 projectId', async () => {
     const ui = useUiStore()
     const workspace = useWorkspaceStore()
+    // **MSG-3528**：默认**不再预置**项目（旧"默认有客户管理/Rust 工具箱"口径已废）
+    // ⇒ 本用例先自建一个项目再验证选择器（原断言中的 `workspace.projects[0]` 依旧可用）。
+    workspace.addProject('客户管理')
     const wrapper = mount(ChatView, {
       global: { plugins: [i18n, router] },
     })

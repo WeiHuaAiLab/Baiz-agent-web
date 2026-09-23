@@ -102,3 +102,18 @@ export async function createScheduledTask(
   const id = (res as { id?: string } | undefined)?.id
   return typeof id === 'string' ? id : ''
 }
+
+/** **MSG-3528 · 编辑径**：经 `schedule.update` 改既有任务（同一条 snake_case 装配＋`id`）。
+ *
+ * 口径：**失败上抛**（调用方给人话·**不回落内存**——不制造"看着改了其实没改"的假绿）；
+ * `user_id` 仍**不传**（服务端钉归属）；`id` 为路径上的既有 id（daemon 侧钉死不可改）。 */
+export async function updateScheduledTask(
+  client: Pick<BaizClient, 'scheduleUpdate'>,
+  id: string,
+  draft: TaskDraft,
+): Promise<string> {
+  const res = await client.scheduleUpdate({ ...toScheduleCreateParams(draft), id })
+  notifyScheduleChanged()
+  const out = (res as { id?: string } | undefined)?.id
+  return typeof out === 'string' && out ? out : id
+}

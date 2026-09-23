@@ -13,7 +13,11 @@ import {
 } from '../../stores/workspace'
 import { useUiStore } from '../../stores/ui'
 import { getClient } from '../../client/singleton'
-import { createScheduledTask, humanizeRpcError } from '../../utils/scheduleWire'
+import {
+  createScheduledTask,
+  humanizeRpcError,
+  updateScheduledTask,
+} from '../../utils/scheduleWire'
 import Icon from '../common/Icon.vue'
 
 const { t } = useI18n()
@@ -23,7 +27,15 @@ const ui = useUiStore()
 /** 名称字数上限（对齐参考图 0/50） */
 const MAX_NAME = 50
 
-const draft = ref<TaskDraft>(createEmptyTaskDraft())
+/** **MSG-3528**：`ui.scheduleEditTask` 非空 ⇒ **编辑态**（预填既有值·提交走 update）。 */
+const editingTask = ui.scheduleEditTask
+const draft = ref<TaskDraft>(
+  editingTask?.schedule ? { ...createEmptyTaskDraft(), ...editingTask.schedule } : createEmptyTaskDraft(),
+)
+if (editingTask) {
+  draft.value.title = editingTask.title
+  draft.value.instruction = editingTask.instruction
+}
 
 const nameLen = computed(() => draft.value.title.length)
 const canSubmit = computed(
@@ -60,6 +72,14 @@ async function submit() {
   if (!canSubmit.value) return
   const title = draft.value.title.trim()
   try {
+    if (editingTask) {
+      // **MSG-3528 编辑径**：`schedule.update`（id 为既有任务；daemon 钉 id/归属/created_at）
+      await updateScheduledTask(getClient(), editingTask.id, { ...draft.value, title })
+      workspace.updateTask(editingTask.id, { ...draft.value, title })
+      ui.toast(`${t('tasks.scheduleEditTitle')}：${title}`, 'success')
+      ui.closeCreate()
+      return
+    }
     await createScheduledTask(getClient(), { ...draft.value, title })
     // 落库成功后再镜像到本地列表：保持既有「创建后立即出现在任务列表」的界面行为，
     // 真源仍是 daemon（重登/重启后由 schedule.list 拉回）。失败径不镜像（不造假绿）。

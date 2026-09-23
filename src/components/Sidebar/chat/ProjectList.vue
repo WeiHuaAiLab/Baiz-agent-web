@@ -30,6 +30,21 @@ function selectProject(id: string) {
   ui.pendingProjectId = id
   ui.openCreate('session')
 }
+
+/** **MSG-3528**：项目**改名**（提示输入·空名拒——不静默改） */
+function renameCurrent(project: { id: string; title: string }) {
+  const next = window.prompt(t('sidebar.projectRenamePrompt'), project.title)
+  if (next === null) return
+  if (!workspace.renameProject(project.id, next)) {
+    ui.toast(t('sidebar.projectTitleRequired'), 'error')
+  }
+}
+
+/** **MSG-3528**：项目**删除**（**须确认**——带项目名；只删项目行·其下任务保留并解除关联） */
+function removeCurrent(project: { id: string; title: string }) {
+  if (!window.confirm(t('sidebar.projectRemoveConfirm', { name: project.title }))) return
+  workspace.removeProject(project.id)
+}
 </script>
 
 <template>
@@ -49,6 +64,23 @@ function selectProject(id: string) {
       <li v-for="project in workspace.projects" :key="project.id" @click="selectProject(project.id)">
         <Icon name="workspace" :size="13" />
         <span class="project-title">{{ project.title }}</span>
+        <!-- **MSG-3528**：用户自建项**可改可删**（改名＝提示输入；删除＝确认后删） -->
+        <button
+          type="button"
+          class="project-op"
+          :title="t('sidebar.projectRename')"
+          @click.stop="renameCurrent(project)"
+        >
+          <Icon name="pen" :size="12" />
+        </button>
+        <button
+          type="button"
+          class="project-op"
+          :title="t('sidebar.projectRemove')"
+          @click.stop="removeCurrent(project)"
+        >
+          <Icon name="trash" :size="12" />
+        </button>
       </li>
     </ul>
     <p v-else class="placeholder">{{ t('sidebar.noProjects') }}</p>

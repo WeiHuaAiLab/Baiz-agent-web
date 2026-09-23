@@ -67,10 +67,22 @@ describe('MSG-3511 S1：定时任务子页接线', () => {
     expect(wrapper.text()).toContain('成功')
     expect(wrapper.text()).toContain('产出：日报.md')
 
-    // 删除按钮在（旧模板有、接线刀必须保留）
+    // 删除按钮在（旧模板有、接线刀必须保留）——**MSG-3528：删除须先确认**
+    // （"不得一键无声删"：确认后才真调 `schedule.delete`）
+    const confirmSpy = vi.spyOn(window, 'confirm').mockReturnValue(false)
+    await wrapper.find('.task-del').trigger('click')
+    await flushPromises()
+    expect(confirmSpy).toHaveBeenCalled()
+    // **取消确认 ⇒ 不得删**（此时行仍在：下方"确认后真删"仍可点）
+    expect(del).not.toHaveBeenCalled()
+
+    // 确认 ⇒ 真调 daemon 删除（随后行从列表摘除）
+    confirmSpy.mockReturnValue(true)
     await wrapper.find('.task-del').trigger('click')
     await flushPromises()
     expect(del).toHaveBeenCalledWith('s1')
+    expect(del).toHaveBeenCalledTimes(1)
+    confirmSpy.mockRestore()
   })
 
   it('拉取失败 ⇒ 顶部错误行给人话（不得空白）', async () => {

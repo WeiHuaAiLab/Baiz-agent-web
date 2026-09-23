@@ -69,93 +69,13 @@ export function formatRelativeTime(ts: number, now = Date.now()): string {
 
 export const useWorkspaceStore = defineStore('workspace', {
   state: () => ({
-    projects: [
-      { id: 'p-1', title: '客户管理' },
-      { id: 'p-2', title: 'Rust 工具箱' },
-    ],
-    tasks: [
-      // 普通任务演示数据
-      {
-        id: 't-demo-1',
-        title: '客户日报汇总',
-        instruction: '汇总当天微信客户沟通记录，按意向程度分组并生成 markdown 日报',
-        projectId: 'p-1',
-        createdAt: Date.now() - 5 * 60_000,
-      },
-      {
-        id: 't-demo-2',
-        title: 'Rust 学习笔记整理',
-        instruction: '把最近一周的 Rust 学习要点整理成结构化笔记，输出到「Rust 工具箱」项目',
-        projectId: 'p-2',
-        createdAt: Date.now() - 2 * 60 * 60_000,
-      },
-      {
-        id: 't-demo-3',
-        title: '竞品功能对比',
-        instruction: '对比豆包、Kimi、百度搭子三款 AI 产品的底部菜单结构，写一段简短结论',
-        createdAt: Date.now() - 26 * 60 * 60_000,
-      },
-      {
-        id: 't-demo-4',
-        title: '零散需求归类',
-        instruction: '把这周收集到的零散需求整理成一个清单，按优先级排序',
-        createdAt: Date.now() - 3 * 24 * 60 * 60_000,
-      },
-      // 定时任务演示数据
-      {
-        id: 't-demo-s1',
-        title: '每日客户日报',
-        instruction: '每天早晨汇总前一天微信客户沟通记录，生成日报发送到「客户管理」项目',
-        schedule: {
-          title: '每日客户日报',
-          instruction: '每天早晨汇总前一天微信客户沟通记录，生成日报发送到「客户管理」项目',
-          mode: 'cloud',
-          cycle: 'daily',
-          day: 1,
-          weekday: 1,
-          time: '09:00',
-          every: 30,
-          unit: 'minute',
-        },
-        projectId: 'p-1',
-        createdAt: Date.now() - 4 * 60 * 60_000,
-      },
-      {
-        id: 't-demo-s2',
-        title: 'Rust 工具箱每周备份',
-        instruction: '每周一晚上把 Rust 工具箱项目变更提交归档，生成 changelog',
-        schedule: {
-          title: 'Rust 工具箱每周备份',
-          instruction: '每周一晚上把 Rust 工具箱项目变更提交归档，生成 changelog',
-          mode: 'local',
-          cycle: 'weekly',
-          day: 1,
-          weekday: 1,
-          time: '20:00',
-          every: 30,
-          unit: 'minute',
-        },
-        projectId: 'p-2',
-        createdAt: Date.now() - 2 * 24 * 60 * 60_000,
-      },
-      {
-        id: 't-demo-s3',
-        title: '服务健康巡检',
-        instruction: '每小时检查一次本地服务进程状态，异常时输出告警',
-        schedule: {
-          title: '服务健康巡检',
-          instruction: '每小时检查一次本地服务进程状态，异常时输出告警',
-          mode: 'cloud',
-          cycle: 'hourly',
-          day: 1,
-          weekday: 1,
-          time: '09:00',
-          every: 30,
-          unit: 'minute',
-        },
-        createdAt: Date.now() - 6 * 24 * 60 * 60_000,
-      },
-    ] as TaskItem[],
+    // **MSG-3528（老板 2026-09-23 22:1x 亲口）**：**默认不出预设** ——
+    // 项目与任务**初始为空**（旧版在此硬编码 2 个项目「客户管理／Rust 工具箱」＋
+    // 6 条演示任务 ⇒ 新装即"默认有"，与"只有用户新建才会有"的口径相悖）。
+    // 照录：**本刀不删任何既有数据**（老板机上既有的 2 项目/3 预设任务处置另呈堂）；
+    // 演示态仍可由 `seedDemo()`（demo 模式）自行播种。
+    projects: [] as ProjectItem[],
+    tasks: [] as TaskItem[],
   }),
   getters: {
     projectById: (state) => (id: string) =>
@@ -166,6 +86,34 @@ export const useWorkspaceStore = defineStore('workspace', {
       if (!title.trim()) return
       seq += 1
       this.projects.unshift({ id: `p-${Date.now().toString(36)}-${seq}`, title: title.trim() })
+    },
+    /** **MSG-3528**：项目**改名**（空名拒；返回是否成） */
+    renameProject(id: string, title: string): boolean {
+      const next = title.trim()
+      if (!next) return false
+      const p = this.projects.find((item) => item.id === id)
+      if (!p) return false
+      p.title = next
+      return true
+    },
+    /** **MSG-3528**：项目**删除**（只删项目行；其下任务保留但解除关联——不静默删任务） */
+    removeProject(id: string): boolean {
+      const before = this.projects.length
+      this.projects = this.projects.filter((item) => item.id !== id)
+      if (this.projects.length === before) return false
+      for (const t of this.tasks) {
+        if (t.projectId === id) delete t.projectId
+      }
+      return true
+    },
+    /** 演示态播种（仅 demo 模式调用；真机默认零播种） */
+    seedDemo() {
+      if (this.projects.length === 0) {
+        this.projects = [
+          { id: 'p-1', title: '客户管理' },
+          { id: 'p-2', title: 'Rust 工具箱' },
+        ]
+      }
     },
     addTask(draft: TaskDraft) {
       if (!draft.title.trim()) return
