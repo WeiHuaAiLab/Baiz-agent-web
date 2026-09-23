@@ -19,6 +19,8 @@ import type {
   ChatQueueCancelResult,
   EventSubscribeParams,
   EventSubscribeResult,
+  MemoryListParams,
+  MemoryListResult,
   TaskResumeParams,
   TaskResumeResult,
   PendingApproval,
@@ -75,6 +77,8 @@ export interface BaizClient {
   weknoraGetConfig(params?: { token?: string }): Promise<WeknoraConfigResult>
   /** DEBT-743：写知识库连接配置（`api_key` 入参即写、零回显、零落日志） */
   weknoraSetConfig(params: WeknoraSetConfigParams): Promise<WeknoraSetConfigResult>
+  /** MSG-3503 A9：读记忆条目（`memory.list`——**只回本人**；零令牌 ⇒ 空表＋note） */
+  memoryList(params?: MemoryListParams): Promise<MemoryListResult>
   /**
    * MSG-3189 `E2②`：切档审计（**契约先行**）——口径 `audit.execModeChanged`，
    * 字段 `mode／previous／at／account`。daemon 面未落地前调用会失败（-32601），
@@ -193,6 +197,9 @@ export function createClient(transport: RpcTransport): BaizClient {
     weknoraGetConfig: (params) => rpc.call<WeknoraConfigResult>('weknora.get_config', params ?? {}),
     weknoraSetConfig: (params) =>
       rpc.call<WeknoraSetConfigResult>('weknora.set_config', params),
+    // MSG-3503 A9：daemon 侧 1.0.22 起实装 `memory.list`（只读·只回本人）；
+    // 未实装时回 -32601 ⇒ 界面显「服务端未就绪」（禁静默假成功）
+    memoryList: (params) => rpc.call<MemoryListResult>('memory.list', params ?? {}),
     auditExecModeChanged: (params) => rpc.call('audit.execModeChanged', params),
     onEvent: (handler) => transport.onEvent(handler),
     close: () => transport.close(),

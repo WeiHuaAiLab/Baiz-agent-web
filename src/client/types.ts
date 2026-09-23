@@ -360,3 +360,30 @@ export interface PreviewReadResult {
   /** 二进制判别标记（界面据以示「不可预览」） */
   binary: boolean
 }
+
+// MSG-3503 A9（DEBT-876／测试员 T8）：**记忆只读面**（daemon `memory.list`）。
+// 口径＝**只回本人**（归属由 daemon 侧以会话令牌经 `SessionStore::verified_uid`
+// 查证，勿信前端自报）；零令牌 ⇒ `items` 空 ＋ `note` 人话（界面据此渲染空态，
+// **不得**假装有数据）。
+export interface MemoryListParams {
+  /** 会话令牌（随行——daemon 以它查证归属；缺 ⇒ 未登录面空表） */
+  token?: string
+}
+
+export interface MemoryListItem {
+  id: string
+  text: string
+  /** 来源显示串（daemon 侧按 source_sessions 合成；缺 ⇒「（未标注来源）」） */
+  source: string
+  /** RFC3339 时间串 */
+  created_at: string
+  owner: string
+}
+
+export interface MemoryListResult {
+  owner: string
+  count: number
+  items: MemoryListItem[]
+  /** 零令牌面的人话说明（未登录 ⇒ 记忆不可见） */
+  note?: string
+}
