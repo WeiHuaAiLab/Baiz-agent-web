@@ -9,6 +9,8 @@ export default {
     empty: '发送第一条消息开始对话',
     emptyStart: '新建会话',
     elapsed: '耗时',
+    // MSG-3503 A10：web_fetch 取件在途人话（抓网页期间不再"静止"）
+    fetchingWeb: '正在抓取网页…（单次取件受上界约束，超时即回人话）',
     modelPro: 'DeepSeek V4 Pro',
     modelFlash: 'DeepSeek V4 Flash',
     demoMode: '演示模式（未连接）',
