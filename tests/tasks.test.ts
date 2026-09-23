@@ -70,23 +70,23 @@ describe('once 档下次执行', () => {
 })
 
 describe('schedule.create 参数转换（DEBT-546）', () => {
-  it('daily：time "09:00" → timeSecs 32400；every/runAt 零', () => {
+  it('daily：time "09:00" → time_secs 32400；every/runAt 零', () => {
     const p = toScheduleCreateParams({ ...base, cycle: 'daily', time: '09:00' })
-    expect(p.timeSecs).toBe(9 * 3600)
-    expect(p.everySecs).toBe(0)
-    expect(p.runAtSecs).toBe(0)
+    expect(p.time_secs).toBe(9 * 3600)
+    expect(p.every_secs).toBe(0)
+    expect(p.run_at_secs).toBe(0)
   })
 
-  it('interval：30 分钟 → everySecs 1800', () => {
+  it('interval：30 分钟 → every_secs 1800', () => {
     const p = toScheduleCreateParams({ ...base, cycle: 'interval', every: 30, unit: 'minute' })
-    expect(p.everySecs).toBe(1800)
+    expect(p.every_secs).toBe(1800)
   })
 
-  it('once：runAt datetime-local → runAtSecs 本地时 epoch；timeSecs 零', () => {
+  it('once：runAt datetime-local → run_at_secs 本地时 epoch；time_secs 零', () => {
     const runAt = '2030-01-02T03:04'
     const p = toScheduleCreateParams({ ...base, cycle: 'once', runAt })
-    expect(p.runAtSecs).toBe(Math.floor(new Date(runAt).getTime() / 1000))
-    expect(p.timeSecs).toBe(0)
+    expect(p.run_at_secs).toBe(Math.floor(new Date(runAt).getTime() / 1000))
+    expect(p.time_secs).toBe(0)
   })
 
   it('formatRunAtSecs：epoch → "M月D日 HH:mm"（本地时）', () => {

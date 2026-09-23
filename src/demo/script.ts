@@ -5,6 +5,7 @@
 // - 每张卡进台账（`permission.pending` 真源，重连补拉即补到真卡）；
 // - `scope` ≠ once 落规则 ⇒ 同类第二次**不再弹**；`approval.revoke` 撤销 ⇒ 再弹；
 // - 含「定时／收件箱／后台」的消息另出一张 `__inbox__` 卡（无会话来源）。
+import { RpcError } from '../client/rpc'
 import type { RpcRequest } from '../client/rpc'
 import type { SseFrame } from '../client/sse'
 import type {
@@ -290,6 +291,122 @@ export function buildDemoFrames(
   return frames
 }
 
+/** MSG-3511：演示态 `schedule.*` 台账（mock 真源·内存·不落盘）。
+ * 字段名与语义对卯 daemon `scheduled_store::TaskSpec`／`RunRecord`：`schedule.list`
+ * 与 `schedule.list_runs` 回**裸数组**（handler.rs:1237／1303）。种子与工作区演示
+ * 数据同名同义，免得侧栏与子页两处打架。 */
+interface DemoSchedTask {
+  id: string
+  title: string
+  instruction: string
+  mode: string
+  cycle: string
+  day: number
+  weekday: number
+  time_secs: number
+  every_secs: number
+  run_at_secs: number
+  enabled: boolean
+  created_at: number
+  updated_at: number
+  user_id: string
+}
+interface DemoRun {
+  id: number
+  task_id: string
+  triggered_at: number
+  status: string
+  summary: string
+  error: string
+}
+
+const DEMO_SCHED_USER = 'demo@demo.local'
+const nowSecs = () => Math.floor(Date.now() / 1000)
+/** cycle 白名单六档（对卯 daemon handler.rs:1217-1222） */
+const DEMO_CYCLES = ['monthly', 'weekly', 'daily', 'hourly', 'interval', 'once']
+
+let schedSeq = 0
+
+function demoSchedTask(
+  index: string,
+  title: string,
+  instruction: string,
+  mode: string,
+  cycle: string,
+  timeSecs: number,
+  ageSecs: number,
+): DemoSchedTask {
+  return {
+    id: `sched-demo-${index}`,
+    title,
+    instruction,
+    mode,
+    cycle,
+    day: 1,
+    weekday: 1,
+    time_secs: timeSecs,
+    every_secs: 0,
+    run_at_secs: 0,
+    enabled: true,
+    created_at: nowSecs() - ageSecs,
+    updated_at: nowSecs() - ageSecs,
+    user_id: DEMO_SCHED_USER,
+  }
+}
+
+function demoRun(
+  id: number,
+  taskId: string,
+  agoSecs: number,
+  status: string,
+  summary = '',
+  error = '',
+): DemoRun {
+  return { id, task_id: taskId, triggered_at: nowSecs() - agoSecs, status, summary, error }
+}
+
+const demoTasks: DemoSchedTask[] = [
+  demoSchedTask(
+    '1',
+    '每日客户日报',
+    '每天早晨汇总前一天微信客户沟通记录，生成日报发送到「客户管理」项目',
+    'cloud',
+    'daily',
+    9 * 3600,
+    4 * 24 * 3600,
+  ),
+  demoSchedTask(
+    '2',
+    'Rust 工具箱每周备份',
+    '每周一晚上把 Rust 工具箱项目变更提交归档，生成 changelog',
+    'local',
+    'weekly',
+    20 * 3600,
+    2 * 24 * 3600,
+  ),
+  demoSchedTask(
+    '3',
+    '服务健康巡检',
+    '每小时检查一次本地服务进程状态，异常时输出告警',
+    'cloud',
+    'hourly',
+    0,
+    6 * 24 * 3600,
+  ),
+]
+
+/** 执行记录台账（runs——「真在跑与产出」的可视样本） */
+const demoRuns: Record<string, DemoRun[]> = {
+  'sched-demo-1': [
+    demoRun(1, 'sched-demo-1', 3 * 3600, 'success', '已生成日报并发送到「客户管理」项目'),
+    demoRun(2, 'sched-demo-1', 27 * 3600, 'success', '已生成日报（28 条客户沟通记录）'),
+  ],
+  'sched-demo-3': [
+    demoRun(3, 'sched-demo-3', 600, 'success', '本地服务进程正常（3/3）'),
+    demoRun(4, 'sched-demo-3', 3600, 'skipped', '上一轮仍在执行，本轮跳过'),
+  ],
+}
+
 export function demoHandle(req: RpcRequest): { result?: unknown; frames?: SseFrame[] } | null {
   if (req.method === 'chat.send') {
     const params = req.params as ChatSendParams | undefined
@@ -394,6 +511,64 @@ export function demoHandle(req: RpcRequest): { result?: unknown; frames?: SseFra
         provider: 'mock',
       },
     }
+  }
+  // MSG-3511：演示态 schedule.* 五方法（返回形对卯 daemon handler.rs:1203-1306）
+  if (req.method === 'schedule.create') {
+    const spec = req.params as Partial<DemoSchedTask> | undefined
+    const cycle = String(spec?.cycle ?? '')
+    if (!DEMO_CYCLES.includes(cycle)) {
+      throw new RpcError({ code: -32602, message: 'invalid cycle——白名单六档' })
+    }
+    if (!String(spec?.title ?? '').trim()) {
+      throw new RpcError({ code: -32602, message: 'title 不能为空' })
+    }
+    schedSeq += 1
+    const id = String(spec?.id ?? '') || `sched-demo-${schedSeq}-${Date.now().toString(36)}`
+    const now = nowSecs()
+    demoTasks.push({
+      id,
+      title: String(spec?.title ?? '').trim(),
+      instruction: String(spec?.instruction ?? ''),
+      mode: String(spec?.mode ?? 'cloud'),
+      cycle,
+      day: Number(spec?.day ?? 0),
+      weekday: Number(spec?.weekday ?? 0),
+      time_secs: Number(spec?.time_secs ?? 0),
+      every_secs: Number(spec?.every_secs ?? 0),
+      run_at_secs: Number(spec?.run_at_secs ?? 0),
+      enabled: spec?.enabled !== false,
+      created_at: now,
+      updated_at: now,
+      // 服务端覆写归属（勿信客户端自报）——演示态同口径
+      user_id: DEMO_SCHED_USER,
+    })
+    return { result: { id } }
+  }
+  if (req.method === 'schedule.list') return { result: demoTasks }
+  if (req.method === 'schedule.toggle') {
+    const params = req.params as { task_id?: string; enabled?: boolean } | undefined
+    const task = demoTasks.find((item) => item.id === params?.task_id)
+    if (!task) return null
+    task.enabled = Boolean(params?.enabled)
+    task.updated_at = nowSecs()
+    return { result: { ok: true } }
+  }
+  if (req.method === 'schedule.delete') {
+    const params = req.params as { task_id?: string } | undefined
+    const index = demoTasks.findIndex((item) => item.id === params?.task_id)
+    if (index < 0) return null
+    demoTasks.splice(index, 1)
+    delete demoRuns[String(params?.task_id)]
+    return { result: { ok: true } }
+  }
+  if (req.method === 'schedule.list_runs') {
+    const params = req.params as { task_id?: string; limit?: number } | undefined
+    const taskId = String(params?.task_id ?? '')
+    if (!taskId) {
+      throw new RpcError({ code: -32602, message: 'invalid schedule.list_runs params' })
+    }
+    const limit = Math.min(200, Math.max(1, Number(params?.limit ?? 20) || 20))
+    return { result: (demoRuns[taskId] ?? []).slice(0, limit) }
   }
   if (req.method === 'event.subscribe') {
     return { result: { subscribed: true, latest_seq: 0, oldest_seq: 0 } }

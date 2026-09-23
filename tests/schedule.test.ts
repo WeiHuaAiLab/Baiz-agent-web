@@ -22,32 +22,32 @@ function draft(over: Partial<TaskDraft> = {}): TaskDraft {
 }
 
 describe('once 档转换（toScheduleCreateParams）', () => {
-  it('once runAt → runAtSecs 本地时 epoch 秒', () => {
+  it('once runAt → run_at_secs 本地时 epoch 秒', () => {
     const p = toScheduleCreateParams(draft())
     // datetime-local 值按本地时解析（勿误作 UTC）——epoch 秒与本地 Date 一致
     const local = new Date('2026-09-08T10:30')
     expect(p.cycle).toBe('once')
-    expect(p.runAtSecs).toBe(Math.floor(local.getTime() / 1000))
-    // once 时 timeSecs 置 0（time/day 组不消费）
-    expect(p.timeSecs).toBe(0)
+    expect(p.run_at_secs).toBe(Math.floor(local.getTime() / 1000))
+    // once 时 time_secs 置 0（time/day 组不消费）
+    expect(p.time_secs).toBe(0)
   })
 
-  it('非 once（daily/interval）runAtSecs=0 且 time/everySecs 语义正确', () => {
+  it('非 once（daily/interval）run_at_secs=0 且 time/every_secs 语义正确', () => {
     const daily = toScheduleCreateParams(draft({ cycle: 'daily', runAt: undefined }))
-    expect(daily.runAtSecs).toBe(0)
-    expect(daily.timeSecs).toBe(10 * 3600 + 30 * 60)
+    expect(daily.run_at_secs).toBe(0)
+    expect(daily.time_secs).toBe(10 * 3600 + 30 * 60)
     const interval = toScheduleCreateParams(
       draft({ cycle: 'interval', runAt: undefined, unit: 'hour', every: 2 }),
     )
-    expect(interval.runAtSecs).toBe(0)
-    expect(interval.everySecs).toBe(2 * 3600)
+    expect(interval.run_at_secs).toBe(0)
+    expect(interval.every_secs).toBe(2 * 3600)
   })
 
-  it('once 且 runAt 空/非法 → runAtSecs 0（不产 NaN）', () => {
+  it('once 且 runAt 空/非法 → run_at_secs 0（不产 NaN）', () => {
     const empty = toScheduleCreateParams(draft({ runAt: '' }))
-    expect(empty.runAtSecs).toBe(0)
+    expect(empty.run_at_secs).toBe(0)
     const bad = toScheduleCreateParams(draft({ runAt: 'not-a-date' }))
-    expect(bad.runAtSecs).toBe(0)
+    expect(bad.run_at_secs).toBe(0)
   })
 })
 

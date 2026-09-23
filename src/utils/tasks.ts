@@ -1,20 +1,10 @@
 // 定时任务"下次执行"计算与展示。
 import type { TaskDraft, TaskItem } from '../stores/workspace'
+// MSG-3511：参数型**不再本地另立**（旧本地型同为 camelCase，双份易漂移）——
+// 统一用 `client/types` 的 `ScheduleCreateParams`（键名对卯 daemon `TaskSpec`）。
+import type { ScheduleCreateParams } from '../client/types'
 
-/** DEBT-546：draft 送 daemon 的 schedule.create 参数（time "HH:MM"→timeSecs；
- * unit minute/hour/day→everySecs；once runAt datetime-local→runAtSecs 本地时
- * epoch 秒——daemon 端 ScheduleSpec 全字段形）。 */
-export interface ScheduleCreateParams {
-  title: string
-  instruction: string
-  mode: TaskDraft['mode']
-  cycle: TaskDraft['cycle']
-  day: number
-  weekday: number
-  timeSecs: number
-  everySecs: number
-  runAtSecs: number
-}
+export type { ScheduleCreateParams }
 
 function parseTime(time: string): { h: number; m: number } {
   const [h, m] = (time || '09:00').split(':').map(Number)
@@ -26,8 +16,9 @@ function toSecs(time: string): number {
   return h * 3600 + m * 60
 }
 
-/** draft → schedule.create RPC 参数（once：runAtSecs 本地时 epoch 秒——
- * datetime-local 值按本地时解析，勿误作 UTC）。 */
+/** draft → `schedule.create` RPC 参数（once：`run_at_secs` 本地时 epoch 秒——
+ * datetime-local 值按本地时解析，勿误作 UTC）。**键名＝daemon `TaskSpec` 的
+ * snake_case**（MSG-3511 勘误：旧版输出 camelCase ⇒ 被 serde `default` 静默置零）。 */
 export function toScheduleCreateParams(draft: TaskDraft): ScheduleCreateParams {
   const unitSecs =
     draft.unit === 'minute' ? 60 : draft.unit === 'hour' ? 3600 : 86_400
@@ -45,9 +36,9 @@ export function toScheduleCreateParams(draft: TaskDraft): ScheduleCreateParams {
     cycle: draft.cycle,
     day: draft.day,
     weekday: draft.weekday,
-    timeSecs: draft.cycle === 'once' ? 0 : toSecs(draft.time),
-    everySecs: draft.cycle === 'interval' ? Math.max(1, draft.every) * unitSecs : 0,
-    runAtSecs,
+    time_secs: draft.cycle === 'once' ? 0 : toSecs(draft.time),
+    every_secs: draft.cycle === 'interval' ? Math.max(1, draft.every) * unitSecs : 0,
+    run_at_secs: runAtSecs,
   }
 }
 

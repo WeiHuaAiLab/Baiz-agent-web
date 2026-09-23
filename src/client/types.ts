@@ -286,9 +286,11 @@ export interface MessageEventData {
   timestamp: string
 }
 
-// ── DEBT-546 schedule.* 契约（daemon ScheduleSpec/RunRecord 全字段形）──
-
-/** 调度任务（daemon tasks 行 ↔ schedule.list 回显） */
+/** 调度任务（daemon `scheduled_store::TaskSpec` 行 ↔ `schedule.list` 回显）。
+ * ⚠ **MSG-3511 勘误**：本两型旧注释自称"daemon 全字段形"，字段却写成 camelCase
+ * （`timeSecs`…）——daemon 侧 `TaskSpec` 是 `#[derive(serde::Serialize,
+ * Deserialize)]` 且**无 rename**，线上键只能是 **snake_case**（`time_secs`…）；
+ * 照旧声明发包会被 `#[serde(default)]` **静默置零**（09:00 变 00:00）。故于接线刀纠回。 */
 export interface ScheduleTask {
   id: string
   title: string
@@ -299,15 +301,17 @@ export interface ScheduleTask {
   cycle: string
   day: number
   weekday: number
-  timeSecs: number
-  everySecs: number
-  runAtSecs: number
+  time_secs: number
+  every_secs: number
+  run_at_secs: number
   enabled: boolean
-  createdAt: number
-  updatedAt: number
+  created_at: number
+  updated_at: number
+  /** MSG-3142：账号归属（服务端覆写；空串＝未登录面·对任何账号零可见） */
+  user_id?: string
 }
 
-/** schedule.create 入参（前端 draft 转换后——id 可省——daemon 生成） */
+/** schedule.create 入参（前端 draft 转换后——id 可省——daemon 生成；键名同 daemon） */
 export interface ScheduleCreateParams {
   id?: string
   title: string
@@ -316,9 +320,9 @@ export interface ScheduleCreateParams {
   cycle: string
   day: number
   weekday: number
-  timeSecs: number
-  everySecs: number
-  runAtSecs: number
+  time_secs: number
+  every_secs: number
+  run_at_secs: number
   enabled?: boolean
 }
 
