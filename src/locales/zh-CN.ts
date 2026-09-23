@@ -87,6 +87,11 @@ export default {
     queuePosition: '排队中 · 第 {n} 位',
     queueCancel: '取消排队',
     queueCancelled: '已取消排队',
+    // MSG-3513 并上游 1712993：连续工具调用折叠组文案（**新键·只增**）
+    toolGroupSummary: '{count} 个工具调用',
+    toolGroupFailed: '{count} 个失败',
+    toolGroupExpand: '展开工具调用',
+    toolGroupCollapse: '收起工具调用',
   },
   files: {
     title: '文件',
