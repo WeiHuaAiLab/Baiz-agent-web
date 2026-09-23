@@ -3,6 +3,7 @@
 // 拒词面照 DEBT-398 例：败面通用提示零泄词（不泄账号存在性/后端 detail）。
 import { defineStore } from "pinia";
 import { createDefaultClient } from "../client/factory";
+import { clearStoredAccount, readStoredAccount, setDbAccount, storeAccount } from "../db";
 
 const TOKEN_KEY = "baiz_session_token";
 
@@ -34,9 +35,13 @@ export const useAuthStore = defineStore("auth", {
     },
   },
   actions: {
-    /** 启动恢复：sessionStorage 命中即续登录态（零网络零泄）。 */
+    /** 启动恢复：sessionStorage 命中即续登录态（零网络零泄）。
+     * MSG-3485：同时把**账号键**（非凭据）恢复进库面——token 在而账号键缺（升级首启 /
+     * storage 被清）⇒ 账号**未知**，落 `baiz-anon`（**不猜**：宁空勿串档）。 */
     hydrate() {
       this.sessionToken = readStoredToken();
+      this.userId = this.sessionToken.length > 0 ? readStoredAccount() : "";
+      setDbAccount(this.sessionToken.length > 0 ? this.userId : "");
       return this.sessionToken.length > 0;
     },
     /** 登录：账号/密码 → auth.login（经乙径 proxy→daemon 9876）。
@@ -55,6 +60,11 @@ export const useAuthStore = defineStore("auth", {
         const result = await client.authLogin({ email, password });
         this.sessionToken = result.session_token;
         this.userId = result.user_id;
+        // MSG-3485：库面切到本账号（分段库）＋账号键落地（重载续用），
+        // 并清掉上一账号的内存残留后按本账号重载列表。
+        setDbAccount(this.userId);
+        storeAccount(this.userId);
+        await this.reloadAccountScoped(this.userId);
         try {
           sessionStorage.setItem(TOKEN_KEY, result.session_token);
         } catch {
@@ -88,6 +98,10 @@ export const useAuthStore = defineStore("auth", {
     logout() {
       this.sessionToken = "";
       this.userId = "";
+      // MSG-3485：库面回落 anon ＋ 账号键清；内存面同步清（不留上一账号列表）
+      setDbAccount("");
+      clearStoredAccount();
+      void this.reloadAccountScoped("");
       this.error = "";
       this.sessionExpired = false;
       this.kbNotConfigured = false;
@@ -95,6 +109,24 @@ export const useAuthStore = defineStore("auth", {
         sessionStorage.removeItem(TOKEN_KEY);
       } catch {
         /* storage 不可用零残留面已清 */
+      }
+    },
+    /**
+     * MSG-3485（T12）：账号切换后的**内存面归位**——库已按账号分段，此处只负责把
+     * 上一账号留在内存里的会话列表/活动会话清掉；`account` 非空则按本账号重载
+     * （空列表即建一条，与启动口径一致）。任何失败只记 warn——**不得**连带把登录判成败。
+     */
+    async reloadAccountScoped(account: string): Promise<void> {
+      try {
+        const { useSessionStore } = await import("./session");
+        const session = useSessionStore();
+        session.conversations = [];
+        session.activeId = "";
+        if (account.length === 0) return;
+        await session.load();
+        if (!session.activeId) await session.create();
+      } catch (error) {
+        console.warn("[baiz] 账号切换后重载会话列表失败（库面已按账号分段，未串档）：", error);
       }
     },
     /**

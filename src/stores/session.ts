@@ -1,7 +1,22 @@
 // 会话 store：会话 CRUD、置顶排序、草稿清理，IndexedDB 持久化。
 import { defineStore } from "pinia";
-import { db } from "../db";
+import { db, legacyDbSummary } from "../db";
 import type { Conversation } from "../models";
+
+/**
+ * MSG-3485：旧库（无账号段 `baiz`）**只读清点** → 显式提示文案。
+ * 判据：旧数据**不归任何账号** ⇒ 列表不显示，但**零删零改**（原地保留）；
+ * 有则给一句人话（非静默），要归属须显式迁移令。无旧数据 ⇒ 空串。
+ */
+async function legacyNoticeText(): Promise<string> {
+    const summary = await legacyDbSummary();
+    if (summary.conversations + summary.messages + summary.drafts === 0) return "";
+    const text = `存在 ${summary.conversations} 条旧版会话（无账号段）：本版不显示，数据未删`;
+    console.warn(
+        `[baiz] ${text}——旧库 baiz 全程只读清点（零删零改）；要归属须走显式迁移令`,
+    );
+    return text;
+}
 
 function cloneForDb<T>(value: T): T {
     return JSON.parse(JSON.stringify(value)) as T;
@@ -25,6 +40,8 @@ export const useSessionStore = defineStore("session", {
     state: () => ({
         conversations: [] as Conversation[],
         activeId: "",
+        /** MSG-3485：旧版（无账号段）会话的显式提示（空串＝无） */
+        legacyNotice: "",
     }),
     getters: {
         active(state): Conversation | null {
@@ -45,6 +62,7 @@ export const useSessionStore = defineStore("session", {
                 return b.updatedAt - a.updatedAt;
             });
             this.conversations = rows;
+            this.legacyNotice = await legacyNoticeText();
             if (!this.activeId && this.conversations.length > 0) {
                 this.activeId = this.conversations[0].id;
             }
