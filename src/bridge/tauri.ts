@@ -143,7 +143,33 @@ export function createTauriBridge(): Bridge {
           consumed = true
           const fresh = await check().catch(() => null)
           if (!fresh) return
-          await fresh.downloadAndInstall()
+          // MSG-3483：安装前**静场**（壳侧 command `prepare_update_install`——置抑制位／停
+          // daemon／等端口释放／等镜像可写。壳侧签名单参无参返还 JSON，见 main.rs:521）。
+          // **失败不吞**：静场拿不到回执即**中止本次安装**（下载与安装都未开始——无半程），
+          // 真因随抛错交给调用方上屏（UpdateCard.vue 既有 catch）。
+          const { invoke } = await import('@tauri-apps/api/core')
+          const quiesce = await invoke<{
+            ready: boolean
+            port_free: boolean
+            image_free: boolean
+            waited_ms: number
+          }>('prepare_update_install')
+          if (!quiesce?.ready) {
+            // 静场已置抑制位却未就绪 ⇒ 仍须解抑制（否则壳守护永久不重拉）——
+            // 故先 finish(ok=false) 再抛错，勿把 daemon 落在"抑制住但没装"的死态。
+            await invoke('finish_update_install', { ok: false }).catch(() => {})
+            throw new Error(
+              `安装前静场未就绪（端口释放=${quiesce?.port_free}／镜像可写=${quiesce?.image_free}／等待=${quiesce?.waited_ms}ms）——请稍后重试`,
+            )
+          }
+          let installed = false
+          try {
+            await fresh.downloadAndInstall()
+            installed = true
+          } finally {
+            // 成功/失败/取消**一律**解抑制（壳侧口径：安装中止/失败 ⇒ finish 解抑制，守护恢复）
+            await invoke('finish_update_install', { ok: installed }).catch(() => {})
+          }
         },
       }
     },
