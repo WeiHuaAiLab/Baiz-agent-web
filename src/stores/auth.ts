@@ -66,6 +66,10 @@ export const useAuthStore = defineStore("auth", {
         if (st && st.loggedIn) {
           this.persisted = true;
           this.userId = st.userId ?? "";
+          // MSG-3517③：持久径**亦须切库面**（T12 分段库）——否则自动更新/重启恢复
+          // 后落 `baiz-anon`，该账号既有会话/消息读不到（＝"东西没了"同类）。
+          setDbAccount(this.userId);
+          storeAccount(this.userId);
           return true;
         }
       } catch {
