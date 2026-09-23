@@ -117,6 +117,23 @@ export function createTauriBridge(): Bridge {
         await invoke('proxy_open_external', { url })
       },
     },
+    // MSG-3509 P1/P2：持久登录／显式退出（壳侧系统凭据库；**零令牌输出**）
+    identity: {
+      async status() {
+        const { invoke } = await import('@tauri-apps/api/core')
+        try {
+          const s = await invoke<{ loggedIn?: boolean; userId?: string }>('identity_status')
+          return { loggedIn: !!s?.loggedIn, userId: s?.userId ?? '' }
+        } catch {
+          // 壳未注册该 command（旧壳／桥未通）⇒ 诚实"未登录"，不造假
+          return { loggedIn: false, userId: '' }
+        }
+      },
+      async logout() {
+        const { invoke } = await import('@tauri-apps/api/core')
+        await invoke('identity_logout')
+      },
+    },
     // MSG-3203 DEBT-741（移植 MSG-2726）：自动更新检查（tauri-plugin-updater——
     // 壳侧已注册——check→available/version——install 触发 downloadAndInstall 被动装）
     async checkUpdate(): Promise<UpdateCheckResult | null> {

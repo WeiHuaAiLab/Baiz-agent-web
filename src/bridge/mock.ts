@@ -87,6 +87,13 @@ export function createMockBridge(): Bridge {
     openExternal: {
       async open() {},
     },
+    // MSG-3509：mock 形态无壳、无系统凭据库 ⇒ 诚实"未登录"／空操作
+    identity: {
+      async status() {
+        return { loggedIn: false, userId: '' }
+      },
+      async logout() {},
+    },
     // MSG-3203 DEBT-741：mock 形态无更新（能力门 has('updater.check')=false 面）
     async checkUpdate() {
       return null

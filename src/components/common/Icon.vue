@@ -16,6 +16,7 @@ export type IconName =
   | 'shield'
   | 'user'
   | 'feedback'
+  | 'logout'
   | 'info'
   | 'pen'
   | 'alarm'
@@ -58,6 +59,7 @@ const paths: Record<IconName, string> = {
   shield: 'M12 3l7 3v6c0 4.2-2.9 7.6-7 9-4.1-1.4-7-4.8-7-9V6l7-3Z',
   user: 'M12 12a4 4 0 1 0 0-8 4 4 0 0 0 0 8Zm-7 8a7 7 0 0 1 14 0',
   feedback: 'M21 15a2 2 0 0 1-2 2H9l-5 4V5a2 2 0 0 1 2-2h13a2 2 0 0 1 2 2v10ZM12 8v3M12 14h.01',
+  logout: 'M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4M16 17l5-5-5-5M21 12H9',
   info: 'M12 21a9 9 0 1 0 0-18 9 9 0 0 0 0 18Zm0-13v5M12 16h.01',
   pen: 'M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5ZM12 20h9',
   alarm: 'M12 21a8 8 0 1 0 0-16 8 8 0 0 0 0 16Zm0-12v4l3 2M5 3 2 6M19 3l3 3',

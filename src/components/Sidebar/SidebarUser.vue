@@ -6,11 +6,13 @@ import { ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useRouter } from 'vue-router'
 import { useSettingsStore } from '../../stores/settings'
+import { useAuthStore } from '../../stores/auth'
 import Icon from '../common/Icon.vue'
 
 const { t } = useI18n()
 const router = useRouter()
 const settings = useSettingsStore()
+const auth = useAuthStore()
 
 const showFeedback = ref(false)
 const feedbackText = ref('')
@@ -18,6 +20,13 @@ const feedbackSent = ref(false)
 
 function goSettings() {
   void router.push('/settings')
+}
+
+// MSG-3509 P2：**显式退出登录**——清壳侧系统凭据库条目＋清本机会话态，
+// 然后回登录页（**清后必须重登**，不得残留自动复登痕迹）。
+async function doLogout() {
+  await auth.logout()
+  void router.push('/login')
 }
 
 function openFeedback() {
@@ -46,6 +55,10 @@ function sendFeedback() {
       <button type="button" @click="openFeedback">
         <Icon name="feedback" :size="14" />
         <span>{{ t('sidebar.feedback') }}</span>
+      </button>
+      <button type="button" class="logout" @click="doLogout">
+        <Icon name="logout" :size="14" />
+        <span>{{ t('sidebar.logout') }}</span>
       </button>
     </div>
   </div>

@@ -257,6 +257,13 @@ export function createWebBridge(): Bridge {
         window.open(url, '_blank', 'noopener')
       },
     },
+    // MSG-3509：web 形态无壳、无系统凭据库 ⇒ 诚实"未登录"／空操作（不造假）
+    identity: {
+      async status() {
+        return { loggedIn: false, userId: '' }
+      },
+      async logout() {},
+    },
     // MSG-3203 DEBT-741：web 形态无 updater——返 null（has 门控前置）
     async checkUpdate() {
       return null
