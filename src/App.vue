@@ -35,8 +35,10 @@ onMounted(async () => {
   applyTheme()
   // MSG-3189 E2③：介入方式**启动加载**——fail-closed：盘上"完全执行"一律回落「每次确认」
   execMode.hydrate()
-  // 创建Demo会话
-  await seedDemoIfNeeded()
+  // MSG-3539 刀①（外审补刀·智谱判词 11 条／千问 A·3(a)）：演示会话**默认不播**——
+  // 与下两行 `working.seedDemo()`／`memory.seedDemo()` **同闸**（`settings.demoMode`，
+  // 缺省 `false`）。旧态无条件播 ⇒ 装完首启即塞 3 条假会话，**演示面冒充用户数据**。
+  if (settings.demoMode) await seedDemoIfNeeded()
   // 模拟工作树（编码版本管理）[初始化workingTree树结构到Store中]
   if (settings.demoMode) working.seedDemo()
   // 模拟记忆数据[初始化memory到Store中]
