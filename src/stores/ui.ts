@@ -1,6 +1,7 @@
 // UI 状态：聊天区中央创建模式（会话/普通任务/定时任务）。
 import { defineStore } from 'pinia'
 import { useSessionStore } from './session'
+import type { TaskItem } from './workspace'
 
 export type CreateMode = '' | 'session' | 'task' | 'scheduled' | 'project'
 
@@ -51,6 +52,9 @@ export const useUiStore = defineStore('ui', {
     // 创建项目完成后的回归上下文 + 待自动选中的项目 id（CreateChat 重新挂载时消费）
     createReturn: null as CreateReturn | null,
     pendingProjectId: '',
+    /** **MSG-3528**：定时任务**编辑目标**（非空 ⇒ `CreateTask` 进入编辑态并走
+     *  `schedule.update`；空 ⇒ 新建态）。用毕 `closeCreate()` 清场。 */
+    scheduleEditTask: null as TaskItem | null,
   }),
   actions: {
     openCreate(mode: 'session' | 'task' | 'scheduled' | 'project') {
@@ -66,6 +70,14 @@ export const useUiStore = defineStore('ui', {
       // 清理「创建项目」回归上下文，避免残留导致后续误回跳/误选中
       this.createReturn = null
       this.pendingProjectId = ''
+      // **MSG-3528**：编辑目标同清（免下一轮"新建"误入编辑态）
+      this.scheduleEditTask = null
+      this.createEpoch += 1
+    },
+    /** **MSG-3528**：打开定时任务**编辑**弹窗（复用 `CreateTask` 组件·编辑态）。 */
+    openScheduleEdit(task: TaskItem) {
+      this.scheduleEditTask = task
+      this.createMode = 'scheduled'
       this.createEpoch += 1
     },
     /** 从创建流程回到普通会话视图（如 ChatInput 发起新建项目后回跳）：
