@@ -14,6 +14,40 @@ const apiKey = ref('')
 /** 九态落点：idle(默认)／loading／unconfigured(空)／ready／saving／saved／error／notReady／invalid */
 const state = computed(() => kb.status)
 
+/**
+ * DEBT-875（MSG-3502·A8）：状态行**三态分开**——「读不到」≠「没配过」。
+ *
+ * 旧式 `kb.configured ? 已配置 : 未配置` 只看布尔：读回**失败**（`error`）或
+ * **服务端未就绪**（`notReady`）时 `configured` 仍为 false ⇒ 状态行谎称「未配置」，
+ * 且 base_url 输入框留空 ⇒ 用户见"关闭软件重开后配置**变空了**"（测试员 T3c）。
+ * 现：读失败明说「读取失败（可重试）」、未就绪明说「服务端未就绪」，
+ * 只有**读回成功且服务端判未配置**才落「未配置」；首帧也不谎称（显「读取中…」）。
+ */
+const stateLabel = computed(() => {
+  switch (kb.status) {
+    case 'ready':
+    case 'saved':
+      return kb.configured ? t('settings.kb.configured') : t('settings.kb.notConfigured')
+    case 'notReady':
+      return t('settings.kb.stateNotReady')
+    case 'error':
+      return t('settings.kb.stateReadFailed')
+    case 'idle':
+    case 'loading':
+      return t('settings.kb.loading')
+    default:
+      return t('settings.kb.notConfigured')
+  }
+})
+
+/** 正常「已配置」态（带对勾） */
+const stateIsOk = computed(
+  () => kb.configured && (kb.status === 'ready' || kb.status === 'saved'),
+)
+
+/** 读不到（失败／未就绪）——状态行按警示色渲染 */
+const stateIsWarn = computed(() => kb.status === 'error' || kb.status === 'notReady')
+
 function reload() {
   void kb.load().then(() => {
     if (kb.baseUrl) baseUrl.value = kb.baseUrl
@@ -78,8 +112,8 @@ onMounted(reload)
         />
       </label>
 
-      <p class="kb-state" :class="{ ok: kb.configured }">
-        {{ kb.configured ? `✓ ${t('settings.kb.configured')}` : t('settings.kb.notConfigured') }}
+      <p class="kb-state" :class="{ ok: stateIsOk, warn: stateIsWarn }" :data-kb-state="state">
+        <span v-if="stateIsOk">✓ </span>{{ stateLabel }}
         <span v-if="kb.keyFp" class="kb-meta">{{ t('settings.kb.keyFp', { fp: kb.keyFp }) }}</span>
         <span v-if="kb.source" class="kb-meta">{{ t(`settings.kb.source.${kb.source}`) }}</span>
       </p>
@@ -172,6 +206,11 @@ onMounted(reload)
 
 .kb-state.ok {
   color: var(--success-text);
+}
+
+/* DEBT-875（MSG-3502·A8）：读不到（失败／未就绪）——**不得**与"未配置"同色混淆 */
+.kb-state.warn {
+  color: var(--danger);
 }
 
 .kb-actions {

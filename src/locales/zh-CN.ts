@@ -374,6 +374,9 @@ export default {
       apiKeyPlaceholderSet: '已配置（如需更换，粘贴新 Key）',
       configured: '已配置',
       notConfigured: '未配置',
+      /** DEBT-875（MSG-3502·A8）：读不到 ≠ 没配过——失败／未就绪**分开说** */
+      stateReadFailed: '读取失败（可重试）',
+      stateNotReady: '服务端未就绪（读取失败·可重试）',
       keyFp: '指纹 {fp}',
       source: { env: '来源：环境变量', file: '来源：本机配置', none: '' },
       save: '保存',
