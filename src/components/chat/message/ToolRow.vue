@@ -3,6 +3,7 @@
 // MSG-3233 ③（自 origin/main 挑件）：文件类工具的 path 命中**预览型扩展**
 // （HTML/JS/CSS/Vue/TS/SVG/MD…）时改用 FileCard 渲染；其余扩展保留原 `.file-ref`（最小侵入）。
 import { computed, ref } from 'vue'
+import { useI18n } from 'vue-i18n'
 import type { ChatMessage } from '../../../models'
 import { useWorkingTreeStore } from '../../../stores/workingTree'
 import { useSettingsStore } from '../../../stores/settings'
@@ -14,6 +15,7 @@ import Icon from '../../common/Icon.vue'
 import FileCard from './FileCard.vue'
 
 const props = defineProps<{ message: ChatMessage }>()
+const { t } = useI18n()
 const working = useWorkingTreeStore()
 const settings = useSettingsStore()
 const open = ref(false)
@@ -25,6 +27,16 @@ const toolHuman = computed(() => translateTool(props.message.meta?.toolName ?? '
 const filePath = computed(() => extractFilePath(props.message.meta?.argsPreview))
 const shellCommand = computed(() => extractShellCommand(props.message.meta?.argsPreview))
 const toolUrl = computed(() => extractUrl(props.message.meta?.argsPreview))
+/**
+ * MSG-3503 A10（DEBT-874／T9「搜索很慢·几十秒」）：取件**在途**人话——
+ * 抓网页期间把"静止"显成"进行中"（耗时／上界见结果行正文：
+ * daemon 侧 `[取件 X.Xs／上界 Ns]` 前置行）。**不新增帧型**（协议面未动）。
+ */
+const runningHint = computed(() => {
+  if (!running.value) return ''
+  const name = props.message.meta?.toolName ?? ''
+  return /^web[._]fetch$/.test(name) ? t('chat.fetchingWeb') : ''
+})
 // 双族归一（架构铁律3：下划线族为规范名）：fs_read/fs_write/code_edit 等
 // 下划线族与点号兼容别名俱收——文件引用现形不漏生产径
 const isFileTool = computed(() =>
@@ -54,6 +66,7 @@ function openFile() {
     <div class="tool-main" @click="open = !open">
       <span class="tool-status">{{ running ? '⟳' : message.meta?.success ? '✓' : '✗' }}</span>
       <span class="tool-name">{{ message.meta?.toolName }}</span>
+      <span v-if="runningHint" class="tool-hint">{{ runningHint }}</span>
       <span v-if="message.text" class="tool-preview">{{ message.text }}</span>
       <span class="tool-toggle">{{ open ? '▾' : '▸' }}</span>
     </div>
