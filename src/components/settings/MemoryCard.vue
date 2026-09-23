@@ -1,6 +1,6 @@
 <script setup lang="ts">
 // 记忆模块：开关、作用范围、自动蒸馏、清空与已存事实列表。
-import { ref } from 'vue'
+import { onMounted, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { db } from '../../db'
 import { useSettingsStore } from '../../stores/settings'
@@ -12,6 +12,16 @@ const { t } = useI18n()
 const settings = useSettingsStore()
 const memory = useMemoryStore()
 const memoryMsg = ref('')
+
+/** MSG-3503 A9：真机面拉 daemon 真记忆（只回本人）；演示态保种子（零 RPC）。 */
+onMounted(() => {
+  if (settings.demoMode) memory.seedDemo()
+  else void memory.load()
+})
+
+function reload() {
+  void memory.load()
+}
 
 async function clearMemory() {
   if (!window.confirm(t('settings.clearMemoryConfirm'))) return
@@ -87,7 +97,16 @@ async function clearMemory() {
         <span>{{ t('settings.memoryFacts') }}</span>
         <span class="memory-count">{{ memory.facts.length }}</span>
       </div>
-      <ul v-if="memory.facts.length" class="memory-fact-list">
+      <p v-if="memory.loading" class="dir-empty">{{ t('settings.memoryLoading') }}</p>
+      <p v-else-if="memory.notReady" class="dir-empty">{{ t('settings.memoryNotReady') }}</p>
+      <p v-else-if="memory.failed" class="dir-empty">
+        {{ t('settings.memoryLoadFailed') }}
+        <template v-if="memory.error">：{{ memory.error }}</template>
+        <button type="button" class="btn-ghost" @click="reload">
+          {{ t('settings.memoryRetry') }}
+        </button>
+      </p>
+      <ul v-else-if="memory.facts.length" class="memory-fact-list">
         <li v-for="fact in memory.facts" :key="fact.id">
           <div class="fact-main">
             <span class="fact-text">{{ fact.text }}</span>
@@ -104,6 +123,7 @@ async function clearMemory() {
         </li>
       </ul>
       <p v-else class="dir-empty">{{ t('settings.memoryFactsEmpty') }}</p>
+      <p v-if="memory.note" class="dir-empty">{{ memory.note }}</p>
     </div>
   </div>
 </template>

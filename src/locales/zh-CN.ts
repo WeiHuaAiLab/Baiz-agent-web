@@ -374,6 +374,10 @@ export default {
     memoryCleared: '已清除本地消息历史',
     memoryFacts: '记忆内容',
     memoryFactsEmpty: '暂无记忆，与 Baiz Agent 对话后会自动沉淀',
+    memoryLoading: '正在读取记忆…',
+    memoryLoadFailed: '记忆读取失败',
+    memoryRetry: '重试',
+    memoryNotReady: '服务端未就绪（本版本无 memory.list）——记忆内容暂不可读',
     pickDir: '选择文件夹',
     // DEBT-743（MSG-3168）：连接知识库——base URL＋API key 落库（不再依赖环境变量）
     kb: {
