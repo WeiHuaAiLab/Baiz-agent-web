@@ -97,7 +97,17 @@ function createRealTauriTransport(): RpcTransport {
   }
 }
 
-// 智能回退：Tauri proxy 桩未实现时自动切到 mock，保证安装包/开发态可完整演示。
+// 智能回退：Tauri proxy 桩未实现时切到 mock，保证**开发态／显式演示态**可完整演示。
+//
+// DEBT-875（MSG-3502·A7）：降级**收紧为显式许可**——只有 dev 构建或显式
+// `VITE_BAIZ_DEMO=1` 才允许降级演示；生产构建遇「未实现」**一律上抛**。
+// 旧版此处**无条件** `useMock()`：于是"壳回未实现"＝静默转演示 ⇒ mock 的
+// `auth.login` 对**任意口令**发 `mock-` token ⇒ 乱输入也能登进主界面
+// （测试员 T3a 实测；与 `MSG-3494` 勘定件 §②A7 同一病灶）。
+function demoFallbackAllowed(): boolean {
+  return import.meta.env.DEV === true || import.meta.env.VITE_BAIZ_DEMO === '1'
+}
+
 export function createTauriTransport(): RpcTransport {
   const handlers = new Set<(frame: SseFrame) => void>()
   const disconnectHandlers = new Set<() => void>()
@@ -135,6 +145,13 @@ export function createTauriTransport(): RpcTransport {
         const message = error instanceof Error ? error.message : String(error)
         if (/not implemented/i.test(message)) {
           // 仅"后端未实现"才降级演示模式；网络抖动等真实错误继续走重连
+          // DEBT-875（MSG-3502·A7）：降级**须显式许可**——生产禁静默兜底
+          // （否则任意口令都能换到 `mock-` token ＝ 假登录）
+          if (!demoFallbackAllowed()) {
+            throw new Error(
+              '无法连接本地服务：本地壳回「未实现」，且未开启演示模式（VITE_BAIZ_DEMO=1）',
+            )
+          }
           useMock()
           await mock.connect()
         } else {
