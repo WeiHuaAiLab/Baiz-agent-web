@@ -87,6 +87,11 @@ export default {
     queuePosition: 'Queued · position {n}',
     queueCancel: 'Cancel',
     queueCancelled: 'Removed from queue',
+    // MSG-3513 merge of upstream 1712993: tool-call group labels (**new keys only**)
+    toolGroupSummary: '{count} tool calls',
+    toolGroupFailed: '{count} failed',
+    toolGroupExpand: 'Expand tool calls',
+    toolGroupCollapse: 'Collapse tool calls',
   },
   files: {
     title: 'Files',

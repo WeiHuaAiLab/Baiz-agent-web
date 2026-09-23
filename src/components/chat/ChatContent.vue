@@ -13,6 +13,9 @@ import { useApprovalStore } from '../../stores/approval'
 import { getBridge } from '../../bridge'
 import type { ChatMessage, RunState } from '../../models'
 import MessageItem from './MessageItem.vue'
+// MSG-3513 并上游 1712993：工具调用折叠组（`StreamingMarkdownView` 我方第 24 行已 import
+// 同径 ⇒ **不重复引入**，否则重复 import 报错）
+import ToolCallGroup from './ToolCallGroup.vue'
 import SkeletonChatView from './SkeletonChatView.vue'
 // MSG-3335 G-4：RunBlocks 随 kind 分发迁入 chat/message/（本件随迁改 import，行为零改）
 import RunBlocks from './message/RunBlocks.vue'
@@ -90,10 +93,112 @@ function isPendingApproval(m: ChatMessage): boolean {
 const pendingApprovals = computed<ChatMessage[]>(() =>
   messages.list(activeId.value).filter(isPendingApproval),
 )
-const displayItems = computed<ChatMessage[]>(() =>
-  messages.list(activeId.value).filter((m) => !isPendingApproval(m)),
-)
+
 const streamingRuns = computed(() => messages.activeRuns(activeId.value))
+
+/** 连续工具调用折叠组：≥ TOOL_GROUP_MIN 条连续 tool_call 在收束后合并成一个虚拟 item */
+interface ToolGroup {
+  id: string
+  kind: 'tool-group'
+  /** 摘要文本（工具名去重）：与 ChatMessage.text 同形，让 size 依赖 / 贴底签名
+   *  的取值表达式对两种 item 无需分支 */
+  text: string
+  messages: ChatMessage[]
+}
+
+type DisplayItem = ChatMessage | ToolGroup
+
+function isToolGroup(item: DisplayItem): item is ToolGroup {
+  return item.kind === 'tool-group'
+}
+
+// 折叠门槛：连续 tool_call ≥ 3 条才收起（不足则逐条散开，行为与既有会话完全一致）
+const TOOL_GROUP_MIN = 3
+
+/** 「思考完毕」判定：该 tool_call 所属 run 是否已收束（不再 running/queued）。
+ *  未收束 = 流式进行中 —— 此时保持逐条散开（尾流期不折叠，让用户看到实时操作）；
+ *  run 已被 trim 或从未登记（从 DB 载入的历史消息）一律视为已收束。 */
+function isRunSettled(taskId?: string): boolean {
+  if (!taskId) return true
+  const run = messages.runs[taskId]
+  if (!run) return true
+  return run.status !== 'running' && run.status !== 'queued'
+}
+
+/** 折叠组摘要：工具名去重保序（同一工具反复调用时不重复堆字） */
+function summarizeTools(items: ChatMessage[]): string {
+  const names = items
+    .map((message) => message.meta?.toolName)
+    .filter((name): name is string => !!name)
+  return [...new Set(names)].join(' · ')
+}
+
+/**
+ * **MSG-3513 合流**（我方 `MSG-3236` ① ＋ 上游 `1712993`「连续工具调用折叠」）：
+ * 源＝消息流**去掉未决审批卡**（未决卡走常驻区，见 `pendingApprovals`）
+ * ⇒ 再对剩余流做「同 run 连续 `tool_call` ≥ `TOOL_GROUP_MIN` ⇒ 折成一个 `ToolGroup`」。
+ * **两侧合取并集**：我方"审批卡常驻区"与上游"工具链折叠"语义各自保留，**零丢弃**。
+ */
+const displayItems = computed<DisplayItem[]>(() => {
+  const source = messages.list(activeId.value).filter((m) => !isPendingApproval(m))
+  const out: DisplayItem[] = []
+  let buffer: ChatMessage[] = []
+
+  const flush = () => {
+    const head = buffer[0]
+    // 段内必定同 run（下方断组保证），故只需看首条所属 run 是否收束
+    if (head && buffer.length >= TOOL_GROUP_MIN && isRunSettled(head.meta?.taskId)) {
+      // id 由首条消息 id 派生：段尾追加新条目时 id 不变，虚拟列表不重建
+      out.push({
+        id: `tg:${head.id}`,
+        kind: 'tool-group',
+        text: summarizeTools(buffer),
+        messages: buffer,
+      })
+    } else {
+      out.push(...buffer)
+    }
+    buffer = []
+  }
+
+  for (const message of source) {
+    if (message.kind === 'tool_call') {
+      // 同一 run 的连续 tool_call 才归一组：换 run 即断组——否则「上一个 run
+      // 已完成、下一个 run 还在跑」两段相邻时会被并成一段，导致已收束的那半
+      // 也一直不折叠（违背「已完成的默认折叠」）
+      if (buffer.length > 0 && buffer[0]?.meta?.taskId !== message.meta?.taskId) flush()
+      buffer.push(message)
+      continue
+    }
+    flush()
+    out.push(message)
+  }
+  flush()
+  return out
+})
+
+// 折叠组展开态：默认收起（「思考完毕后」自动折叠，用户点击可展开）。
+// 存父层而非组组件内部——DynamicScroller 会回收 item 组件，
+// 状态若存组件内，滚出视口再滚回来就丢了。
+const groupExpanded = ref<Record<string, boolean>>({})
+
+function isGroupExpanded(id: string): boolean {
+  return groupExpanded.value[id] === true
+}
+
+function toggleGroup(id: string) {
+  groupExpanded.value = { ...groupExpanded.value, [id]: !groupExpanded.value[id] }
+  // 整组展开/收起是高度突变，且组内工具行的高度还要等 ResizeObserver 落地——
+  // 交给贴底循环吸收「展开 → 重测 → 落定」的多跳；非吸附态不动，尊重阅读位置
+  if (pinned.value) startPinLoop()
+}
+
+/** size 依赖（v3 已 deprecated，ResizeObserver 才是正路）：仅保证两种 item 都取得到值 */
+function sizeDeps(item: DisplayItem): unknown[] {
+  if (isToolGroup(item)) return [item.messages.length, isGroupExpanded(item.id)]
+  return [item.text, item.meta?.taskId, item.meta?.attachments?.length, item.meta?.streaming]
+}
+
 // MSG-3233 ④：消息加载态——**加载中且消息为空**时盖骨架（免空帧闪 empty-state）
 const loadingMessages = ref(false)
 /**
@@ -118,6 +223,8 @@ watch(
   async (id) => {
     // 切换会话：重置贴底状态；消息加载完毕后默认滚动到底部
     pinned.value = true
+    // 折叠组展开态随会话切换重置：id 派生自消息，跨会话残留只会是死键
+    groupExpanded.value = {}
     if (!id) return
     loadingMessages.value = true
     try {
@@ -317,9 +424,21 @@ async function onStreamingClick(event: MouseEvent) {
         :min-item-size="64"
       >
         <template #default="{ item, index, active }">
-          <DynamicScrollerItem :item="item" :active="active" :data-index="index">
+          <DynamicScrollerItem
+            :item="item"
+            :active="active"
+            :data-index="index"
+            :size-dependencies="sizeDeps(item)"
+          >
             <div class="message-inner">
-              <MessageItem :message="item" />
+              <!-- 收束后的长工具链收成一个虚拟 item；展开体仍是逐条 MessageItem -->
+              <ToolCallGroup
+                v-if="isToolGroup(item)"
+                :messages="item.messages"
+                :expanded="isGroupExpanded(item.id)"
+                @toggle="toggleGroup(item.id)"
+              />
+              <MessageItem v-else :message="item" />
             </div>
           </DynamicScrollerItem>
         </template>
