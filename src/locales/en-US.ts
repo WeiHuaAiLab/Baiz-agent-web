@@ -419,6 +419,8 @@ export default {
     taskDisabled: 'Task paused',
     refresh: 'Refresh',
     scheduledRefreshed: 'Refreshed',
+    runsLabel: 'Runs',
+    runsEmpty: 'No runs yet',
     scheduledList: 'Scheduled tasks',
     emptyScheduledTitle: 'No scheduled tasks',
     emptyScheduled: 'Click "New task" to configure one — it will appear here',

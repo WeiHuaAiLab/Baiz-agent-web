@@ -1,27 +1,99 @@
 <script setup lang="ts">
-// 定时任务子页：顶部大标题 + 描述 + 右侧操作（刷新 / 通过对话创建 / 创建新任务），
-// 下方是任务列表 / 空状态。
-// 「创建新任务」直接打开「创建自动化任务」弹窗（ui.openCreate('scheduled')）；
-// 「通过对话创建」跳回聊天页并触发「新建会话」弹窗（ui.openCreate('session')）。
-// 不再内联 TaskForm，避免与全局弹窗重复入口。
-import { computed } from 'vue'
+// 定时任务子页：顶部大标题 + 描述 + 右侧操作（刷新 / 创建新任务），下方任务列表 / 空状态。
+// **MSG-3511 S1**：列表／执行记录**改接 daemon**（`schedule.list`／`schedule.list_runs`）；
+// 空表与错误均给**人话**（不得空白）；启停／删除同接 daemon。
+import { computed, onMounted, onBeforeUnmount, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { useWorkspaceStore, type TaskItem } from '../../stores/workspace'
+import { type TaskItem } from '../../stores/workspace'
 import { useUiStore } from '../../stores/ui'
+import { getClient } from '../../client/singleton'
+import {
+  humanizeRpcError,
+  loadScheduledTasks,
+  loadTaskRuns,
+  onScheduleChanged,
+  runStatusLabel,
+} from '../../utils/scheduleWire'
+import type { ScheduleRun } from '../../client/types'
 import { scheduleText } from '../../utils/tasks'
 import Icon from '../common/Icon.vue'
 import EmptyCompents from '../common/EmptyCompents.vue'
 
 const { t } = useI18n()
-const workspace = useWorkspaceStore()
 const ui = useUiStore()
 
-/** 定时任务：带 schedule 调度配置的任务 */
-const scheduledTasks = computed(() => workspace.tasks.filter((task) => task.schedule))
+/** 定时任务：来自 **daemon**（本拘前为内存 store） */
+const remoteTasks = ref<TaskItem[]>([])
+const loadError = ref('')
+const loading = ref(false)
+/** 已展开的执行记录（taskId → runs） */
+const runsOf = ref<Record<string, ScheduleRun[]>>({})
+const runsError = ref<Record<string, string>>({})
 
-/** 「创建新任务」：复用 ui.openCreate('scheduled') 触发 App.vue 挂载的 CreateTask 弹窗 */
-function createNew() {
-  ui.openCreate('scheduled')
+const scheduledTasks = computed(() => remoteTasks.value)
+
+async function load() {
+  loading.value = true
+  loadError.value = ''
+  try {
+    remoteTasks.value = await loadScheduledTasks(getClient())
+  } catch (e) {
+    remoteTasks.value = []
+    loadError.value = humanizeRpcError(e)
+  } finally {
+    loading.value = false
+  }
+}
+
+/** 刷新：**真重拉 daemon**（旧为演示 toast） */
+async function refresh() {
+  await load()
+  if (!loadError.value) ui.toast(t('working.scheduledRefreshed'), 'info')
+}
+
+/** 执行记录：真在跑与产出（展开即拉、再点收起） */
+async function toggleRuns(task: TaskItem) {
+  if (runsOf.value[task.id]) {
+    const next = { ...runsOf.value }
+    delete next[task.id]
+    runsOf.value = next
+    return
+  }
+  try {
+    const runs = await loadTaskRuns(getClient(), task.id, 10)
+    runsOf.value = { ...runsOf.value, [task.id]: runs }
+    runsError.value = { ...runsError.value, [task.id]: '' }
+  } catch (e) {
+    runsError.value = { ...runsError.value, [task.id]: humanizeRpcError(e) }
+  }
+}
+
+/** 同一行人话：`状态 · 时间 [· 摘要/错误]` */
+function runLine(r: ScheduleRun): string {
+  const at = r.triggered_at > 0 ? new Date(r.triggered_at * 1000).toLocaleString() : '—'
+  const extra = (r.error || r.summary || '').trim()
+  return `${runStatusLabel(r.status)} · ${at}${extra ? `· ${extra}` : ''}`
+}
+
+/** 启停：接 daemon（失败人话·不改界面状态） */
+async function toggleTask(task: TaskItem) {
+  const next = !isEnabled(task)
+  try {
+    await getClient().scheduleToggle(task.id, next)
+    task.enabled = next
+  } catch (e) {
+    ui.toast(humanizeRpcError(e), 'error')
+  }
+}
+
+/** 删除：接 daemon（成功后从列表摘除） */
+async function removeTask(id: string) {
+  try {
+    await getClient().scheduleDelete(id)
+    remoteTasks.value = remoteTasks.value.filter((item) => item.id !== id)
+  } catch (e) {
+    ui.toast(humanizeRpcError(e), 'error')
+  }
 }
 
 /** 任务是否开启（enabled 缺省视为开启） */
@@ -29,18 +101,25 @@ function isEnabled(task: TaskItem): boolean {
   return task.enabled !== false
 }
 
-/** 刷新：演示态，弹出 toast；后续可接入定时任务列表的重新拉取逻辑 */
-function refresh() {
-  ui.toast(t('working.scheduledRefreshed'), 'info')
+/** 「创建新任务」：复用 `ui.openCreate('scheduled')` 触发 App.vue 挂载的 CreateTask 弹窗 */
+function createNew() {
+  ui.openCreate('scheduled')
 }
 
-function removeTask(id: string) {
-  workspace.removeTask(id)
-}
+let offSchedule: (() => void) | null = null
+onMounted(() => {
+  void load()
+  offSchedule = onScheduleChanged(() => void load())
+})
+onBeforeUnmount(() => {
+  offSchedule?.()
+  offSchedule = null
+})
 </script>
 
 <template>
   <div>
+    <div v-if="loadError" class="scheduled-error" role="alert">{{ loadError }}</div>
     <header class="scheduled-header">
       <div class="scheduled-head-text">
         <h2 class="scheduled-title">{{ t('working.scheduled') }}</h2>
@@ -75,7 +154,7 @@ function removeTask(id: string) {
               class="task-toggle"
               :class="{ on: isEnabled(task) }"
               :title="isEnabled(task) ? t('working.taskEnabled') : t('working.taskDisabled')"
-              @click="workspace.toggleTask(task.id)"
+              @click="toggleTask(task)"
             >
               <span class="task-toggle-track">
                 <span class="task-toggle-knob" />
@@ -90,14 +169,7 @@ function removeTask(id: string) {
               <Icon name="alarm" :size="12" />
               {{ scheduleText(task as TaskItem, t) }}
             </span>
-            <button
-              type="button"
-              class="task-del"
-              :title="t('common.delete')"
-              @click="removeTask(task.id)"
-            >
-              <Icon name="trash" :size="14" />
-            </button>
+
           </div>
         </li>
       </ul>

@@ -12,6 +12,8 @@ import {
   type TaskDraft,
 } from '../../stores/workspace'
 import { useUiStore } from '../../stores/ui'
+import { getClient } from '../../client/singleton'
+import { createScheduledTask, humanizeRpcError } from '../../utils/scheduleWire'
 import Icon from '../common/Icon.vue'
 
 const { t } = useI18n()
@@ -53,13 +55,21 @@ function onKeydown(event: KeyboardEvent) {
 window.addEventListener('keydown', onKeydown)
 onBeforeUnmount(() => window.removeEventListener('keydown', onKeydown))
 
-/** 确认：新建定时任务后关闭弹窗 */
-function submit() {
+/** 确认：**经 RPC 真落 daemon**（MSG-3511 S2；旧为内存 `addTask` ⇒ 重登即失） */
+async function submit() {
   if (!canSubmit.value) return
   const title = draft.value.title.trim()
-  workspace.addTask({ ...draft.value, title })
-  ui.toast(`${t('tasks.scheduleTitle')}：${title}`, 'success')
-  ui.closeCreate()
+  try {
+    await createScheduledTask(getClient(), { ...draft.value, title })
+    // 落库成功后再镜像到本地列表：保持既有「创建后立即出现在任务列表」的界面行为，
+    // 真源仍是 daemon（重登/重启后由 schedule.list 拉回）。失败径不镜像（不造假绿）。
+    workspace.addTask({ ...draft.value, title })
+    ui.toast(`${t('tasks.scheduleTitle')}：${title}`, 'success')
+    ui.closeCreate()
+  } catch (e) {
+    // 失败给人话；**不回落内存**（不制造“看似已建、实则未落”的假绿）
+    ui.toast(`${t('tasks.scheduleTitle')}：${humanizeRpcError(e)}`, 'error')
+  }
 }
 
 function cancel() {
