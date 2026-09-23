@@ -51,6 +51,12 @@ function toggleSearch() {
 
 <template>
   <section class="side-section">
+    <!-- MSG-3529 A3：**旧版（无账号段）会话的显式提示**——旧库 `baiz` 只读清点、
+         本版不显示（零删零改）；有则上屏（非静默），无则空串不占位。
+         口径：换账号后=**各账号只看本账号库**；旧库会话**不归任何账号** ⇒ 一律不显示。 -->
+    <p v-if="session.legacyNotice" class="legacy-notice" role="status">
+      {{ session.legacyNotice }}
+    </p>
     <!-- MSG-2581 修④：新建钮 aria-label 显式化（可及/自动化定位面） -->
     <button type="button" class="menu-item" :aria-label="t('chat.newSession')" @click="newSession">
       <Icon name="chat" :size="15" />
@@ -91,3 +97,17 @@ function toggleSearch() {
     </div>
   </section>
 </template>
+
+<style scoped>
+/* MSG-3529 A3：旧版会话提示条（全 token 走既有 DESIGN 变量·常显可辨·非阻断） */
+.legacy-notice {
+  margin: 6px 8px 8px;
+  padding: 8px 10px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--surface-2);
+  color: var(--text-secondary);
+  font-size: 12px;
+  line-height: 1.5;
+}
+</style>
