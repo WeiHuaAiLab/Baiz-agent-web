@@ -64,6 +64,10 @@ export default {
     reasoningLabel: '思考过程',
     toolCall: '调用工具',
     toolResult: '工具结果',
+    toolGroupSummary: '{count} 个工具调用',
+    toolGroupFailed: '{count} 个失败',
+    toolGroupExpand: '展开工具调用',
+    toolGroupCollapse: '收起工具调用',
     fileCard: {
       run: '运行',
       open: '在面板中打开',

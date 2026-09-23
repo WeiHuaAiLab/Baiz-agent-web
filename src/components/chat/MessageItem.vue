@@ -10,7 +10,6 @@ import UserMessage from './message/UserMessage.vue'
 import StatusMessage from './message/StatusMessage.vue'
 import ToolRow from './message/ToolRow.vue'
 import ApprovalCard from './message/ApprovalCard.vue'
-import RunReasoning from './message/RunReasoning.vue'
 import RunSubtitles from './message/RunSubtitles.vue'
 import type { ChatMessage } from '../../models'
 
@@ -34,8 +33,10 @@ const run = computed(() =>
     />
     <UserMessage v-else-if="message.kind === 'user'" :message="message" />
     <template v-else>
-      <!-- MSG-2413 思考过程折叠块：有 reasoning 即现形（流式累积照渲），默认收起 -->
-      <RunReasoning v-if="run?.reasoning" :reasoning="run.reasoning" />
+      <!-- MSG-2413 思考过程折叠块： reasoning 是 assistant / run 级别的内容，
+           只由 AssistantMessage 或流式 tail 统一承载。tool_call/status/approval
+           上不再兜底渲染——否则同一 turn 的多个 tool_call 会重复出现 N 份
+           "深度思考"（它们共享同一个 run.reasoning）。 -->
       <StatusMessage v-if="message.kind === 'status'" :message="message" />
       <ToolRow v-else-if="message.kind === 'tool_call'" :message="message" />
       <ApprovalCard v-else-if="message.kind === 'approval'" :message="message" />

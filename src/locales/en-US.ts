@@ -64,6 +64,10 @@ export default {
     reasoningLabel: 'Thinking',
     toolCall: 'Tool',
     toolResult: 'Result',
+    toolGroupSummary: '{count} tool calls',
+    toolGroupFailed: '{count} failed',
+    toolGroupExpand: 'Expand tool calls',
+    toolGroupCollapse: 'Collapse tool calls',
     fileCard: {
       run: 'Run',
       open: 'Open in panel',

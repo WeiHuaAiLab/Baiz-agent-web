@@ -47,6 +47,72 @@
   color: var(--muted);
 }
 
+/* 连续工具调用折叠组：≥3 条连续 tool_call 在「思考完毕」（所属 run 收束）后
+   收起为一行摘要，点击展开逐条查看（展开体里仍是原样的工具行，零改动）。
+   头部走虚线框 = 「这里收起了 N 次调用」，与展开后的实线工具卡区分层级；
+   文字整体走 muted，hover 才提亮，避免长工具链在会话里反复抢视线。 */
+.tool-group-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 6px 10px;
+  border: 1px dashed var(--border);
+  border-radius: 8px;
+  background: transparent;
+  color: var(--muted);
+  font: inherit;
+  font-size: 13px;
+  text-align: left;
+  cursor: pointer;
+}
+
+.tool-group-head:hover {
+  border-color: var(--muted);
+  color: var(--text);
+}
+
+/* 展开后头部转实线：与组内工具卡同一层级感，同时表明「这里已经摊开了」 */
+.tool-group.expanded .tool-group-head {
+  border-style: solid;
+}
+
+.tool-group-caret {
+  flex: none;
+  font-family: monospace;
+}
+
+.tool-group-count {
+  flex: none;
+  font-weight: 600;
+}
+
+.tool-group-names {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-family: 'Cascadia Code', Consolas, monospace;
+  font-size: 12px;
+}
+
+.tool-group-failed {
+  flex: none;
+  color: #c0392b;
+}
+
+.tool-group-body {
+  padding-top: 8px;
+}
+
+/* 组内相邻工具行之间的空隙：补 margin-top 而非 margin-bottom——
+   .message-inner .msg 已把 margin-bottom 归零（item 间距统一由父层 padding 承担），
+   在相邻兄弟上补间距既不与它冲突，也不需要靠特异性取胜 */
+.tool-group-body .msg + .msg {
+  margin-top: 8px;
+}
+
 .tool-args {
   margin: 0;
   padding: 8px 12px;
@@ -402,10 +468,9 @@
   color: var(--muted);
   white-space: pre-wrap;
   word-break: break-word;
-  /* 行业共识（ChatGPT / Cline / Cursor / 豆包 / Kimi）：约 320px ≈ 17 行
-     （按 12px × line-height 1.55 ≈ 18.6px/行计算）。思考过长时滚动——既不会让单
-     条消息吃掉半屏，也足够展示大部分思考轨迹。 */
-  max-height: 320px;
+  /* 约 220px ≈ 12 行（按 12px × line-height 1.55 ≈ 18.6px/行计算）。思考过长
+     时滚动——既不会让单条消息吃掉半屏，也足够展示大部分思考轨迹。 */
+  max-height: 220px;
   overflow-y: auto;
   border-top: 1px solid var(--border);
   /* 滚动条样式与 .code-body 保持一致 */

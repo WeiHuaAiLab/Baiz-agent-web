@@ -5,7 +5,7 @@
 // 与流式期的区分（ChatContent.vue）：流式期默认展开 + 2 秒无新帧自动折叠，
 // 终态即本组件——直接默认展开，不再随时间折叠。
 //
-// MSG-XXXX 终态 reasoning 局部贴底：reasoning-body 是 max-height 320px 的滚动区，
+// MSG-XXXX 终态 reasoning 局部贴底：reasoning-body 是 max-height 220px 的滚动区，
 // 折叠→展开时贴底让用户看到完整思考轨迹（最新追加在末尾）；reasoning 是 prop
 // 一次性传入，不存在流式增长，所以只处理「挂载 + 折叠→展开」两种时机。流式期
 // 在 ChatContent 的 streaming-tail 内有同源实现并被本组件复用。

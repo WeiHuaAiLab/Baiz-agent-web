@@ -11,6 +11,7 @@ import { useUiStore } from '../../stores/ui'
 import { getBridge } from '../../bridge'
 import type { ChatMessage, RunState } from '../../models'
 import MessageItem from './MessageItem.vue'
+import ToolCallGroup from './ToolCallGroup.vue'
 import StreamingMarkdownView from '../markdown/StreamingMarkdownView.vue'
 import SkeletonChatView from './SkeletonChatView.vue'
 
@@ -138,8 +139,104 @@ function unpin() {
 }
 
 const activeId = computed(() => session.activeId)
-const displayItems = computed<ChatMessage[]>(() => [...messages.list(activeId.value)])
 const streamingRuns = computed(() => messages.activeRuns(activeId.value))
+
+/** 连续工具调用折叠组：≥ TOOL_GROUP_MIN 条连续 tool_call 在收束后合并成一个虚拟 item */
+interface ToolGroup {
+  id: string
+  kind: 'tool-group'
+  /** 摘要文本（工具名去重）：与 ChatMessage.text 同形，让 size 依赖 / 贴底签名
+   *  的取值表达式对两种 item 无需分支 */
+  text: string
+  messages: ChatMessage[]
+}
+
+type DisplayItem = ChatMessage | ToolGroup
+
+function isToolGroup(item: DisplayItem): item is ToolGroup {
+  return item.kind === 'tool-group'
+}
+
+// 折叠门槛：连续 tool_call ≥ 3 条才收起（不足则逐条散开，行为与既有会话完全一致）
+const TOOL_GROUP_MIN = 3
+
+/** 「思考完毕」判定：该 tool_call 所属 run 是否已收束（不再 running/queued）。
+ *  未收束 = 流式进行中 —— 此时保持逐条散开（尾流期不折叠，让用户看到实时操作）；
+ *  run 已被 trim 或从未登记（从 DB 载入的历史消息）一律视为已收束。 */
+function isRunSettled(taskId?: string): boolean {
+  if (!taskId) return true
+  const run = messages.runs[taskId]
+  if (!run) return true
+  return run.status !== 'running' && run.status !== 'queued'
+}
+
+/** 折叠组摘要：工具名去重保序（同一工具反复调用时不重复堆字） */
+function summarizeTools(items: ChatMessage[]): string {
+  const names = items
+    .map((message) => message.meta?.toolName)
+    .filter((name): name is string => !!name)
+  return [...new Set(names)].join(' · ')
+}
+
+const displayItems = computed<DisplayItem[]>(() => {
+  const source = messages.list(activeId.value)
+  const out: DisplayItem[] = []
+  let buffer: ChatMessage[] = []
+
+  const flush = () => {
+    const head = buffer[0]
+    // 段内必定同 run（下方断组保证），故只需看首条所属 run 是否收束
+    if (head && buffer.length >= TOOL_GROUP_MIN && isRunSettled(head.meta?.taskId)) {
+      // id 由首条消息 id 派生：段尾追加新条目时 id 不变，虚拟列表不重建
+      out.push({
+        id: `tg:${head.id}`,
+        kind: 'tool-group',
+        text: summarizeTools(buffer),
+        messages: buffer,
+      })
+    } else {
+      out.push(...buffer)
+    }
+    buffer = []
+  }
+
+  for (const message of source) {
+    if (message.kind === 'tool_call') {
+      // 同一 run 的连续 tool_call 才归一组：换 run 即断组——否则「上一个 run
+      // 已完成、下一个 run 还在跑」两段相邻时会被并成一段，导致已收束的那半
+      // 也一直不折叠（违背「已完成的默认折叠」）
+      if (buffer.length > 0 && buffer[0]?.meta?.taskId !== message.meta?.taskId) flush()
+      buffer.push(message)
+      continue
+    }
+    flush()
+    out.push(message)
+  }
+  flush()
+  return out
+})
+
+// 折叠组展开态：默认收起（「思考完毕后」自动折叠，用户点击可展开）。
+// 存父层而非组组件内部——DynamicScroller 会回收 item 组件，
+// 状态若存组件内，滚出视口再滚回来就丢了。
+const groupExpanded = ref<Record<string, boolean>>({})
+
+function isGroupExpanded(id: string): boolean {
+  return groupExpanded.value[id] === true
+}
+
+function toggleGroup(id: string) {
+  groupExpanded.value = { ...groupExpanded.value, [id]: !groupExpanded.value[id] }
+  // 整组展开/收起是高度突变，且组内工具行的高度还要等 ResizeObserver 落地——
+  // 交给贴底循环吸收「展开 → 重测 → 落定」的多跳；非吸附态不动，尊重阅读位置
+  if (pinned.value) startPinLoop()
+}
+
+/** size 依赖（v3 已 deprecated，ResizeObserver 才是正路）：仅保证两种 item 都取得到值 */
+function sizeDeps(item: DisplayItem): unknown[] {
+  if (isToolGroup(item)) return [item.messages.length, isGroupExpanded(item.id)]
+  return [item.text, item.meta?.taskId, item.meta?.attachments?.length, item.meta?.streaming]
+}
 
 // 「加载中」判定：当前 activeId 对应的消息列表尚未从 IndexedDB 载入
 //（byConversation[id] === undefined）。
@@ -212,6 +309,8 @@ watch(
     // 会自动转为常驻，不退。scroller watch 会在 scrollEl 就绪后补一次 startPinLoop，
     // 覆盖「messages.load 后 scrollEl 还没绑定」的时序差。
     pinned.value = true
+    // 折叠组展开态随会话切换重置：id 派生自消息，跨会话残留只会是死键
+    groupExpanded.value = {}
     if (!id) return
     await messages.load(id)
     startPinLoop()
@@ -347,7 +446,7 @@ watch(
   },
 )
 
-// 流式 reasoning 局部贴底：.reasoning-body 是 max-height 320px 的滚动区，
+// 流式 reasoning 局部贴底：.reasoning-body 是 max-height 220px 的滚动区，
 // 思考过程逐帧追加时须保持底部跟随。与外层 ChatContent 主滚动区的贴底循环
 // 一致——"在底部附近则软贴底，不在则不动"：
 //   · 用户在底部（gap ≤ REASONING_PIN_EPS）→ scrollTop = scrollHeight，让最新追加可见
@@ -506,10 +605,17 @@ async function onStreamingClick(event: MouseEvent) {
             :item="item"
             :active="active"
             :data-index="index"
-            :size-dependencies="[item.text, item.meta?.taskId, item.meta?.attachments?.length, item.meta?.streaming]"
+            :size-dependencies="sizeDeps(item)"
           >
             <div class="message-inner">
-              <MessageItem :message="item" />
+              <!-- 收束后的长工具链收成一个虚拟 item；展开体仍是逐条 MessageItem -->
+              <ToolCallGroup
+                v-if="isToolGroup(item)"
+                :messages="item.messages"
+                :expanded="isGroupExpanded(item.id)"
+                @toggle="toggleGroup(item.id)"
+              />
+              <MessageItem v-else :message="item" />
             </div>
           </DynamicScrollerItem>
         </template>
