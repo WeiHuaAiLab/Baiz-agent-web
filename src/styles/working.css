@@ -231,6 +231,56 @@
   background: var(--hover);
 }
 
+/* MSG-3511 S1：执行记录入口 + 展开块 + 顶部错误行（读 daemon 后新增） */
+.task-runs-btn {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 8px;
+  border-radius: 8px;
+  font-size: 12px;
+  color: var(--muted);
+}
+
+.task-runs-btn:hover {
+  color: var(--text);
+  background: var(--hover);
+}
+
+.task-runs {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin-top: 6px;
+  padding: 8px 10px;
+  border-radius: 8px;
+  background: var(--hover);
+  font-size: 12px;
+  color: var(--muted);
+  list-style: none;
+}
+
+.task-run-line {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.task-runs-empty {
+  color: var(--muted);
+}
+
+.task-runs-error,
+.scheduled-error {
+  margin-top: 6px;
+  padding: 8px 10px;
+  border-radius: 8px;
+  font-size: 12px;
+  color: var(--danger);
+  background: var(--hover);
+}
+
 /* 内联新建任务表单（Settings 风格：label + 全宽输入框 + 行尾操作按钮） */
 .task-new-form {
   display: flex;

@@ -169,8 +169,36 @@ onBeforeUnmount(() => {
               <Icon name="alarm" :size="12" />
               {{ scheduleText(task as TaskItem, t) }}
             </span>
-
+            <button
+              type="button"
+              class="task-runs-btn"
+              :title="t('working.runsLabel')"
+              @click="toggleRuns(task)"
+            >
+              <Icon name="list" :size="13" />
+              <span>{{ t('working.runsLabel') }}</span>
+            </button>
+            <button
+              type="button"
+              class="task-del"
+              :title="t('common.delete')"
+              @click="removeTask(task.id)"
+            >
+              <Icon name="trash" :size="14" />
+            </button>
           </div>
+          <!-- S1：执行记录（展开即拉 `schedule.list_runs`；空表/错误均给人话） -->
+          <div v-if="runsError[task.id]" class="task-runs-error" role="alert">
+            {{ runsError[task.id] }}
+          </div>
+          <ul v-else-if="runsOf[task.id]" class="task-runs">
+            <li v-if="!runsOf[task.id].length" class="task-runs-empty">
+              {{ t('working.runsEmpty') }}
+            </li>
+            <li v-for="run in runsOf[task.id]" :key="run.id" class="task-run-line">
+              {{ runLine(run) }}
+            </li>
+          </ul>
         </li>
       </ul>
     </div>
