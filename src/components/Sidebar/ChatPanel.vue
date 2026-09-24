@@ -1,9 +1,10 @@
 <script setup lang="ts">
 // 侧栏「聊天」Tab：新建会话入口 + 项目列表 + 最近会话（搜索/折叠/列表）。
-import { computed, ref } from 'vue'
+import { computed, onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import { useSessionStore } from '../../stores/session'
+import { useAuthStore } from '../../stores/auth'
 import { useUiStore } from '../../stores/ui'
 import Icon from '../common/Icon.vue'
 import ProjectList from './chat/ProjectList.vue'
@@ -12,7 +13,26 @@ import SessionList from './chat/SessionList.vue'
 const { t } = useI18n()
 const router = useRouter()
 const session = useSessionStore()
+const auth = useAuthStore()
 const ui = useUiStore()
+
+/** MSG-3558 ③：未登录面（空 uid）——侧栏会话列表须显式提示，不得以空态呈现 */
+/** 口径同 ScheduledView：**已持令牌但身份未建立**（空 uid）才提示，纯未登录由登录闸处理。
+ *  **MSG-3573 P1甲**：判据收口到 `auth.identityMissing`——持久面命中而 uid 暂空**不再**
+ *  判「身份未建立」（旧口径在此恒真＝假提示）。 */
+const identityMissing = computed(() => auth.identityMissing)
+
+onMounted(() => {
+  // **MSG-3573 P1甲**：持久面 uid 暂空 ⇒ 再取一次壳身份态（补齐即切库面并重载本账号会话
+  // 列表——侧栏与主区同源，一处补齐两处都回）；失败**显式上屏人话**，禁静默。
+  void auth.ensureIdentityUserId().catch((e) => {
+    ui.toast(e instanceof Error ? e.message : String(e), 'error')
+  })
+})
+
+function goLogin() {
+  void router.push('/login')
+}
 
 const recentOpen = ref(true)
 const searchOpen = ref(false)
@@ -57,6 +77,14 @@ function toggleSearch() {
     <p v-if="session.legacyNotice" class="legacy-notice" role="status">
       {{ session.legacyNotice }}
     </p>
+    <!-- MSG-3558 ③（老板 2026-09-24）：未登录／身份未建立 ⇒ **显式提示条**；
+         历史／会话列表**不得**以「暂无」空态呈现（空 uid 下"没有会话"其实是"没有身份"）。 -->
+    <div v-if="identityMissing" class="identity-notice" role="status" data-identity-notice="1">
+      <span class="identity-notice-text">{{ t('identity.notEstablished') }}</span>
+      <button type="button" class="identity-login" @click="goLogin">
+        {{ t('identity.goLogin') }}
+      </button>
+    </div>
     <!-- MSG-2581 修④：新建钮 aria-label 显式化（可及/自动化定位面） -->
     <button type="button" class="menu-item" :aria-label="t('chat.newSession')" @click="newSession">
       <Icon name="chat" :size="15" />

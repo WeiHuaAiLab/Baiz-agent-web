@@ -20,6 +20,7 @@ import { createI18n } from 'vue-i18n'
 import { RpcError } from '../src/client/rpc'
 import { getClientSetup, resetClientForTests } from '../src/client/singleton'
 import KbCard from '../src/components/settings/KbCard.vue'
+import { useAuthStore } from '../src/stores/auth'
 import zhCN from '../src/locales/zh-CN'
 
 const i18n = createI18n({
@@ -41,6 +42,9 @@ async function mountWith(loadImpl: () => Promise<never> | Promise<unknown>) {
 beforeEach(() => {
   setActivePinia(createPinia())
   resetClientForTests()
+  // **MSG-3575 · A1**：KB **读面按账号**（未登录面不读他人/全局 KB）——本件各例验的是
+  // 「读回成功/失败/未就绪」三态下的状态行口径，故一律置于**已登录态**（断言逐字未改）。
+  useAuthStore().userId = 'acct-a8-3575'
 })
 
 describe('A8 · 状态行三态分开（读不到 ≠ 没配过）', () => {

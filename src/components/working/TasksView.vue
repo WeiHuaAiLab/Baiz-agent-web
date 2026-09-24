@@ -3,16 +3,34 @@
 import { computed, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useWorkspaceStore, formatRelativeTime } from '../../stores/workspace'
+import { splitPresetItems } from '../../utils/presetItems'
+import { useUiStore } from '../../stores/ui'
 import Icon from '../common/Icon.vue'
 import EmptyCompents from '../common/EmptyCompents.vue'
 
 const { t } = useI18n()
 const workspace = useWorkspaceStore()
+const ui = useUiStore()
 
 /** 普通任务：无 schedule 调度配置的任务 */
 const plainTasks = computed(() =>
   workspace.tasks.filter((task) => !task.schedule),
 )
+
+/** **MSG-3575 · 预设项 UI**：普通任务面同口径——预置项（`preset-*`）**默认软隐藏**
+ *  （不上屏·**不自动删**）；有则给一行说明＋「清理预置项」入口（清理须**用户点＋二次确认**）。 */
+const taskSplit = computed(() => splitPresetItems(plainTasks.value))
+const visibleTasks = computed(() => taskSplit.value.visible)
+const presetTasks = computed(() => taskSplit.value.presets)
+
+/** 清理本机**普通**预置项（只删 `preset-*` 且无 schedule 的行；用户自建项一字不动） */
+function clearPresets() {
+  const n = presetTasks.value.length
+  if (!n) return
+  if (!window.confirm(t('working.clearPresetsConfirm', { n }))) return
+  const removed = workspace.removePresetTasks('plain')
+  if (removed > 0) ui.toast(t('working.clearPresetsDone', { n: removed }), 'success')
+}
 
 const title = ref('')
 const instruction = ref('')
@@ -89,10 +107,19 @@ function getProjectTitle(projectId?: string) {
       </div>
     </div>
 
-    <div v-if="plainTasks.length" class="task-list-wrap">
+    <!-- **MSG-3575 · 预设项 UI**：预置项默认软隐藏 ⇒ 一行说明＋「清理预置项」入口
+         （清理**须用户点**并二次确认；不点不删） -->
+    <div v-if="presetTasks.length" class="preset-bar" data-preset-bar="1">
+      <span class="preset-bar-text">{{ t('working.presetHidden', { n: presetTasks.length }) }}</span>
+      <button type="button" class="preset-clear" @click="clearPresets">
+        {{ t('working.clearPresets') }}
+      </button>
+    </div>
+
+    <div v-if="visibleTasks.length" class="task-list-wrap">
       <h3 class="task-section-title">{{ t('working.taskList') }}</h3>
       <ul class="task-list">
-        <li v-for="task in plainTasks" :key="task.id" class="task-item">
+        <li v-for="task in visibleTasks" :key="task.id" class="task-item">
           <div class="task-dot" />
           <div class="task-main">
             <div class="task-title">{{ task.title }}</div>

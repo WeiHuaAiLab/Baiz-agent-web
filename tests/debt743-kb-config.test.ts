@@ -40,6 +40,9 @@ describe('DEBT-743 · 保存／读取／失败／未就绪（真径：client 注
   beforeEach(() => {
     setActivePinia(createPinia())
     resetClientForTests()
+    // **MSG-3575 · A1**：KB **读面按账号**（未登录面不读他人/全局 KB）——本件各例验的是
+    // 读/写/失败/未就绪契约，故一律置于**已登录态**（断言逐字未改；写径口径零变）。
+    useAuthStore().userId = 'acct-743-3575'
   })
 
   it('①保存调用参数正确：base_url 已归一、api_key 原样、token 随行（会话存在时）', async () => {

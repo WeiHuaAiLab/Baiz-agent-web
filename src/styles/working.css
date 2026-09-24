@@ -78,6 +78,43 @@
   gap: 4px;
 }
 
+/* **MSG-3575 · 预设项 UI**：预置项软隐藏提示条＋「清理预置项」入口
+   （全 token／圆角 8／间距 4 倍数——DESIGN.md §10 四条机判） */
+.preset-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin: 0 0 12px;
+  padding: 8px 12px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--surface);
+}
+
+.preset-bar-text {
+  font-size: 12px;
+  line-height: 1.6;
+  color: var(--muted);
+}
+
+.preset-clear {
+  flex: 0 0 auto;
+  padding: 4px 8px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: transparent;
+  color: var(--text-secondary);
+  font-size: 12px;
+  cursor: pointer;
+  transition: background 150ms, color 150ms;
+}
+
+.preset-clear:hover {
+  background: var(--hover);
+  color: var(--text);
+}
+
 /* 任务列表区域标题行：左侧标题 + 右侧刷新按钮（两端对齐） */
 .task-section-head {
   display: flex;

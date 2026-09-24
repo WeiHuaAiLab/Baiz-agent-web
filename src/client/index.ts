@@ -29,6 +29,8 @@ import type {
   PreviewReadResult,
   ScheduleCreateParams,
   ScheduleRun,
+  ScheduleRunDetailParams,
+  ScheduleRunDetailResult,
   ScheduleTask,
   WeknoraConfigResult,
   WeknoraSetConfigParams,
@@ -73,6 +75,12 @@ export interface BaizClient {
   scheduleToggle(taskId: string, enabled: boolean): Promise<{ ok: boolean }>
   scheduleDelete(taskId: string): Promise<{ ok: boolean }>
   scheduleListRuns(taskId: string, limit?: number): Promise<ScheduleRun[]>
+  /**
+   * **MSG-3561 C3**：单次执行结果面**懒加载**（契约先行：`schedule.run_detail`）。
+   * daemon 结果表未落地前调用会失败（-32601）——调用方必须**降级**到 `summary`／`error`
+   * （禁把截断当全文、禁静默假成功）。
+   */
+  scheduleRunDetail?(params: ScheduleRunDetailParams): Promise<ScheduleRunDetailResult>
   /** MSG-3014 包131：只读文件内容预览（daemon file.preview——授权目录钉死） */
   previewRead(params: PreviewReadParams): Promise<PreviewReadResult>
   /** DEBT-743：读知识库连接配置——**不回显 API key**（契约＝MSG-3165 §三） */
@@ -183,6 +191,12 @@ export function createClient(transport: RpcTransport): BaizClient {
     scheduleDelete: (taskId) => rpc.call('schedule.delete', { task_id: taskId }),
     scheduleListRuns: (taskId, limit) =>
       rpc.call('schedule.list_runs', { task_id: taskId, limit: limit ?? 20 }),
+    // **MSG-3561 C3**：结果面全文（daemon 未实装 ⇒ -32601 ⇒ 调用方降级渲染，不假装成功）
+    scheduleRunDetail: (params) =>
+      rpc.call<ScheduleRunDetailResult>('schedule.run_detail', {
+        task_id: params.task_id,
+        run_id: params.run_id,
+      }),
     // MSG-3014：daemon file.preview（对卯 handler dispatch 同名）
     // MSG-3231 ①：带上**面板已授权目录**（authorized_roots）——daemon（MSG-3228）
     // 与配置面取并集后逐项 canonicalize；此前从未传 ⇒ 面板里"已授权"的目录对

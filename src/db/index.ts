@@ -17,6 +17,12 @@
 import Dexie from 'dexie'
 import type { Table } from 'dexie'
 import type { ChatMessage, Conversation } from '../models'
+import { accountSegment } from './segment'
+import { accountReadLiterals, stableAccountSegment } from './alias'
+
+export { accountSegment } from './segment'
+/// **MSG-3573 P2**：别名面统一由库面出口再导出（`auth.login` 的**唯一写入点**＋读径取值点）
+export { accountReadLiterals, rememberAccountLogin, stableAccountSegment } from './alias'
 
 export interface DraftRow {
   conversationId: string
@@ -33,22 +39,16 @@ export const ACCOUNT_DB_PREFIX = 'baiz-u-'
 /** 账号标识的本地持久键（**非凭据**：只存 daemon 下发的 user_id，供"重载后仍落同库"） */
 export const ACCOUNT_STORAGE_KEY = 'baiz.account'
 
-/** 账号 → 库名段：可读 id 直用；含异常字符则取稳定哈希（FNV-1a 32 位·十六进制） */
-export function accountSegment(userId: string): string {
-  const id = userId.trim()
-  if (/^[A-Za-z0-9._-]{1,48}$/.test(id)) return id
-  let hash = 0x811c9dc5
-  for (let i = 0; i < id.length; i += 1) {
-    hash ^= id.charCodeAt(i)
-    hash = Math.imul(hash, 0x01000193) >>> 0
-  }
-  return `h${hash.toString(16).padStart(8, '0')}`
-}
-
-/** 账号 → 库名（**唯一映射点**：全部取值面都经此处 ⇒ 注掉账号维必然整体回漏） */
+/**
+ * 账号 → 库名（**唯一映射点**：全部取值面都经此处 ⇒ 注掉账号维必然整体回漏）。
+ * **MSG-3561 B1**：段取自**持久别名表**（`stableAccountSegment`）⇒ 账号字面由邮箱形变
+ * 归一形时，库名**不再漂移**（同一账号恒落同库）。
+ */
 export function dbNameFor(userId: string | null | undefined): string {
   const id = (userId ?? '').trim()
-  return id ? `${ACCOUNT_DB_PREFIX}${accountSegment(id)}` : ANON_DB_NAME
+  if (!id) return ANON_DB_NAME
+  const seg = stableAccountSegment(id) || accountSegment(id)
+  return `${ACCOUNT_DB_PREFIX}${seg}`
 }
 
 class BaizDatabase extends Dexie {
@@ -90,6 +90,135 @@ export function currentDbAccount(): string {
 
 export function currentDbName(): string {
   return dbNameFor(currentAccount)
+}
+
+/**
+ * **MSG-3573 · P2**：当前账号**读径候选库名**（并读用）。
+ *
+ * 口径（照令）：**读＝并集／写＝当前形**——
+ *   · 第 0 项＝**当前稳定段库**（`dbNameFor()`；写径唯一落点，与既有口径逐字一致）；
+ *   · 其后＝各**字面旧口径段**库（`accountSegment(字面)`）——同账号字面由邮箱形漂到
+ *     归一形（或反向）时，1.0.24 别名表落地**之前**写下的老库正在这些名字里；
+ *   · **只读并读**：不建库、不升级、不写、不删（重名去重）。
+ */
+export function accountReadDbNames(userId: string | null | undefined): string[] {
+  const id = (userId ?? '').trim()
+  if (!id) return [ANON_DB_NAME]
+  const out = [dbNameFor(id)]
+  for (const literal of accountReadLiterals(id)) {
+    const name = `${ACCOUNT_DB_PREFIX}${accountSegment(literal)}`
+    if (!out.includes(name)) out.push(name)
+  }
+  return out
+}
+
+/**
+ * **MSG-3573 · P2**：现存库名集合。`indexedDB.databases()` 不可用（旧内核）⇒ `null`
+ * ＝**无法清点**（调用方据此**只读当前库**，绝不"猜着开库"——不带版本地 `open` 一个
+ * 不存在的库会**建出空库**，故开库前必须先清点）。
+ */
+export async function listExistingDbNames(): Promise<Set<string> | null> {
+  try {
+    if (typeof indexedDB.databases !== 'function') return null
+    const list = await indexedDB.databases()
+    return new Set(list.map((entry) => String(entry?.name ?? '')).filter((n) => n !== ''))
+  } catch {
+    return null
+  }
+}
+
+/**
+ * **MSG-3573 · P2**：**只读**某库 `conversations` 全表（raw IndexedDB）。
+ *
+ * 硬口径：**不带版本** `open`（已存在的库按其现版本打开，**绝不升级／改写**）；
+ * 库不存在、无该表、读失败 ⇒ **空数组**（读径降级，不抛给界面）。调用方须先经
+ * `existingDbNames()` 确认库存在（本函数自身不建库）。
+ */
+export async function readConversationsFrom(name: string): Promise<Conversation[]> {
+  return new Promise((resolve) => {
+    let req: IDBOpenDBRequest
+    try {
+      req = indexedDB.open(name)
+    } catch {
+      resolve([])
+      return
+    }
+    req.onupgradeneeded = () => {
+      // 不带版本时不应到此；万一到此（库本不存在）⇒ 立刻中止——**不建新库**
+      try {
+        req.transaction?.abort()
+      } catch {
+        /* noop */
+      }
+    }
+    req.onerror = () => resolve([])
+    req.onsuccess = () => {
+      const conn = req.result
+      if (!conn.objectStoreNames.contains('conversations')) {
+        conn.close()
+        resolve([])
+        return
+      }
+      try {
+        const tx = conn.transaction('conversations', 'readonly')
+        const all = tx.objectStore('conversations').getAll()
+        all.onsuccess = () => {
+          const rows = (all.result ?? []) as Conversation[]
+          conn.close()
+          resolve(Array.isArray(rows) ? rows : [])
+        }
+        all.onerror = () => {
+          conn.close()
+          resolve([])
+        }
+      } catch {
+        conn.close()
+        resolve([])
+      }
+    }
+  })
+}
+
+/**
+ * **MSG-3573 · P2 绿证落点**：当前账号**两字面形并读**（会话面）。
+ *
+ * 顺序＝**当前库优先**（同 id 去重时以当前库为准）；其余候选库**只读**并入。
+ * 零删除、零改写、零新建——旧字形（邮箱形）库里那些"看得见数据、列表里没有"的
+ * 历史会话由此**可见**；写径仍落当前形（`db` 懒门面）。
+ */
+export async function readConversationsUnion(
+  userId: string | null | undefined = currentAccount,
+): Promise<Conversation[]> {
+  const rows: Conversation[] = []
+  const seen = new Set<string>()
+  const push = (list: Conversation[]) => {
+    for (const row of list) {
+      const id = row?.id
+      if (typeof id !== 'string' || !id || seen.has(id)) continue
+      seen.add(id)
+      rows.push(row)
+    }
+  }
+  // ① 当前库（既有一致读径：Dexie 懒门面 ⇒ 按当前账号解析，含 schema 迁移）
+  push(await db.conversations.toArray())
+  // ② 其余候选库（旧口径段库）：**只对已存在的库**做 raw 只读并读
+  const others = accountReadDbNames(userId).filter((name) => {
+    try {
+      return name !== currentDbName()
+    } catch {
+      return true
+    }
+  })
+  if (others.length > 0) {
+    const existing = await listExistingDbNames()
+    if (existing) {
+      for (const name of others) {
+        if (!existing.has(name)) continue
+        push(await readConversationsFrom(name))
+      }
+    }
+  }
+  return rows
 }
 
 function instanceFor(name: string): BaizDatabase {
