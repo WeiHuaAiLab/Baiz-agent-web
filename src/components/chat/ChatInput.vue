@@ -28,6 +28,8 @@ import Icon from "../common/Icon.vue";
 import TaskForm from "../common/TaskForm.vue";
 // T11／DEBT-872：附件行抽为共享件（ChatInput 与 ComposerBox 同一实现）
 import AttachmentRow from "./AttachmentRow.vue";
+// 20c3736（老板意图④）：审核卡移到输入框上方 ⇒ 需 ApprovalConfirmBar
+import ApprovalConfirmBar from "./ApprovalConfirmBar.vue";
 
 const emit = defineEmits<{ (e: "submitted"): void }>();
 
@@ -393,6 +395,8 @@ watch(
     </div>
 
     <div ref="inputRoot" class="chat-input">
+        <!-- 20c3736（老板第④条）：待审批消息栏——审核卡移到输入框上方 ⇒ 取双方 -->
+        <ApprovalConfirmBar />
         <!-- MSG-2722 L3 编程 UI：Blocked/失败任务人工回传续跑行（daemon
             tool_loop.resume——note 回传文本） -->
         <form
@@ -424,6 +428,7 @@ watch(
         >
             <AttachmentRow />
 
+            <!-- 输入框的区域 -->
             <div class="composer-input">
                 <textarea
                     v-model="input"
