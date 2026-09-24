@@ -105,8 +105,7 @@ export default {
     collapse: '收起文件区',
     empty: '暂无文件',
     // MSG-3263 ①：空态语义化（本面板列的是什么、去哪看盘面文件）——不再用「暂无文件」盖过事实
-    emptyWorkingTree:
-      '本栏显示本次会话有改动的文件；当前无改动。要看工作区里的文件，请在设置 → 通用里配置工作区（或点上方「授权文件夹」）。',
+    emptyWorkingTree: '本栏显示本次会话有改动的文件；当前无改动。要看工作区里的文件，请在设置 → 通用里配置工作区（或点上方「授权文件夹」）。',
     webUnsupported: 'Web 形态暂不支持本机目录',
     pathFiles: '项目文件',
     backToTree: '返回文件树',
@@ -125,14 +124,10 @@ export default {
     previewUnavailable: '该文件暂不支持预览',
     previewFailed: '预览读取失败',
     // MSG-3225 ①（DEBT-753）：预览败面**人话＋可行动指引＋服务端原文**
-    previewFailOutside:
-      '该文件不在服务端授权目录内，未读取也未写入任何内容。请把该文件所在目录加入授权根（~/.closer/config.toml 的 authorized_roots），或改用工作区内的文件。服务端原文：{detail}',
-    previewFailMissing:
-      '服务端找不到该文件（或路径不可解析），未读取也未写入任何内容。请确认文件仍在原位置。服务端原文：{detail}',
-    previewFailUnreadable:
-      '服务端读取该文件失败（权限／占用／IO 面），未做任何写入。可稍后重试，或先在系统里确认该文件可被当前用户读取。服务端原文：{detail}',
-    previewFailTooBig:
-      '该文件超出预览读取上限（服务端已拒），未做任何写入。可改用系统编辑器打开。服务端原文：{detail}',
+    previewFailOutside: '该文件不在服务端授权目录内，未读取也未写入任何内容。请把该文件所在目录加入授权根（~/.closer/config.toml 的 authorized_roots），或改用工作区内的文件。服务端原文：{detail}',
+    previewFailMissing: '服务端找不到该文件（或路径不可解析），未读取也未写入任何内容。请确认文件仍在原位置。服务端原文：{detail}',
+    previewFailUnreadable: '服务端读取该文件失败（权限／占用／IO 面），未做任何写入。可稍后重试，或先在系统里确认该文件可被当前用户读取。服务端原文：{detail}',
+    previewFailTooBig: '该文件超出预览读取上限（服务端已拒），未做任何写入。可改用系统编辑器打开。服务端原文：{detail}',
     previewFailGeneric: '预览读取失败（未做任何读取或写入）。服务端原文：{detail}',
     previewTruncated: '已截断：显示前 {shown}（共 {total}）',
     previewBinary: '二进制文件——不可预览',
@@ -150,8 +145,7 @@ export default {
     htmlScriptsOn: '沙箱内脚本：开',
     htmlScriptsOff: '沙箱内脚本：关',
     htmlLoading: '正在读取并渲染…',
-    htmlPreviewFailed:
-      '预览失败：该文件不在授权目录内、或不是可渲染的 HTML 文本（未做任何写入）。',
+    htmlPreviewFailed: '预览失败：该文件不在授权目录内、或不是可渲染的 HTML 文本（未做任何写入）。',
     htmlOpenUnsupported: '当前壳未提供"外部打开"能力，且新窗被拦——已在面板内只读预览。',
   },
   workspace: { empty: '暂无授权目录', active: '当前', manage: '在设置中管理' },
@@ -434,8 +428,7 @@ export default {
     emptyTasks: '暂无普通任务，在上方创建',
     addScheduled: '新增定时任务',
     scheduledHint: '按周期自动执行的任务，可随时编辑调度',
-    scheduledSubtitle:
-      '日报汇总、每日提醒、数据抓取，告诉搭子什么时候需要帮您做什么，它会准时完成',
+    scheduledSubtitle: '日报汇总、每日提醒、数据抓取，告诉搭子什么时候需要帮您做什么，它会准时完成',
     createNewTask: '创建新任务',
     taskEnabled: '任务已开启',
     // MSG-3528：定时任务「可改可删」（编辑＝复用创建弹窗；删除＝确认对话框）
@@ -447,8 +440,10 @@ export default {
     runsLabel: '执行记录',
     runsEmpty: '暂无执行记录', openRunSession: '打开该次会话',
     scheduledList: '定时任务列表',
-    emptyScheduledTitle: '暂无定时任务',
-    emptyScheduled: '点击「创建新任务」开始配置，定时任务会出现在此',
+    emptyScheduledTitle: '暂无定时任务', emptyScheduled: '点击「创建新任务」开始配置，定时任务会出现在此',
+    /** **MSG-3575 · 预设项 UI**：预置项软隐藏＋清理入口（清理须二次确认） */
+    presetHidden: '已隐藏 {n} 个预置项（首次安装自带的模板项，可清理）', clearPresets: '清理预置项',
+    clearPresetsConfirm: '将删除 {n} 个预置项。它们只是首次安装自带的模板项，需要时可随时重新创建；其它任务不受影响。确定删除？', clearPresetsDone: '已清理 {n} 个预置项', clearPresetsPartial: '{n} 个预置项删除失败（服务端未生效）——请稍后重试', // MSG-3575
     extensionsHint: '扩展插件市场（演示数据），启用后即生效',
   },
   status: {
@@ -464,6 +459,8 @@ export default {
     taskError: '任务错误',
     // MSG-3266 ②：模型输出了未能解析的工具协议文本（已从正文剥离）——给可见交代＋重试入口
     protocolLeak: '本轮模型输出了工具协议文本（未能解析），已从正文剥离；可点「重试」再试一次',
+    /** **MSG-3575 · P5**：同类重复失败合并（降噪）尾标 */
+    repeatMerged: '（同类失败 ×{n}，已合并）',
     demo: '演示模式（未连接）',
     chars: '字符',
   },
@@ -478,6 +475,8 @@ export default {
     taskNotFound: '任务不存在',
     internal: '服务内部错误',
     unknown: '请求失败',
+    /** **MSG-3575 · P5**：外网取件／知识库不可用 ⇒ 一句人话（内部号与术语零上屏） */
+    netFetchUnavailable: '网络取件不可用，已跳过（可稍后重试）', kbUnavailable: '知识库暂不可用，已跳过',
     goSettings: '去设置',
     /** MSG-3340 A3：未登录态也有一条到「连接知识库」的可点入口 */
     goKbSetup: '去配置知识库',

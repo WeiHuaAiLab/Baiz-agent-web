@@ -21,6 +21,8 @@ import SkeletonChatView from './SkeletonChatView.vue'
 import RunBlocks from './message/RunBlocks.vue'
 import StreamingMarkdownView from '../markdown/StreamingMarkdownView.vue'
 import Icon from '../common/Icon.vue'
+import { classifyRuntimeFailure, compactRuntimeFailures } from '../../utils/failureText'
+import type { RuntimeFailureKind } from '../../utils/failureText'
 
 const { t } = useI18n()
 const session = useSessionStore()
@@ -106,10 +108,40 @@ interface ToolGroup {
   messages: ChatMessage[]
 }
 
-type DisplayItem = ChatMessage | ToolGroup
+/**
+ * **MSG-3575 · P5**：同类重复失败**合并条**——连续同类（外网取件／KB 不可用）失败状态条
+ * 折成一条（代表项＝首条，`repeat`＝条数）：**不刷屏**，且原文不上屏（见 `StatusMessage`）。
+ */
+interface StatusRepeat {
+  id: string
+  kind: 'status-repeat'
+  message: ChatMessage
+  repeat: number
+}
+
+type DisplayItem = ChatMessage | ToolGroup | StatusRepeat
 
 function isToolGroup(item: DisplayItem): item is ToolGroup {
   return item.kind === 'tool-group'
+}
+
+function isStatusRepeat(item: DisplayItem): item is StatusRepeat {
+  return item.kind === 'status-repeat'
+}
+
+/** 本条是否是"外网取件／KB 不可用"失败状态条（本件分型；非本件 ⇒ null） */
+function failureKindOf(item: DisplayItem): RuntimeFailureKind | null {
+  if (item.kind !== 'status') return null
+  if (item.meta?.status !== 'error' && item.meta?.statusKey !== 'taskError') return null
+  return classifyRuntimeFailure(item.text)
+}
+
+/** 取 item 的可读文本（三种 item 同形取值；滚动签名用） */
+function itemText(item: DisplayItem | undefined): string {
+  if (!item) return ''
+  if (isToolGroup(item)) return item.text
+  if (isStatusRepeat(item)) return item.message.text
+  return item.text
 }
 
 // 折叠门槛：连续 tool_call ≥ 3 条才收起（不足则逐条散开，行为与既有会话完全一致）
@@ -174,7 +206,13 @@ const displayItems = computed<DisplayItem[]>(() => {
     out.push(message)
   }
   flush()
-  return out
+  // **MSG-3575 · P5**：再走一道**同类失败合并**（连续同类 ⇒ 一条 ＋ ×N）——
+  // 工具链折叠组与非本件分型项一律原样透传（零误伤）。
+  return compactRuntimeFailures(out, failureKindOf).map(({ item, repeat }) =>
+    repeat > 1 && item.kind === 'status'
+      ? { id: `sf:${item.id}`, kind: 'status-repeat' as const, message: item, repeat }
+      : item,
+  )
 })
 
 // 折叠组展开态：默认收起（「思考完毕后」自动折叠，用户点击可展开）。
@@ -196,6 +234,7 @@ function toggleGroup(id: string) {
 /** size 依赖（v3 已 deprecated，ResizeObserver 才是正路）：仅保证两种 item 都取得到值 */
 function sizeDeps(item: DisplayItem): unknown[] {
   if (isToolGroup(item)) return [item.messages.length, isGroupExpanded(item.id)]
+  if (isStatusRepeat(item)) return [item.repeat, item.message.text]
   return [item.text, item.meta?.taskId, item.meta?.attachments?.length, item.meta?.streaming]
 }
 
@@ -271,7 +310,7 @@ onBeforeUnmount(() => {
 watch(
   () =>
     displayItems.value.length +
-    (displayItems.value.at(-1)?.text ?? '').length +
+    itemText(displayItems.value.at(-1)).length +
     streamingRuns.value.reduce((sum, run) => sum + run.text.length, 0),
   async () => {
     // 内容变化（含流式增长）：通知外层刷新悬浮滑块（上滚脱离贴底时 scrollTop 不变，需手动 sync）
@@ -437,6 +476,12 @@ async function onStreamingClick(event: MouseEvent) {
                 :messages="item.messages"
                 :expanded="isGroupExpanded(item.id)"
                 @toggle="toggleGroup(item.id)"
+              />
+              <!-- MSG-3575 P5：同类重复失败合并条（代表项 ＋ ×N；原文不上屏） -->
+              <MessageItem
+                v-else-if="isStatusRepeat(item)"
+                :message="item.message"
+                :repeat="item.repeat"
               />
               <MessageItem v-else :message="item" />
             </div>

@@ -1,5 +1,6 @@
 // 工作区 store：项目 + 任务（普通/定时，含完整调度配置）。
 import { defineStore } from 'pinia'
+import { isPresetId } from '../utils/presetItems'
 
 export type TaskMode = 'cloud' | 'local'
 export type TaskCycle = 'monthly' | 'weekly' | 'daily' | 'hourly' | 'interval' | 'once'
@@ -146,6 +147,19 @@ export const useWorkspaceStore = defineStore('workspace', {
     },
     removeTask(id: string) {
       this.tasks = this.tasks.filter((item) => item.id !== id)
+    },
+    /**
+     * **MSG-3575 · 预设项 UI**：清掉本机**预置项**（只删 id 命中 `preset-*` 的行；
+     * 用户自建项**一字不动**），返回删除条数。
+     * `scope='plain'` ⇒ 只清**普通任务**（无 schedule）；`'all'` ⇒ 普通＋定时（缺省）。
+     * **调用方必须先二次确认**（红线：预置项只软隐藏，删须用户点）。
+     */
+    removePresetTasks(scope: 'plain' | 'all' = 'all'): number {
+      const before = this.tasks.length
+      this.tasks = this.tasks.filter(
+        (task) => !(isPresetId(task.id) && (scope === 'all' || !task.schedule)),
+      )
+      return before - this.tasks.length
     },
     /** 切换定时任务开关状态（enabled 缺省视为开启） */
     toggleTask(id: string) {

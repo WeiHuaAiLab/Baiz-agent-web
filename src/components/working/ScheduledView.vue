@@ -21,6 +21,7 @@ import {
 import type { ScheduleRun } from '../../client/types'
 import { useSessionStore } from '../../stores/session'
 import { scheduleText } from '../../utils/tasks'
+import { splitPresetItems } from '../../utils/presetItems'
 import Icon from '../common/Icon.vue'
 import EmptyCompents from '../common/EmptyCompents.vue'
 
@@ -52,7 +53,12 @@ const runsError = ref<Record<string, string>>({})
 /** MSG-3561 C3：单次执行的**结果全文**（懒加载；缺省＝后端结果面未落地，回退 summary/error） */
 const runsFull = ref<Record<number, string>>({})
 
-const scheduledTasks = computed(() => remoteTasks.value)
+/** **MSG-3575 · 预设项 UI（甲/丙）**：预置项（id `preset-*`，首启自带的模板项）
+ *  **默认软隐藏**（不上屏、**不自动删**）；有则在列表上方给一行「已隐藏 N 个预置项」＋
+ *  「清理预置项」入口（清理须**用户点＋二次确认**，走 daemon **既有** `schedule.delete`）。 */
+const presetSplit = computed(() => splitPresetItems(remoteTasks.value))
+const scheduledTasks = computed(() => presetSplit.value.visible)
+const presetTasks = computed(() => presetSplit.value.presets)
 
 async function load() {
   loading.value = true
@@ -140,6 +146,31 @@ async function removeTask(id: string) {
   }
 }
 
+/**
+ * **MSG-3575 · 预设项 UI（乙）**：**清理预置项**——**二次确认**后逐条走 daemon **既有**
+ * `schedule.delete`（不新增删除通道）；确认框写明「只删预置模板项、需要时可重建」。
+ * 部分失败**照实上屏**（不假装全清）。
+ */
+async function clearPresets() {
+  const presets = presetTasks.value
+  if (!presets.length) return
+  if (!window.confirm(t('working.clearPresetsConfirm', { n: presets.length }))) return
+  let failed = 0
+  for (const task of presets) {
+    try {
+      await getClient().scheduleDelete(task.id)
+    } catch {
+      failed += 1
+    }
+  }
+  await load()
+  if (failed > 0) {
+    ui.toast(t('working.clearPresetsPartial', { n: failed }), 'error')
+    return
+  }
+  ui.toast(t('working.clearPresetsDone', { n: presets.length }), 'success')
+}
+
 /** 任务是否开启（enabled 缺省视为开启） */
 function isEnabled(task: TaskItem): boolean {
   return task.enabled !== false
@@ -190,6 +221,15 @@ onBeforeUnmount(() => {
         </button>
       </div>
     </header>
+
+    <!-- **MSG-3575 · 预设项 UI**：预置项默认软隐藏 ⇒ 一行说明＋「清理预置项」入口
+         （清理**须用户点**并二次确认；不点不删——零自动删除） -->
+    <div v-if="presetTasks.length" class="preset-bar" data-preset-bar="1">
+      <span class="preset-bar-text">{{ t('working.presetHidden', { n: presetTasks.length }) }}</span>
+      <button type="button" class="preset-clear" @click="clearPresets">
+        {{ t('working.clearPresets') }}
+      </button>
+    </div>
 
     <div v-if="scheduledTasks.length" class="task-list-wrap">
       <div class="task-section-head">

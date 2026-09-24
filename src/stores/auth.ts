@@ -124,6 +124,20 @@ export const useAuthStore = defineStore("auth", {
       await this.reloadAccountScoped(uid);
       return uid;
     },
+    /**
+     * **MSG-3575 · A1 前端面**：换账号／登出 ⇒ **KB 面清场**（旧账号的 KB 值不得残留在屏上；
+     * 登出另清**按账号缓存**＝"登出即清"）。best-effort：KB store 未装载 ⇒ 无面可清
+     * （此处吞的只是"没有面"，**不是**数据错误——KB 数据面零写零删）。
+     */
+    async resetKbFace(clearCache: boolean): Promise<void> {
+      try {
+        const kb = await import("./kb");
+        if (clearCache) kb.clearKbAccountCache();
+        kb.useKbStore().resetAccountFace();
+      } catch {
+        /* KB store 未装载：无面可清 */
+      }
+    },
     /** 登录：账号/密码 → auth.login（经乙径 proxy→daemon 9876）。
      * 败面通用拒词（DEBT-398 例）——零泄词零 detail。 */
     async login(email: string, password: string): Promise<boolean> {
@@ -165,6 +179,8 @@ export const useAuthStore = defineStore("auth", {
         }
         this.sessionExpired = false;
         this.kbNotConfigured = false;
+        // **MSG-3575 A1**：换账号 ⇒ KB 面清场（旧账号 KB 值不上屏；下一读按新账号重取）
+        await this.resetKbFace(false);
         return true;
       } catch (e) {
         // DEBT-743：知识库未配置（-32010）⇒ 引导去「设置 → 连接知识库」，
@@ -205,6 +221,9 @@ export const useAuthStore = defineStore("auth", {
       } catch {
         /* storage 不可用零残留面已清 */
       }
+      // **MSG-3575 A1**：登出 ⇒ KB 面**清值＋清按账号缓存**（"登出即清"；桥未通也先清）。
+      // 位置在**本地清场（含 token 移除）之后**——登出径的同步清场不得被 KB 清面拖后。
+      await this.resetKbFace(true);
       try {
         await getBridge().identity.logout();
       } catch {

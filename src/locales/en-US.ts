@@ -102,8 +102,7 @@ export default {
     collapse: 'Collapse files panel',
     empty: 'No files',
     // MSG-3263 ①: semantic empty state (what this pane lists, where to find disk files)
-    emptyWorkingTree:
-      'This pane lists files changed in the current session — none right now. To browse workspace files, set a workspace in Settings → General (or use "Authorize folder").',
+    emptyWorkingTree: 'This pane lists files changed in the current session — none right now. To browse workspace files, set a workspace in Settings → General (or use "Authorize folder").',
     webUnsupported: 'Local directory is unavailable in web mode',
     pathFiles: 'Project files',
     backToTree: 'Back to file tree',
@@ -122,14 +121,10 @@ export default {
     previewUnavailable: 'Preview is not available for this file yet',
     previewFailed: 'Failed to load preview',
     // MSG-3225 (1) DEBT-753: preview failure = plain words + action + server text
-    previewFailOutside:
-      'This file is outside the daemon authorized directories; nothing was read or written. Add its folder to authorized_roots in ~/.closer/config.toml, or use a file inside the workspace. Server said: {detail}',
-    previewFailMissing:
-      'The daemon cannot find this file (or the path cannot be resolved); nothing was read or written. Check that the file is still at that location. Server said: {detail}',
-    previewFailUnreadable:
-      'The daemon failed to read this file (permissions / lock / IO); nothing was written. Retry later, or make sure the current user can read it. Server said: {detail}',
-    previewFailTooBig:
-      'The file exceeds the preview read limit (rejected by the daemon); nothing was written. Open it with a system editor instead. Server said: {detail}',
+    previewFailOutside: 'This file is outside the daemon authorized directories; nothing was read or written. Add its folder to authorized_roots in ~/.closer/config.toml, or use a file inside the workspace. Server said: {detail}',
+    previewFailMissing: 'The daemon cannot find this file (or the path cannot be resolved); nothing was read or written. Check that the file is still at that location. Server said: {detail}',
+    previewFailUnreadable: 'The daemon failed to read this file (permissions / lock / IO); nothing was written. Retry later, or make sure the current user can read it. Server said: {detail}',
+    previewFailTooBig: 'The file exceeds the preview read limit (rejected by the daemon); nothing was written. Open it with a system editor instead. Server said: {detail}',
     previewFailGeneric: 'Failed to load preview (nothing was read or written). Server said: {detail}',
     previewTruncated: 'Truncated: showing first {shown} (of {total})',
     previewBinary: 'Binary file — no preview',
@@ -147,10 +142,8 @@ export default {
     htmlScriptsOn: 'Sandbox scripts: on',
     htmlScriptsOff: 'Sandbox scripts: off',
     htmlLoading: 'Loading and rendering…',
-    htmlPreviewFailed:
-      'Preview failed: the file is outside the authorized directories, or is not renderable HTML text (nothing was written).',
-    htmlOpenUnsupported:
-      'This shell provides no external-open capability and blocked the new window — showing the read-only preview in the panel instead.',
+    htmlPreviewFailed: 'Preview failed: the file is outside the authorized directories, or is not renderable HTML text (nothing was written).',
+    htmlOpenUnsupported: 'This shell provides no external-open capability and blocked the new window — showing the read-only preview in the panel instead.',
   },
   workspace: { empty: 'No authorized directories', active: 'Active', manage: 'Manage in settings' },
   sidebar: {
@@ -265,10 +258,8 @@ export default {
     },
     // MSG-3231 ②: Runtime & updates page (version + check for updates)
     runtimeTitle: 'Runtime & updates',
-    updateHint:
-      'Check for a new version. You will be asked to confirm first; the app restarts after install.',
-    updateUnsupported:
-      'Automatic update checks are not available in this runtime (desktop only) — the current version is shown above.',
+    updateHint: 'Check for a new version. You will be asked to confirm first; the app restarts after install.',
+    updateUnsupported: 'Automatic update checks are not available in this runtime (desktop only) — the current version is shown above.',
     versionUnknown: 'Version unavailable · {runtime}',
     localPreview: 'Local preview',
     language: 'Language',
@@ -307,8 +298,7 @@ export default {
     themeLight: 'Light',
     themeDark: 'Dark',
     humanSubtitles: 'Plain-language captions',
-    humanSubtitlesHint:
-      'Translate tool calls into a plain sentence anyone can understand; hidden by default',
+    humanSubtitlesHint: 'Translate tool calls into a plain sentence anyone can understand; hidden by default',
     keyHint: 'Keys are stored by the daemon; never kept in plain text here',
     model: 'Model',
     modelHint: 'Routing is decided by the daemon; this is a preference',
@@ -431,8 +421,7 @@ export default {
     emptyTasks: 'No tasks yet — create one above',
     addScheduled: 'Add scheduled task',
     scheduledHint: 'Tasks that run automatically on a schedule; edit anytime',
-    scheduledSubtitle:
-      'Daily digests, reminders, and data scrapes — tell your agent when to do what, and it gets it done on time',
+    scheduledSubtitle: 'Daily digests, reminders, and data scrapes — tell your agent when to do what, and it gets it done on time',
     createNewTask: 'New task',
     taskEnabled: 'Task enabled',
     // MSG-3528: scheduled tasks are editable / removable
@@ -446,6 +435,12 @@ export default {
     scheduledList: 'Scheduled tasks',
     emptyScheduledTitle: 'No scheduled tasks',
     emptyScheduled: 'Click "New task" to configure one — it will appear here',
+    /** **MSG-3575**：preset items are soft-hidden by default; cleanup needs explicit confirm */
+    presetHidden: '{n} preset item(s) hidden (fresh-install templates; can be cleared)',
+    clearPresets: 'Clear presets',
+    clearPresetsConfirm: 'This deletes {n} preset item(s). They are only fresh-install templates and can be re-created anytime; other tasks are untouched. Delete now?',
+    clearPresetsDone: 'Cleared {n} preset item(s)',
+    clearPresetsPartial: '{n} preset item(s) failed to delete (server did not apply) — please retry later',
     extensionsHint: 'Extension marketplace (demo data). Enable to activate',
   },
   status: {
@@ -460,8 +455,9 @@ export default {
     sendFailed: 'Send failed',
     taskError: 'Task error',
     // MSG-3266 ②: unparsed tool-protocol text was stripped from the body — say so and offer retry
-    protocolLeak:
-      'The model emitted tool-protocol text that could not be parsed; it was stripped from the reply. Click Retry to try again.',
+    protocolLeak: 'The model emitted tool-protocol text that could not be parsed; it was stripped from the reply. Click Retry to try again.',
+    /** **MSG-3575 · P5**：merged repeated failures suffix */
+    repeatMerged: ' (same failure ×{n}, merged)',
     demo: 'Demo mode (offline)',
     chars: 'chars',
   },
@@ -469,14 +465,16 @@ export default {
     network: 'Cannot reach daemon. Check gateway settings',
     unauthorized: 'Unauthorized. Check the API key',
     sessionExpired: 'Session expired. Please sign in again',
-    kbNotConfigured:
-      'Knowledge base not connected — set host and API key in Settings → Knowledge base connection',
+    kbNotConfigured: 'Knowledge base not connected — set host and API key in Settings → Knowledge base connection',
     relogin: 'Sign in again',
     invalidParams: 'Invalid parameters',
     methodNotFound: 'Method not supported',
     taskNotFound: 'Task not found',
     internal: 'Internal server error',
     unknown: 'Request failed',
+    /** **MSG-3575 · P5**：one-line human text (no internal codes/terms) */
+    netFetchUnavailable: 'Network fetch unavailable — skipped (retry later)',
+    kbUnavailable: 'Knowledge base temporarily unavailable — skipped',
     goSettings: 'Open settings',
     /** MSG-3340 A3: reachable entry to "Knowledge base connection" while signed out */
     goKbSetup: 'Configure knowledge base',
@@ -568,8 +566,7 @@ export default {
     confirmHint: 'Ask on every file write / command (default)',
     autoHint: 'Stop asking each time — sandbox, allowlist and authorized dirs still apply',
     title: 'Intervention: {mode} ({hint})',
-    orthogonal:
-      'Independent of "remember scope" (card options) and "authorized directories" — three different layers.',
+    orthogonal: 'Independent of "remember scope" (card options) and "authorized directories" — three different layers.',
   },
   // DEBT-738 (MSG-3148): no mock fallback in production — offline gate screen
   offline: {

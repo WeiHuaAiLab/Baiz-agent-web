@@ -24,7 +24,10 @@ import RunBlocks from './message/RunBlocks.vue'
 import RunSubtitles from './message/RunSubtitles.vue'
 import type { ChatMessage } from '../../models'
 
-const props = defineProps<{ message: ChatMessage }>()
+/** **MSG-3575 P5**：`repeat`＝同类重复失败合并条数（>1 时状态条补「×N」；缺省 1＝未合并） */
+const props = withDefaults(defineProps<{ message: ChatMessage; repeat?: number }>(), {
+  repeat: 1,
+})
 const messages = useMessageStore()
 
 const run = computed(() =>
@@ -64,7 +67,7 @@ const isAuthFailure = computed(
       <RunBlocks v-if="showStatusRunBlocks" :run="run!" />
       <!-- MSG-3558：模型鉴权失败 ⇒ **就地人话错误卡**（标题／掩码原因／模型名／设置入口／重试） -->
       <AuthErrorCard v-if="isAuthFailure" :message="message" />
-      <StatusMessage v-else-if="message.kind === 'status'" :message="message" />
+      <StatusMessage v-else-if="message.kind === 'status'" :message="message" :repeat="repeat" />
       <ToolRow v-else-if="message.kind === 'tool_call'" :message="message" />
       <ApprovalCard v-else-if="message.kind === 'approval'" :message="message" />
     </template>
