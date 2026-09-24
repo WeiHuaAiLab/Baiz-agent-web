@@ -1,5 +1,5 @@
 // Tauri 传输：invoke proxy_rpc + 事件通道 daemon://frame（Rust 壳实现后启用）。
-import { RpcError } from '../rpc'
+import { RpcError, isRpcFailure } from '../rpc'
 import type { RpcRequest } from '../rpc'
 import type { ResyncInfo, RpcTransport } from '../transport'
 import type { SseFrame } from '../sse'
@@ -67,11 +67,21 @@ function createRealTauriTransport(): RpcTransport {
     async abort() {},
     async request(req: RpcRequest) {
       const { invoke } = await import('@tauri-apps/api/core')
+      let payload: unknown
       try {
-        return await invoke<unknown>('proxy_rpc', { request: req })
+        payload = await invoke<unknown>('proxy_rpc', { request: req })
       } catch (error) {
         throw new RpcError(error as TauriInvokeError)
       }
+      // **MSG-3592 P0（根因）**：**与 `http.ts` 同口径解包**——壳 `proxy_rpc` 回的是**整包**
+      // （`{"jsonrpc","id","result":…}`）；旧口径把整包直交 `rpc.call` ⇒ 调用方读
+      // `result.<字段>` **恒 undefined**（∴ `auth.login` 的 `user_id` 丢失、列表恒空、
+      // 本批 P2 的 `rememberAccountLogin(email, undefined)` 抛 `…reading 'trim'` ⇒ 登录即崩）。
+      if (isRpcFailure(payload)) throw new RpcError(payload.error)
+      if (payload && typeof payload === 'object' && 'result' in payload) {
+        return (payload as { result: unknown }).result
+      }
+      return payload
     },
     onEvent(handler) {
       handlers.add(handler)
