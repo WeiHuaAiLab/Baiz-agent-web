@@ -445,7 +445,7 @@ export default {
     refresh: '刷新',
     scheduledRefreshed: '已刷新',
     runsLabel: '执行记录',
-    runsEmpty: '暂无执行记录',
+    runsEmpty: '暂无执行记录', openRunSession: '打开该次会话',
     scheduledList: '定时任务列表',
     emptyScheduledTitle: '暂无定时任务',
     emptyScheduled: '点击「创建新任务」开始配置，定时任务会出现在此',

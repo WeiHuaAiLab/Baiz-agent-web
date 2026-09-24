@@ -17,6 +17,10 @@
 import Dexie from 'dexie'
 import type { Table } from 'dexie'
 import type { ChatMessage, Conversation } from '../models'
+import { accountSegment } from './segment'
+import { stableAccountSegment } from './alias'
+
+export { accountSegment } from './segment'
 
 export interface DraftRow {
   conversationId: string
@@ -33,22 +37,16 @@ export const ACCOUNT_DB_PREFIX = 'baiz-u-'
 /** 账号标识的本地持久键（**非凭据**：只存 daemon 下发的 user_id，供"重载后仍落同库"） */
 export const ACCOUNT_STORAGE_KEY = 'baiz.account'
 
-/** 账号 → 库名段：可读 id 直用；含异常字符则取稳定哈希（FNV-1a 32 位·十六进制） */
-export function accountSegment(userId: string): string {
-  const id = userId.trim()
-  if (/^[A-Za-z0-9._-]{1,48}$/.test(id)) return id
-  let hash = 0x811c9dc5
-  for (let i = 0; i < id.length; i += 1) {
-    hash ^= id.charCodeAt(i)
-    hash = Math.imul(hash, 0x01000193) >>> 0
-  }
-  return `h${hash.toString(16).padStart(8, '0')}`
-}
-
-/** 账号 → 库名（**唯一映射点**：全部取值面都经此处 ⇒ 注掉账号维必然整体回漏） */
+/**
+ * 账号 → 库名（**唯一映射点**：全部取值面都经此处 ⇒ 注掉账号维必然整体回漏）。
+ * **MSG-3561 B1**：段取自**持久别名表**（`stableAccountSegment`）⇒ 账号字面由邮箱形变
+ * 归一形时，库名**不再漂移**（同一账号恒落同库）。
+ */
 export function dbNameFor(userId: string | null | undefined): string {
   const id = (userId ?? '').trim()
-  return id ? `${ACCOUNT_DB_PREFIX}${accountSegment(id)}` : ANON_DB_NAME
+  if (!id) return ANON_DB_NAME
+  const seg = stableAccountSegment(id) || accountSegment(id)
+  return `${ACCOUNT_DB_PREFIX}${seg}`
 }
 
 class BaizDatabase extends Dexie {

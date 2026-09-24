@@ -442,7 +442,7 @@ export default {
     refresh: 'Refresh',
     scheduledRefreshed: 'Refreshed',
     runsLabel: 'Runs',
-    runsEmpty: 'No runs yet',
+    runsEmpty: 'No runs yet', openRunSession: 'Open this run session',
     scheduledList: 'Scheduled tasks',
     emptyScheduledTitle: 'No scheduled tasks',
     emptyScheduled: 'Click "New task" to configure one — it will appear here',

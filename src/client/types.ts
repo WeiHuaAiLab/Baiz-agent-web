@@ -335,6 +335,21 @@ export interface ScheduleRun {
   status: string
   summary: string
   error: string
+  /** **MSG-3561 C3**：结果面**全文**（daemon 结果表落地后回填；缺省＝只有 `summary` 截断面） */
+  full_text?: string
+}
+
+/** **MSG-3561 C3**：单次执行的结果面（懒加载·契约先行——daemon 未实装时回 -32601） */
+export interface ScheduleRunDetailParams {
+  task_id: string
+  run_id: number
+}
+export interface ScheduleRunDetailResult {
+  run_id: number
+  task_id: string
+  /** 与模型输出**逐字一致**的全文（不截断） */
+  full_text?: string
+  created_at?: number
 }
 
 // MSG-3014 包131：只读文件内容预览（daemon file.preview——授权目录钉死／

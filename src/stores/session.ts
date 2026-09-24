@@ -1,6 +1,7 @@
 // 会话 store：会话 CRUD、置顶排序、草稿清理，IndexedDB 持久化。
 import { defineStore } from "pinia";
 import { db, legacyDbSummary } from "../db";
+import { importLegacyIntoCurrent, isImported } from "../db/migrate";
 import type { Conversation } from "../models";
 
 /**
@@ -11,6 +12,17 @@ import type { Conversation } from "../models";
 async function legacyNoticeText(): Promise<string> {
     const summary = await legacyDbSummary();
     if (summary.conversations + summary.messages + summary.drafts === 0) return "";
+    // **MSG-3561 B2/B3**：该源库已**只增导入**到当前账号库（计数相符）⇒ 老数据**已经可见**
+    // ⇒ 不再示"本版不显示"（否则与事实相反）；未导入/计数变化 ⇒ 照旧给显式提示。
+    if (
+        isImported(summary.name, {
+            conversations: summary.conversations,
+            messages: summary.messages,
+            drafts: summary.drafts,
+        })
+    ) {
+        return "";
+    }
     const text = `存在 ${summary.conversations} 条旧版会话（无账号段）：本版不显示，数据未删`;
     console.warn(
         `[baiz] ${text}——旧库 baiz 全程只读清点（零删零改）；要归属须走显式迁移令`,
@@ -54,6 +66,12 @@ export const useSessionStore = defineStore("session", {
     },
     actions: {
         async load() {
+            // **MSG-3561 B2/B3**：首启把旧库**只增导入**当前账号库（旧库保留不删；幂等·可重入）。
+            try {
+                await importLegacyIntoCurrent();
+            } catch (error) {
+                console.warn("[baiz] 旧库只增导入失败（不影响本次加载）", error);
+            }
             const rows = await db.conversations.toArray();
             rows.sort((a, b) => {
                 const pinnedA = a.pinnedAt ?? 0;
@@ -68,18 +86,28 @@ export const useSessionStore = defineStore("session", {
             }
         },
         async create(title?: string, projectId?: string) {
+            return this.createWithId(makeId(), title, projectId);
+        },
+        /** **MSG-3561 C3**：按**指定 id** 打开／建会话（定时任务镜像 `scheduled-<task_id>`）。
+         *  幂等：已存在 ⇒ 只切换选中（不重建、不覆写）。既有 `create()` 走本径（行为零变）。 */
+        async createWithId(id: string, title?: string, projectId?: string) {
+            const existing = this.conversations.find((item) => item.id === id);
+            if (existing) {
+                this.activeId = id;
+                return id;
+            }
             const now = Date.now();
             const conversation: Conversation = {
-                id: makeId(),
+                id,
                 title: title?.trim() || "新会话",
                 createdAt: now,
                 updatedAt: now,
                 projectId,
             };
-            await db.conversations.add(cloneForDb(conversation));
+            await db.conversations.put(cloneForDb(conversation));
             this.conversations.unshift(conversation);
-            this.activeId = conversation.id;
-            return conversation.id;
+            this.activeId = id;
+            return id;
         },
         async remove(id: string) {
             await db.conversations.delete(id);

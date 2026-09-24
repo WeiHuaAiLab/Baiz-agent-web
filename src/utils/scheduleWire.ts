@@ -11,7 +11,7 @@
 // （每日 09:00 变 00:00）。本刀把该两型与 `toScheduleCreateParams` 的输出键名纠回
 // snake_case（差异照录于讫报）。
 import type { BaizClient } from '../client'
-import type { ScheduleRun, ScheduleTask } from '../client/types'
+import type { ScheduleRun, ScheduleRunDetailResult, ScheduleTask } from '../client/types'
 import { toScheduleCreateParams } from './tasks'
 import type { TaskDraft, TaskItem } from '../stores/workspace'
 
@@ -89,6 +89,35 @@ export async function loadTaskRuns(
 ): Promise<ScheduleRun[]> {
   const runs = await client.scheduleListRuns(taskId, limit)
   return Array.isArray(runs) ? runs : []
+}
+
+/**
+ * **MSG-3561 C3**：懒加载**单次执行的结果面全文**（`schedule.run_detail`）。
+ * 契约先行：daemon 未实装（-32601）或调用失败 ⇒ 返**空串**（调用方降级显示 `summary`／`error`，
+ * **不把截断当全文**，也不抛给界面）。
+ */
+export async function loadRunDetail(
+  client: Pick<BaizClient, 'scheduleRunDetail'>,
+  taskId: string,
+  runId: number,
+): Promise<string> {
+  if (typeof client.scheduleRunDetail !== 'function') return ''
+  try {
+    const res: ScheduleRunDetailResult = await client.scheduleRunDetail({
+      task_id: taskId,
+      run_id: runId,
+    })
+    return typeof res?.full_text === 'string' ? res.full_text : ''
+  } catch {
+    return ''
+  }
+}
+
+/** 结果面可渲染文本：**优先全文**，回退 `summary`，再回退 `error`（三者皆空 ⇒ 空串） */
+export function runResultText(run: ScheduleRun, full?: string): string {
+  const text = (full ?? run.full_text ?? '').trim()
+  if (text) return text
+  return (run.summary || run.error || '').trim()
 }
 
 /** **S2 落库**：经 RPC 建任务（失败上抛——由调用方给人话·**不回落内存**）。

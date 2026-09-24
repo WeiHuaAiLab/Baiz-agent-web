@@ -12,12 +12,15 @@ import { useRouter } from 'vue-router'
 import { getClient } from '../../client/singleton'
 import {
   humanizeRpcError,
+  loadRunDetail,
   loadScheduledTasks,
   loadTaskRuns,
   onScheduleChanged,
+  runResultText,
   runStatusLabel,
 } from '../../utils/scheduleWire'
 import type { ScheduleRun } from '../../client/types'
+import { useSessionStore } from '../../stores/session'
 import { scheduleText } from '../../utils/tasks'
 import Icon from '../common/Icon.vue'
 import EmptyCompents from '../common/EmptyCompents.vue'
@@ -26,6 +29,7 @@ const { t } = useI18n()
 const ui = useUiStore()
 const auth = useAuthStore()
 const router = useRouter()
+const session = useSessionStore()
 
 /** MSG-3558 ③（老板 2026-09-24）：**未登录面（空 uid）**不得伪装成"你没建过"——
  *  daemon 侧对空账号 `schedule.list` 返**空表**（fail-closed），若照旧渲染空态，
@@ -45,6 +49,8 @@ const loading = ref(false)
 /** 已展开的执行记录（taskId → runs） */
 const runsOf = ref<Record<string, ScheduleRun[]>>({})
 const runsError = ref<Record<string, string>>({})
+/** MSG-3561 C3：单次执行的**结果全文**（懒加载；缺省＝后端结果面未落地，回退 summary/error） */
+const runsFull = ref<Record<number, string>>({})
 
 const scheduledTasks = computed(() => remoteTasks.value)
 
@@ -79,9 +85,21 @@ async function toggleRuns(task: TaskItem) {
     const runs = await loadTaskRuns(getClient(), task.id, 10)
     runsOf.value = { ...runsOf.value, [task.id]: runs }
     runsError.value = { ...runsError.value, [task.id]: '' }
+    // **C3 懒加载**：只对最近 3 条拉结果全文（`schedule.run_detail`·契约先行·失败静默降级）
+    for (const run of runs.slice(0, 3)) {
+      const full = await loadRunDetail(getClient(), task.id, run.id)
+      if (full) runsFull.value = { ...runsFull.value, [run.id]: full }
+    }
   } catch (e) {
     runsError.value = { ...runsError.value, [task.id]: humanizeRpcError(e) }
   }
+}
+
+/** **MSG-3561 C3**：「打开该次会话」——落到定时任务的**镜像会话** `scheduled-<task_id>` */
+async function openRunSession(task: TaskItem) {
+  const id = `scheduled-${task.id}`
+  await session.createWithId(id, task.title || t('working.runsLabel'))
+  await router.push('/')
 }
 
 /** 同一行人话：`状态 · 时间 [· 摘要/错误]` */
@@ -237,7 +255,17 @@ onBeforeUnmount(() => {
               {{ t('working.runsEmpty') }}
             </li>
             <li v-for="run in runsOf[task.id]" :key="run.id" class="task-run-line">
-              {{ runLine(run) }}
+              <div class="task-run-head">{{ runLine(run) }}</div>
+              <!-- MSG-3561 C3：结果面**全文**（优先 `full_text`；后端未落地时回退 summary/error）
+                   ——**不再只显示 200 字截断**（渲染层零截断） -->
+              <pre
+                v-if="runResultText(run, runsFull[run.id])"
+                class="task-run-full"
+                data-run-full="1"
+              >{{ runResultText(run, runsFull[run.id]) }}</pre>
+              <button type="button" class="task-run-open" @click="openRunSession(task as TaskItem)">
+                {{ t('working.openRunSession') }}
+              </button>
             </li>
           </ul>
         </li>
