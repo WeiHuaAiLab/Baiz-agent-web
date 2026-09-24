@@ -3,7 +3,7 @@ import { defineStore } from 'pinia'
 import { db } from '../db'
 import { getClient } from '../client/singleton'
 import type { AttachmentItem } from './files'
-import { mapRpcError } from '../utils/errors'
+import { isPolicyDenied, mapRpcError, POLICY_DENIED_HUMAN } from '../utils/errors'
 import { createDecisionStreamFilter } from '../utils/decisionStream'
 import type { DecisionStreamFilter } from '../utils/decisionStream'
 import { createProtocolLeakFilter } from '../utils/protocolLeak'
@@ -130,7 +130,7 @@ export function subtitleForTool(toolName: string, success: boolean, preview: str
           : `「${zh}」这一步顺利完成了。`
     }
   }
-
+  if (isPolicyDenied(brief)) return POLICY_DENIED_HUMAN // DEBT-873：策略拒绝≠网络失败，禁「换个方式继续」
   switch (toolName) {
     case 'cargo_test':
     case 'cargo_build':
@@ -140,7 +140,7 @@ export function subtitleForTool(toolName: string, success: boolean, preview: str
     case 'web_search':
       return `这轮没查到有用结果${brief ? `（${brief}）` : ''}，我换个角度再搜。`
     case 'web_fetch':
-      return `网页没抓下来（${brief || '可能被拦了'}），换个来源试试。`
+      return `网页没抓下来（${brief || '没有给出原因'}），换个来源试试。`
     case 'shell_exec':
       return `命令没跑通：${brief || '看输出'}。没事，我根据报错继续调整。`
     case 'apply_patch':

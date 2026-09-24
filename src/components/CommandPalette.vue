@@ -11,6 +11,7 @@ import { useSettingsStore } from '../stores/settings'
 import { useUiStore } from '../stores/ui'
 import { useWorkspaceStore } from '../stores/workspace'
 import { downloadText, exportConversation } from '../utils/export'
+import { isPolicyDenied } from '../utils/errors'
 
 interface Command {
   id: string
@@ -43,10 +44,9 @@ function exportCurrent(format: 'md' | 'json') {
     const done = downloadText(filename, content)
     ui.toast(t('chat.exportDone', { name: done.filename, dir: done.hint }), 'success')
   } catch (error) {
-    ui.toast(
-      t('chat.exportFailed', { msg: error instanceof Error ? error.message : String(error) }),
-      'error',
-    )
+    const msg = error instanceof Error ? error.message : String(error)
+    // DEBT-873（许可面口径）：下载被**安全策略**拦 ⇒ 不得显成「导出失败」（同 ChatHeader 口径）
+    ui.toast(isPolicyDenied(msg) ? t('errors.policyDenied') : t('chat.exportFailed', { msg }), 'error')
   }
 }
 

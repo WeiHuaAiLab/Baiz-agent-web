@@ -6,12 +6,23 @@ import { db } from '../../db'
 import { useSettingsStore } from '../../stores/settings'
 import { useMemoryStore } from '../../stores/memory'
 import type { MemoryScope } from '../../stores/settings'
+import type { MemoryFact } from '../../stores/memory'
+import { formatRelativeTime } from '../../utils/time'
 import Icon from '../common/Icon.vue'
 
 const { t } = useI18n()
 const settings = useSettingsStore()
 const memory = useMemoryStore()
 const memoryMsg = ref('')
+
+/**
+ * R2 波三（DEBT-876 · T8 记忆可解释性）：**"为何被记住"看得见**——
+ * 每条现形「来源」（哪次会话／哪个文件）＋「记住于」（什么时候）。
+ * 时间缺失（daemon 未给／解析失败 ⇒ 0）**明说"未标注"**，不显 1970 假时间。
+ */
+function factTime(fact: MemoryFact): string {
+  return fact.createdAt > 0 ? formatRelativeTime(fact.createdAt) : t('settings.memoryFactTimeUnknown')
+}
 
 /** MSG-3503 A9：真机面拉 daemon 真记忆（只回本人）；演示态保种子（零 RPC）。 */
 onMounted(() => {
@@ -108,9 +119,11 @@ async function clearMemory() {
       </p>
       <ul v-else-if="memory.facts.length" class="memory-fact-list">
         <li v-for="fact in memory.facts" :key="fact.id">
+          <!-- R2 波三（DEBT-876）：摘要＋**来源**＋**时间**三件齐——「记住了什么」与「为何记住」逐条现形 -->
           <div class="fact-main">
             <span class="fact-text">{{ fact.text }}</span>
-            <span class="fact-source">{{ fact.source }}</span>
+            <span class="fact-source">{{ t('settings.memoryFactSource') }}{{ fact.source }}</span>
+            <span class="fact-time">{{ t('settings.memoryFactTime') }}{{ factTime(fact) }}</span>
           </div>
           <button
             type="button"

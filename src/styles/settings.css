@@ -261,7 +261,9 @@
   font-size: 13px;
 }
 
-.fact-source {
+/* R2 波三（DEBT-876）：来源与时间同族——次级信息，同字号同色 */
+.fact-source,
+.fact-time {
   display: block;
   font-size: 11px;
   color: var(--muted);

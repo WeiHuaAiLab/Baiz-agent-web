@@ -1,5 +1,6 @@
 // 批0 命令翻译器：把小白看不懂的命令翻译成一句话人话。
 // 覆盖面：常用 CLI 命令（git/cargo/npm/pnpm/rustc 等）+ Baiz 工具调用。
+import { isPolicyDenied, POLICY_DENIED_HUMAN } from './errors'
 
 /** CLI 命令前缀 → 人话解释 */
 const CLI_RULES: Array<{ pattern: RegExp; text: string }> = [
@@ -66,7 +67,7 @@ export function translateCommand(input: string): string | null {
 }
 
 /** Baiz 工具调用 → 人话（与 message.ts 字幕同源风格，独立供工具行使用） */
-export function translateTool(toolName: string, success?: boolean): string | null {
+export function translateTool(toolName: string, success?: boolean, reason?: string): string | null {
   const zh: Record<string, string> = {
     shell_exec: '执行命令',
     cargo_test: '跑测试',
@@ -88,7 +89,13 @@ export function translateTool(toolName: string, success?: boolean): string | nul
   }
   const name = zh[toolName] ?? toolName
   if (!zh[toolName]) return null
-  if (success === false) return `${name}——这次没成，我换个方式继续`
+  // DEBT-873（许可面口径）：**策略拒绝**与**网络／服务失败**分开说。
+  // 旧式一律「没成，我换个方式继续」⇒ 把"被沙箱拒"说成可重试的失败，
+  // 用户等一个永远不会来的重试（真因＝要放行／要授权，不是换个方式）。
+  if (success === false) {
+    if (isPolicyDenied(reason)) return `${name}——${POLICY_DENIED_HUMAN}`
+    return `${name}——这次没成，我换个方式继续`
+  }
   if (success === true) return `${name}——这步完成了`
   return `${name}——正在做`
 }

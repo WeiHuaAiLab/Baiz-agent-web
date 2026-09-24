@@ -4,9 +4,9 @@ export default {
     placeholder: '输入问题，按 Enter 发送…', send: '发送',
     newSession: '新建会话', demoHint: '骨架演示 · mock 传输',
     empty: '发送第一条消息开始对话', emptyStart: '新建会话',
-    elapsed: '耗时',
-    // MSG-3503 A10：web_fetch 取件在途人话（抓网页期间不再"静止"）
-    fetchingWeb: '正在抓取网页…（单次取件受上界约束，超时即回人话）',
+    elapsed: '耗时', waitingSeconds: '已等 {n} 秒',
+    // MSG-3503 A10／R2 波三：**取件族**在途人话（抓网页／**联网搜索**）＋在途耗时读数
+    fetchingWeb: '正在抓取网页…（单次取件受上界约束，超时即回人话）', searchingWeb: '正在联网搜索…（单次取件受上界约束，超时即回人话）',
   modelPro: 'DeepSeek V4 Pro', modelFlash: 'DeepSeek V4 Flash',
   modelAuthTitle: '模型密钥无效／未授权', modelAuthReason: '服务端原因：{reason}', modelAuthModel: '当前模型：{model}',
   modelAuthGuide: '请在「设置 → 模型／凭据」重新填写该模型密钥（改完可直接重试上一条）。', modelAuthGoSettings: '去设置填写密钥', modelAuthRetry: '重试上一条', modelAuthChip: '模型密钥无效', modelAuthChipHint: '最近一次请求因模型密钥无效失败——点此去设置',
@@ -372,7 +372,7 @@ export default {
     autoDistill: '自动蒸馏',
     clearMemory: '清除本地记忆',
     memoryCleared: '已清除本地消息历史',
-    memoryFacts: '记忆内容',
+    memoryFacts: '记忆内容', memoryFactSource: '来源：', memoryFactTime: '记住于：', memoryFactTimeUnknown: '时间未标注',
     memoryFactsEmpty: '暂无记忆，与 Baiz Agent 对话后会自动沉淀',
     memoryLoading: '正在读取记忆…',
     memoryLoadFailed: '记忆读取失败',
@@ -470,6 +470,8 @@ export default {
     unauthorized: '未授权，请检查 API Key',
     sessionExpired: '登录已过期，请重新登录',
     kbNotConfigured: '知识库未连接——请到「设置 → 连接知识库」填写域名与 API Key',
+    /** **DEBT-873**：**被安全策略拒绝**——与「网络／服务失败」分开说＋写明下一步（放行／授权）；**终态**，不承诺重试 */
+    policyDenied: '这个操作被安全策略拒绝了（不是网络或服务故障，重试也不会变）——需要先放行：在审批卡上点「申请放行」，或到「设置 → 工作区」授权对应目录后再试',
     relogin: '重新登录',
     invalidParams: '请求参数错误',
     methodNotFound: '方法暂不支持',

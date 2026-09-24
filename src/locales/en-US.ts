@@ -4,7 +4,9 @@ export default {
     placeholder: 'Ask anything — press Enter to send…', send: 'Send',
     newSession: 'New session', demoHint: 'Skeleton demo · mock transport',
     empty: 'Send a message to start', emptyStart: 'New session',
-    elapsed: 'took',
+    elapsed: 'took', waitingSeconds: 'waiting {n}s',
+    // MSG-3503 A10 / wave-3: in-flight line for the **fetch family** (page fetch / **web search**) + elapsed readout
+    fetchingWeb: 'Fetching the page… (each fetch is bounded; on timeout you get a plain-language reply)', searchingWeb: 'Searching the web… (each fetch is bounded; on timeout you get a plain-language reply)',
   modelPro: 'DeepSeek V4 Pro', modelFlash: 'DeepSeek V4 Flash',
   modelAuthTitle: 'Model API key invalid / unauthorized', modelAuthReason: 'Server said: {reason}', modelAuthModel: 'Current model: {model}',
   modelAuthGuide: 'Re-enter this model key in Settings → Model / credentials (then retry the last turn).', modelAuthGoSettings: 'Open settings', modelAuthRetry: 'Retry last turn', modelAuthChip: 'Model key invalid', modelAuthChipHint: 'Last request failed: model key invalid — click to open settings',
@@ -369,7 +371,7 @@ export default {
     autoDistill: 'Auto distillation',
     clearMemory: 'Clear local memory',
     memoryCleared: 'Local message history cleared',
-    memoryFacts: 'Memory',
+    memoryFacts: 'Memory', memoryFactSource: 'From: ', memoryFactTime: 'Remembered: ', memoryFactTimeUnknown: 'time not recorded',
     memoryFactsEmpty: 'No memory yet. Facts will accumulate as you talk with Baiz Agent',
     pickDir: 'Choose folder',
     // DEBT-743 (MSG-3168): knowledge-base connection — base URL + API key persisted locally
@@ -467,6 +469,8 @@ export default {
     unauthorized: 'Unauthorized. Check the API key',
     sessionExpired: 'Session expired. Please sign in again',
     kbNotConfigured: 'Knowledge base not connected — set host and API key in Settings → Knowledge base connection',
+    /** **DEBT-873**: blocked by the security policy — distinct from network/service failure, states the next step; terminal (never promises a retry) */
+    policyDenied: 'The security policy blocked this action (not a network or service failure, and retrying will not change it) — grant clearance first: tap "Request clearance" on the approval card, or authorize the target folder in Settings → Workspace, then try again',
     relogin: 'Sign in again',
     invalidParams: 'Invalid parameters',
     methodNotFound: 'Method not supported',
