@@ -28,9 +28,10 @@ export function fnv1a64Hex(input: string): string {
   return hash.toString(16).padStart(16, '0')
 }
 
-/** 同一账号可能出现的**全部字面**（去重·保序）：原字面 ＋（邮箱形时）归一形 */
-export function canonicalAccountLiterals(userId: string): string[] {
-  const id = userId.trim()
+/** 同一账号可能出现的**全部字面**（去重·保序）：原字面 ＋（邮箱形时）归一形。
+ *  **MSG-3592 P0**：入参允许 `undefined`（层错／缺字段面）——兜底空串，禁抛。 */
+export function canonicalAccountLiterals(userId: string | undefined | null): string[] {
+  const id = (userId ?? '').trim()
   if (!id) return []
   const out = [id]
   if (id.includes('@')) {
@@ -69,8 +70,8 @@ function writeAliasMap(map: AliasMap): void {
  * 命中既有别名 ⇒ 直接复用（**字面漂移不影响库名**）；未命中 ⇒ 以 `accountSegment()` 现算一段，
  * 并把该账号的**全部字面**登记到同一条目（先来先定·幂等）。
  */
-export function stableAccountSegment(userId: string): string {
-  const id = userId.trim()
+export function stableAccountSegment(userId: string | undefined | null): string {
+  const id = (userId ?? '').trim()
   if (!id) return ''
   const map = readAliasMap()
   const literals = canonicalAccountLiterals(id)
@@ -103,9 +104,12 @@ export function readAccountAliases(): AliasMap {
  * ⇒ 之后任一字面登录，`stableAccountSegment()` 恒得**同一段**（既有库名零漂移）。
  * 启动持久径（壳身份态只回 `userId`）**只读**别名表，不另造来源。
  */
-export function rememberAccountLogin(email: string, userId: string): string {
-  const mail = email.trim()
-  const uid = userId.trim()
+export function rememberAccountLogin(
+  email: string | undefined | null,
+  userId: string | undefined | null,
+): string {
+  const mail = (email ?? '').trim()
+  const uid = (userId ?? '').trim()
   const primary = uid || mail
   if (!primary) return ''
   const seg = stableAccountSegment(primary)
@@ -123,8 +127,8 @@ export function rememberAccountLogin(email: string, userId: string): string {
  *      `rememberAccountLogin()` 记下）。
  * 仅供**只读并读**用：写径恒走 `dbNameFor(当前字面)`（`stableAccountSegment`），不受本件影响。
  */
-export function accountReadLiterals(userId: string): string[] {
-  const id = userId.trim()
+export function accountReadLiterals(userId: string | undefined | null): string[] {
+  const id = (userId ?? '').trim()
   if (!id) return []
   const out: string[] = []
   const push = (value: string) => {

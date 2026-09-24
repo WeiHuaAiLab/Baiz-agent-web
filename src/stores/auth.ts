@@ -107,7 +107,7 @@ export const useAuthStore = defineStore("auth", {
      * 桥未通（旧壳／纯 web）⇒ 诚实空。**重载失败上抛**（由调用方显式上屏，禁静默）。
      */
     async ensureIdentityUserId(): Promise<string> {
-      if (this.userId.trim()) return this.userId;
+      if ((this.userId ?? "").trim()) return this.userId;
       if (!this.sessionToken && !this.persisted) return "";
       let st: { loggedIn: boolean; userId: string } | null = null;
       try {
@@ -153,7 +153,11 @@ export const useAuthStore = defineStore("auth", {
         await client.connect();
         const result = await client.authLogin({ email, password });
         this.sessionToken = result.session_token;
-        this.userId = result.user_id;
+        // **MSG-3592 P0（兜底）**：响应缺 `user_id`（或层错未修期）不得把 `undefined` 传下去
+        // ——旧口径直接赋值 ⇒ 下游 `rememberAccountLogin(email, undefined)` 抛
+        // `…reading 'trim'` ＝ 老板真机「登录即崩」。空 ⇒ 空串（**不猜**；与 daemon 侧
+        // `user_id.unwrap_or(email)` 同向：此处留空，由别名写入点按**邮箱形**兜底）。
+        this.userId = String(result.user_id ?? "");
         this.persisted = false;
         // MSG-3485：库面切到本账号（分段库）＋账号键落地（重载续用），
         // 并清掉上一账号的内存残留后按本账号重载列表。
