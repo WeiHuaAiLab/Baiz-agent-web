@@ -351,7 +351,7 @@ export default {
     autoDistill: 'Auto distillation',
     clearMemory: 'Clear local memory',
     memoryCleared: 'Local message history cleared',
-    memoryFacts: 'Memory', memoryFactSource: 'From: ', memoryFactTime: 'Remembered: ', memoryFactTimeUnknown: 'time not recorded',
+    memoryFacts: 'Memory', memoryFactSource: 'From: ', memoryFactTime: 'Remembered: ', memoryFactTimeUnknown: 'time not recorded', memoryFactSourceUnknown: 'not recorded',
     memoryFactsEmpty: 'No memory yet. Facts will accumulate as you talk with Baiz Agent',
     pickDir: 'Choose folder',
     // DEBT-743 (MSG-3168): knowledge-base connection — base URL + API key persisted locally
@@ -464,6 +464,9 @@ export default {
     /** MSG-3340 A3: reachable entry to "Knowledge base connection" while signed out */
     goKbSetup: 'Configure knowledge base',
   },
+  // Supplemental seat B (KIMI item ②-b): sign-in face copy — was hard-coded Chinese in
+  // stores/auth.ts + utils/authFailure.ts (en-US users saw Chinese); one line, loc红线吃紧.
+  login: { needAccount: 'Enter your account', badAccount: 'That account looks wrong — enter a full email, e.g. you@example.com', needPassword: 'Enter your password', failed: 'Sign-in failed. Check your account and password', unreachable: 'Cannot reach the service (network down or the service is temporarily unavailable) — check your network and try again' },
   palette: {
     placeholder: 'Search commands…',
     empty: 'No matching commands',

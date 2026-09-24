@@ -352,7 +352,7 @@ export default {
     autoDistill: '自动蒸馏',
     clearMemory: '清除本地记忆',
     memoryCleared: '已清除本地消息历史',
-    memoryFacts: '记忆内容', memoryFactSource: '来源：', memoryFactTime: '记住于：', memoryFactTimeUnknown: '时间未标注',
+    memoryFacts: '记忆内容', memoryFactSource: '来源：', memoryFactTime: '记住于：', memoryFactTimeUnknown: '时间未标注', memoryFactSourceUnknown: '未标注',
     memoryFactsEmpty: '暂无记忆，与 Baiz Agent 对话后会自动沉淀',
     memoryLoading: '正在读取记忆…',
     memoryLoadFailed: '记忆读取失败',
@@ -464,6 +464,11 @@ export default {
     /** MSG-3340 A3：未登录态也有一条到「连接知识库」的可点入口 */
     goKbSetup: '去配置知识库',
   },
+  // 补席 B（KIMI 点名②-b）：**登录面文案**——改前硬编码在 `stores/auth.ts`／`utils/authFailure.ts`，
+  // en-US 用户看中文。本文件紧贴 loc 红线，照本文件惯例一行多键。
+  // （`unreachable` 与 `errors.network` **分家**：后者是 RPC 面通用句且含"daemon／网关"内部术语，
+  //   登录页要的是"连不上服务＋下一步"，不是让用户去查网关。）
+  login: { needAccount: '请输入账号', badAccount: '账号格式不对——请填完整邮箱，例如 you@example.com', needPassword: '请输入密码', failed: '登录失败，请检查账号密码', unreachable: '连不上服务（网络不通或服务端暂时不可用）——请检查网络后重试' },
   palette: {
     placeholder: '搜索命令…',
     empty: '无匹配命令',

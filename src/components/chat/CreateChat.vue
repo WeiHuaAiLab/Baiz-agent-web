@@ -102,6 +102,18 @@ async function submitCreateFromComposer() {
   if (!text) return
   const projectId = pickedProjectId.value || undefined
   if (ui.createMode === 'session') {
+    // T11／DEBT-872 **补闸**（补席 B 点名①）：超限件 ⇒ **不发、不清场**——与
+    // `ChatInput.sendWith` 同口径（同句人话 `chat.attNotSendable`）。改前本径**不查**
+    // `files.attachmentsSendable` ⇒ 超限件以元信息形态（无内容、只剩 name/size）照样随
+    // `sendUserMessage` 上送：附件行明明写着"超限·不可发送"，本页发送钮却只按 `!text.trim()`
+    // 判禁（管不到附件）⇒ 回车／表单提交照发。
+    // 位置在 `session.create` **之前**：否则先建出一条会话、首条消息却被闸掉 ⇒
+    // 屏上留一条空会话（"会话建了、内容没了"），比拦下更糟。
+    // 任务径（`createMode === 'task'`）不上送附件（`workspace.addPlainTask` 只落文本）⇒ 不设此闸。
+    if (!files.attachmentsSendable) {
+      ui.toast(t('chat.attNotSendable'), 'error')
+      return
+    }
     const id = await session.create(text, projectId)
     // MSG-2581 修④：closeCreate 先行（创建确认即时关弹层——跳转不卡）——
     // 首条消息发送降耦（void 后台化——勿 await 阻塞；与 ChatInput.sendWith

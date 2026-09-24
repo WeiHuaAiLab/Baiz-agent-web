@@ -20,7 +20,9 @@ import {
   setDbAccount,
   storeAccount,
 } from "../db";
-import { isIdentityMissing, maskedReason } from "../utils/authFailure";
+import { isIdentityMissing, isTransportFailure, maskedReason } from "../utils/authFailure";
+// 补席 B（KIMI 点名②-b）：败词走 i18n（改前硬编码中文 ⇒ en-US 用户看中文）
+import { t } from "../locales/runtime";
 
 const TOKEN_KEY = "baiz_session_token";
 
@@ -198,10 +200,19 @@ export const useAuthStore = defineStore("auth", {
         // token/密钥类勿上屏回落通用词
         const raw = e instanceof Error ? e.message : String(e);
         const detail = raw.replace(/^RPC -?\d+: /, '');
+        // 补席 B（KIMI 点名②-a）：**网络错／5xx ⇒ 人话**——改前此处一律照透原文，
+        // `Failed to fetch`／`http stream failed: 500`／`transport not connected`／
+        // `未连接本地服务：…VITE_BAIZ_GATEWAY…` 全都糊在登录页上（机器语＋环境变量名），
+        // 用户看不出"是网络问题还是我密码错了"。判据见 `utils/authFailure.ts` 的
+        // `isTransportFailure`（逐字面型，不动"账号密码错"那族的分流）。
+        if (isTransportFailure(detail)) {
+          this.error = t("login.unreachable");
+          return false;
+        }
         this.error =
           detail && !/mock|password|token|secret|key/i.test(detail)
             ? detail
-            : '登录失败，请检查账号密码';
+            : t("login.failed");
         return false;
       } finally {
         this.loading = false;

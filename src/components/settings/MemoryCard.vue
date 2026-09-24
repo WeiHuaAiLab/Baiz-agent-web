@@ -24,6 +24,15 @@ function factTime(fact: MemoryFact): string {
   return fact.createdAt > 0 ? formatRelativeTime(fact.createdAt) : t('settings.memoryFactTimeUnknown')
 }
 
+/**
+ * 补席 B（KIMI 点名③）：**来源缺字段也不留白**——daemon 若没回 `source`（或回空串／null），
+ * 改前直出 `{{ fact.source }}` ⇒ 屏上只剩"来源："两个光秃秃的字（看着像渲染坏了），
+ * 甚至可能显 `undefined`。与 `factTime` **同口径**：缺失明说"未标注"。
+ */
+function factSource(fact: MemoryFact): string {
+  return String(fact.source ?? '').trim() || t('settings.memoryFactSourceUnknown')
+}
+
 /** MSG-3503 A9：真机面拉 daemon 真记忆（只回本人）；演示态保种子（零 RPC）。 */
 onMounted(() => {
   if (settings.demoMode) memory.seedDemo()
@@ -122,7 +131,7 @@ async function clearMemory() {
           <!-- R2 波三（DEBT-876）：摘要＋**来源**＋**时间**三件齐——「记住了什么」与「为何记住」逐条现形 -->
           <div class="fact-main">
             <span class="fact-text">{{ fact.text }}</span>
-            <span class="fact-source">{{ t('settings.memoryFactSource') }}{{ fact.source }}</span>
+            <span class="fact-source">{{ t('settings.memoryFactSource') }}{{ factSource(fact) }}</span>
             <span class="fact-time">{{ t('settings.memoryFactTime') }}{{ factTime(fact) }}</span>
           </div>
           <button
