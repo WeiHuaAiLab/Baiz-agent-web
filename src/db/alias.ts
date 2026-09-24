@@ -94,3 +94,50 @@ export function stableAccountSegment(userId: string): string {
 export function readAccountAliases(): AliasMap {
   return { ...readAliasMap() }
 }
+
+/**
+ * **MSG-3573 · P2（前端读径并读）①**：**登录成功时的唯一别名写入点**。
+ *
+ * 别名来源（令 §一 要求「先钉一处」）＝**登录响应**：前端在 `auth.login()` 里同时拿到
+ * 「用户输入的邮箱字面」与「daemon 回的 `user_id`（归一形）」，二者经本函数并入**同一条目**
+ * ⇒ 之后任一字面登录，`stableAccountSegment()` 恒得**同一段**（既有库名零漂移）。
+ * 启动持久径（壳身份态只回 `userId`）**只读**别名表，不另造来源。
+ */
+export function rememberAccountLogin(email: string, userId: string): string {
+  const mail = email.trim()
+  const uid = userId.trim()
+  const primary = uid || mail
+  if (!primary) return ''
+  const seg = stableAccountSegment(primary)
+  // 另一形（邮箱形）也登记到同一条目——两形此后恒落同一库名段
+  if (mail && mail !== primary) stableAccountSegment(mail)
+  return seg
+}
+
+/**
+ * **MSG-3573 · P2（前端读径并读）②**：当前账号在读径上**可用的全部字面**（去重·保序）。
+ *
+ * 取值口径（**唯一取值点**）：
+ *   ① `canonicalAccountLiterals(id)`——字面本身 ＋（邮箱形时）`x-h-<FNV-1a64>` 归一形；
+ *   ② **别名表反查**——与 `id` 同段的其它字面（例：历史邮箱形；登录时经
+ *      `rememberAccountLogin()` 记下）。
+ * 仅供**只读并读**用：写径恒走 `dbNameFor(当前字面)`（`stableAccountSegment`），不受本件影响。
+ */
+export function accountReadLiterals(userId: string): string[] {
+  const id = userId.trim()
+  if (!id) return []
+  const out: string[] = []
+  const push = (value: string) => {
+    const lit = value.trim()
+    if (lit && !out.includes(lit)) out.push(lit)
+  }
+  canonicalAccountLiterals(id).forEach(push)
+  const map = readAliasMap()
+  const seg = map[id]
+  if (seg) {
+    for (const [lit, value] of Object.entries(map)) {
+      if (value === seg) push(lit)
+    }
+  }
+  return out
+}

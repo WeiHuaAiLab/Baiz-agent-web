@@ -7,7 +7,6 @@ import { useI18n } from 'vue-i18n'
 import { type TaskItem } from '../../stores/workspace'
 import { useUiStore } from '../../stores/ui'
 import { useAuthStore } from '../../stores/auth'
-import { isIdentityMissing } from '../../utils/authFailure'
 import { useRouter } from 'vue-router'
 import { getClient } from '../../client/singleton'
 import {
@@ -34,9 +33,10 @@ const session = useSessionStore()
 /** MSG-3558 ③（老板 2026-09-24）：**未登录面（空 uid）**不得伪装成"你没建过"——
  *  daemon 侧对空账号 `schedule.list` 返**空表**（fail-closed），若照旧渲染空态，
  *  用户只会看到「暂无定时任务」而永远不知道该去登录。 */
-// 口径：**已持令牌但身份未建立**（daemon 空 uid 面）——纯未登录态由登录闸/reouter 处理，
-// 故这里以 `loggedIn && 空 uid` 为判（既有"scheduledView 空表 ⇒ 空态"用例不受扰）。
-const identityMissing = computed(() => auth.loggedIn && isIdentityMissing(auth.userId))
+// 口径：**已持令牌但身份未建立**（daemon 空 uid 面）——纯未登录态由登录闸/route 处理。
+// **MSG-3573 P1甲**：判据收口到 `auth.identityMissing`——**持久面命中（壳已认身份）而 uid
+// 暂空不再判「身份未建立」**（旧口径在此恒真＝假提示），改由 `ensureIdentityUserId()` 补 uid。
+const identityMissing = computed(() => auth.identityMissing)
 
 function goLogin() {
   void router.push('/login')
@@ -151,7 +151,14 @@ function createNew() {
 }
 
 let offSchedule: (() => void) | null = null
-onMounted(() => {
+onMounted(async () => {
+  // **MSG-3573 P1甲**：先补 uid（持久面 uid 暂空 ⇒ 再取一次壳身份态＋切库面＋重载本账号
+  // 列表），再拉 daemon 任务表——否则列表按"账号未知"落 `baiz-anon` 空表＝"像全新的"。
+  try {
+    await auth.ensureIdentityUserId()
+  } catch (e) {
+    loadError.value = humanizeRpcError(e)
+  }
   void load()
   offSchedule = onScheduleChanged(() => void load())
 })

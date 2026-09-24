@@ -1,6 +1,6 @@
 // 会话 store：会话 CRUD、置顶排序、草稿清理，IndexedDB 持久化。
 import { defineStore } from "pinia";
-import { db, legacyDbSummary } from "../db";
+import { db, currentDbAccount, legacyDbSummary, readConversationsUnion } from "../db";
 import { importLegacyIntoCurrent, isImported } from "../db/migrate";
 import type { Conversation } from "../models";
 
@@ -72,7 +72,9 @@ export const useSessionStore = defineStore("session", {
             } catch (error) {
                 console.warn("[baiz] 旧库只增导入失败（不影响本次加载）", error);
             }
-            const rows = await db.conversations.toArray();
+            // **MSG-3573 P2**：读径＝同账号**两字面形并读**（当前稳定段库优先＋各字面旧口径段库
+            // 只读并入·同 id 去重）；写径仍落当前形（`db` 懒门面）——零删除、零改写、零新建。
+            const rows = await readConversationsUnion(currentDbAccount());
             rows.sort((a, b) => {
                 const pinnedA = a.pinnedAt ?? 0;
                 const pinnedB = b.pinnedAt ?? 0;

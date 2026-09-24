@@ -1,11 +1,10 @@
 <script setup lang="ts">
 // 侧栏「聊天」Tab：新建会话入口 + 项目列表 + 最近会话（搜索/折叠/列表）。
-import { computed, ref } from 'vue'
+import { computed, onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import { useSessionStore } from '../../stores/session'
 import { useAuthStore } from '../../stores/auth'
-import { isIdentityMissing } from '../../utils/authFailure'
 import { useUiStore } from '../../stores/ui'
 import Icon from '../common/Icon.vue'
 import ProjectList from './chat/ProjectList.vue'
@@ -18,8 +17,18 @@ const auth = useAuthStore()
 const ui = useUiStore()
 
 /** MSG-3558 ③：未登录面（空 uid）——侧栏会话列表须显式提示，不得以空态呈现 */
-/** 口径同 ScheduledView：**已持令牌但身份未建立**（空 uid）才提示，纯未登录由登录闸处理 */
-const identityMissing = computed(() => auth.loggedIn && isIdentityMissing(auth.userId))
+/** 口径同 ScheduledView：**已持令牌但身份未建立**（空 uid）才提示，纯未登录由登录闸处理。
+ *  **MSG-3573 P1甲**：判据收口到 `auth.identityMissing`——持久面命中而 uid 暂空**不再**
+ *  判「身份未建立」（旧口径在此恒真＝假提示）。 */
+const identityMissing = computed(() => auth.identityMissing)
+
+onMounted(() => {
+  // **MSG-3573 P1甲**：持久面 uid 暂空 ⇒ 再取一次壳身份态（补齐即切库面并重载本账号会话
+  // 列表——侧栏与主区同源，一处补齐两处都回）；失败**显式上屏人话**，禁静默。
+  void auth.ensureIdentityUserId().catch((e) => {
+    ui.toast(e instanceof Error ? e.message : String(e), 'error')
+  })
+})
 
 function goLogin() {
   void router.push('/login')
