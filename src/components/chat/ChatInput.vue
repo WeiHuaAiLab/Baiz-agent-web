@@ -26,6 +26,7 @@ import {
 } from "../../utils/commandTranslator";
 import Icon from "../common/Icon.vue";
 import TaskForm from "../common/TaskForm.vue";
+import ApprovalConfirmBar from "./ApprovalConfirmBar.vue";
 
 const emit = defineEmits<{ (e: "submitted"): void }>();
 
@@ -321,6 +322,10 @@ watch(
     </div>
 
     <div class="chat-input">
+        <!-- 待审批消息栏：SSE 推送 approval.required 帧后挂出 pending 行；
+        approvals.pending 是全局队列，agent 走到待批工具时即使在别的会话
+        也能看到并处理（不必滚回原 ApprovalCard）。空时不渲染。 -->
+        <ApprovalConfirmBar />
         <form
             ref="composerRef"
             class="composer composer-block"
@@ -331,6 +336,7 @@ watch(
             @dragleave="onDragLeave"
             @drop="onDrop"
         >
+            <!-- 附件容器区域 -->
             <div v-if="files.attachments.length" class="attachment-row">
                 <div
                     v-for="att in files.attachments"
@@ -368,6 +374,7 @@ watch(
                 </div>
             </div>
 
+            <!-- 输入框的区域 -->
             <div class="composer-input">
                 <textarea
                     v-model="input"

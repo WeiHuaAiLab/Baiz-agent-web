@@ -542,6 +542,179 @@
   padding-bottom: 10px;
 }
 
+/* 待审批消息栏（ApprovalConfirmBar，挂在 .chat-input 顶部）：
+   顶部呼吸 8px——与下方 .composer 的 padding-top 节奏一致；
+   多条 pending 时纵向堆叠，每条折叠态 40px；max-height 封顶 160px
+   （超出滚动）避免压扁输入框；max-width 沿用 --chat-content-width
+   与 .composer 同宽对齐。 */
+.approval-confirm {
+  width: 100%;
+  max-width: var(--chat-content-width);
+  margin: 0 auto 0;
+  padding: 8px 0 0;
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  background: var(--code-bg);
+  overflow: hidden;
+  box-shadow:
+    0 -12px 24px rgba(0, 0, 0, 0.07),
+    inset 0 1px 2px rgba(0, 0, 0, 0.04);
+}
+
+.approval-confirm-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 12px;
+  border-bottom: 1px solid var(--border);
+  font-size: 12px;
+  color: var(--muted);
+}
+
+.approval-confirm-title {
+  font-weight: 600;
+  color: var(--text);
+  font-size: 13px;
+}
+
+.approval-confirm-count {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 18px;
+  height: 18px;
+  padding: 0 6px;
+  border-radius: 999px;
+  background: var(--accent);
+  color: var(--accent-contrast);
+  font-size: 11px;
+  font-weight: 600;
+  font-family: 'Cascadia Code', Consolas, monospace;
+}
+
+.approval-confirm-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  max-height: 160px;
+  overflow-y: auto;
+}
+
+.needApprovalListItem {
+  border-bottom: 1px solid var(--border);
+}
+
+.needApprovalListItem:last-child {
+  border-bottom: none;
+}
+
+.approval-confirm-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0 12px;
+  min-height: 40px;
+  cursor: pointer;
+  font-size: 13px;
+}
+
+.approval-confirm-row:hover {
+  background: var(--hover);
+}
+
+.approval-confirm-tool {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-family: 'Cascadia Code', Consolas, monospace;
+  font-weight: 600;
+}
+
+/* 复用 ApprovalCard 的 .risk 三档色，与全局风险展示保持一致 */
+.approval-confirm-row .risk {
+  flex: none;
+  padding: 2px 8px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 600;
+}
+
+.approval-confirm-row .risk.high {
+  background: rgba(192, 57, 43, 0.12);
+  color: #c0392b;
+}
+
+.approval-confirm-row .risk.medium {
+  background: rgba(245, 158, 11, 0.14);
+  color: #b45309;
+}
+
+.approval-confirm-row .risk.low {
+  background: rgba(34, 197, 94, 0.14);
+  color: #15803d;
+}
+
+.approval-confirm-toggle {
+  flex: none;
+  color: var(--muted);
+  font-family: monospace;
+  width: 14px;
+  text-align: center;
+}
+
+.approval-confirm-actions {
+  display: flex;
+  gap: 6px;
+  flex: none;
+}
+
+.approval-confirm-actions button {
+  border: none;
+  border-radius: 8px;
+  padding: 5px 12px;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.approval-confirm-actions .approve {
+  background: var(--accent);
+  color: var(--accent-contrast);
+}
+
+.approval-confirm-actions .deny {
+  background: transparent;
+  color: var(--text);
+  border: 1px solid var(--border);
+}
+
+.approval-confirm-actions .deny:hover {
+  background: var(--hover);
+}
+
+.approval-confirm-actions button:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+.approval-confirm-details {
+  margin: 0;
+  padding: 8px 12px 12px;
+  border-top: 1px solid var(--border);
+  background: var(--panel);
+  color: var(--muted);
+  font-size: 12px;
+  font-family: 'Cascadia Code', Consolas, monospace;
+  white-space: pre-wrap;
+  word-break: break-word;
+  max-height: 160px;
+  overflow: auto;
+  scrollbar-width: thin;
+  scrollbar-color: var(--scrollbar-thumb) transparent;
+}
+
 .composer {
   display: flex;
   flex-direction: column;

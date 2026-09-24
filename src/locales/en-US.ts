@@ -369,6 +369,7 @@ export default {
   },
   approval: {
     title: 'Approval',
+    pendingTitle: 'Pending approval',
     approve: 'Approve',
     deny: 'Deny',
     approved: '✓ Approved',

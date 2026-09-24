@@ -368,6 +368,7 @@ export default {
   },
   approval: {
     title: '审批',
+    pendingTitle: '待审批',
     approve: '同意',
     deny: '拒绝',
     approved: '✓ 已批准',

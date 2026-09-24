@@ -192,6 +192,22 @@ function makeMessage(
 
 export type MessageStore = ReturnType<typeof useMessageStore>
 
+/** run 终态集合：status 落到这三者即"已收束"。daemon 的 TaskStatus 是开放
+ *  枚举（running / queued / pending / waiting_approval 等中间态），判定"是否
+ *  还活着"一律用本集合做黑名单——凡不是终态都算活，未来 daemon 新增任何
+ *  中间状态自动兼容，不会再出现「只认 running、把 waiting_approval 误判
+ *  成已收束」导致流式尾条消失 / 停止键失效 / 折叠组提前折叠的一类 bug。 */
+export const TERMINAL_RUN_STATUSES: ReadonlySet<string> = new Set([
+  'completed',
+  'failed',
+  'cancelled',
+])
+
+/** run 是否已收束（终态）。无 run 记录视为已收束（历史/被 trim）。 */
+export function isRunTerminal(status: string | undefined): boolean {
+  return !status || TERMINAL_RUN_STATUSES.has(status)
+}
+
 export const useMessageStore = defineStore('message', {
   state: () => ({
     byConversation: {} as Record<string, ChatMessage[]>,
@@ -215,8 +231,10 @@ export const useMessageStore = defineStore('message', {
       await db.messages.add(cloneForDb(message))
     },
     activeRuns(conversationId: string): RunState[] {
+      // 终态黑名单而非 === 'running'：waiting_approval（审批等待期）也是活 run
+      // ——流式尾条须继续渲染，否则审批一挂出尾条就消失、会话看起来像被收束
       return Object.values(this.runs).filter(
-        (run) => run.conversationId === conversationId && run.status === 'running',
+        (run) => run.conversationId === conversationId && !isRunTerminal(run.status),
       )
     },
     /** queued→running 翻转守卫：daemon 端 FIFO 启动时 task.updated 首帧可
@@ -332,7 +350,9 @@ export const useMessageStore = defineStore('message', {
     stopRun(taskId: string) {
       this.flushRun(taskId)
       const run = this.runs[taskId]
-      if (!run || run.status !== 'running') return
+      // 终态黑名单而非 === 'running'：waiting_approval（审批等待期）也允许停止
+      // ——否则卡在审批上的 run 无法中止，停止键失效
+      if (!run || isRunTerminal(run.status)) return
       // MSG-2318 A-2：停止键接 task.cancel——复用 chatQueueCancel
       // （index.ts 2311 已映射 task.cancel 真径）；本地清面照留；
       // 请求失败留痕不扰本地（cancelled 守卫已挡后续帧，daemon 侧自然收束）
@@ -558,6 +578,15 @@ export const useMessageStore = defineStore('message', {
       }
     },
     onApprovalResolved(data: { request_id: string; approved: boolean }) {
+      // 审批回执观测日志：确认 daemon 推送时 approved 的原始值与时机——
+      // 若用户未点审批却收到 approved: false（daemon 超时自动拒绝 / 断连
+      // 兜底拒绝），在此一眼可见。排查完可移除。
+      console.info(
+        '[baiz] approval.resolved 帧到达',
+        JSON.stringify({ ...data, at: new Date().toISOString() }),
+        '→ 写入消息',
+        JSON.stringify({ messageId: this.requestToMessage[data.request_id] }),
+      )
       const messageId = this.requestToMessage[data.request_id]
       if (messageId) {
         // P3 顺手修：按 requestToConversation 直接定位，避免线性扫描全部会话

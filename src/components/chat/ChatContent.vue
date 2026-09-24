@@ -5,7 +5,7 @@ import { computed, nextTick, onBeforeUnmount, ref, watch } from 'vue'
 import { DynamicScroller, DynamicScrollerItem } from 'vue-virtual-scroller'
 import { useI18n } from 'vue-i18n'
 import { useSessionStore } from '../../stores/session'
-import { useMessageStore } from '../../stores/message'
+import { useMessageStore, isRunTerminal } from '../../stores/message'
 import { useSettingsStore } from '../../stores/settings'
 import { useUiStore } from '../../stores/ui'
 import { getBridge } from '../../bridge'
@@ -160,14 +160,16 @@ function isToolGroup(item: DisplayItem): item is ToolGroup {
 // 折叠门槛：连续 tool_call ≥ 3 条才收起（不足则逐条散开，行为与既有会话完全一致）
 const TOOL_GROUP_MIN = 3
 
-/** 「思考完毕」判定：该 tool_call 所属 run 是否已收束（不再 running/queued）。
+/** 「思考完毕」判定：该 tool_call 所属 run 是否已收束（终态）。
  *  未收束 = 流式进行中 —— 此时保持逐条散开（尾流期不折叠，让用户看到实时操作）；
- *  run 已被 trim 或从未登记（从 DB 载入的历史消息）一律视为已收束。 */
+ *  run 已被 trim 或从未登记（从 DB 载入的历史消息）一律视为已收束。
+ *  用终态黑名单而非 === 'running'：waiting_approval（审批等待期）仍是活 run
+ *  ——该期间工具链不应折叠（与 activeRuns / stopRun 同源修复）。 */
 function isRunSettled(taskId?: string): boolean {
   if (!taskId) return true
   const run = messages.runs[taskId]
   if (!run) return true
-  return run.status !== 'running' && run.status !== 'queued'
+  return isRunTerminal(run.status)
 }
 
 /** 折叠组摘要：工具名去重保序（同一工具反复调用时不重复堆字） */

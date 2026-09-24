@@ -68,6 +68,7 @@ function parsePatch(patch: string): DiffLine[] {
   return lines
 }
 
+// 审批
 async function decide(approved: boolean) {
   if (!props.message.meta?.requestId || working.value) return
   working.value = true
