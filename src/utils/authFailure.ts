@@ -6,6 +6,9 @@
 //   · **禁用**「回复为空」「超时」冒充鉴权失败（本件对二者恒返回 false）；
 //   · **禁把密钥原文上屏**：原因片段一律经 `maskedReason()` 过一遍（服务端已掩码形态照旧保留）。
 
+// 补席 B（KIMI 点名②-b）：登录面文案走 i18n（改前硬编码中文 ⇒ en-US 用户看中文）
+import { t } from '../locales/runtime'
+
 /** 鉴权/授权类字面（401/403/Unauthorized/invalid）——须与 engine 分型词**同时**命中 */
 const AUTH_TOKEN = /(?:^|[^0-9])(401|403)(?:[^0-9]|$)|unauthorized|invalid/i
 /** engine 一类分型词（防"空回复/超时"冒充） */
@@ -86,10 +89,64 @@ export function isObviouslyInvalidAccount(raw: string): boolean {
 /**
  * 登录表单校验（纯函数·可机判）：**空串＝通过**；否则返回**人话**（组件直接上屏）。
  * 顺序固定：先账号后口令——一次只说一条，免得两句同时挂着让人不知道先改哪个。
+ *
+ * 补席 B（KIMI 点名②-b）：三句**走 i18n**（`login.*`）——改前是硬编码中文，
+ * en-US 用户切了语言、登录页仍出中文（＝文案没走 i18n）。判据面**零行为变化**：
+ * 未登记 i18n 面（单测）按 `locales/runtime.ts` 口径回落 zh-CN 源文案，字面与改前逐字一致。
  */
 export function validateLoginInput(account: string, password: string): string {
-  if (!String(account ?? '').trim()) return '请输入账号'
-  if (isObviouslyInvalidAccount(account)) return '账号格式不对——请填完整邮箱，例如 you@example.com'
-  if (!String(password ?? '').trim()) return '请输入密码'
+  if (!String(account ?? '').trim()) return t('login.needAccount')
+  if (isObviouslyInvalidAccount(account)) return t('login.badAccount')
+  if (!String(password ?? '').trim()) return t('login.needPassword')
   return ''
+}
+
+// ── 补席 B（KIMI 点名②-a）：登录失败的**传输面／5xx** 分型 ──
+//
+// 病灶：`stores/auth.ts:199-204` 把 `e.message`（剥 RPC 前缀后）**原样透传上屏**，
+// 只在命中 `mock|password|token|secret|key` 时才回落通用词 ⇒ 下列机器语**照上屏**：
+//   · web 径 fetch 失败 ⇒ `Failed to fetch`（浏览器英文原话，用户看不懂）；
+//   · `/stream` 非 2xx ⇒ `http stream failed: 500`（`client/transports/http.ts:57`）；
+//   · 壳未连通 ⇒ `transport not connected`（`client/transports/tauri.ts:174`）；
+//   · 未配网关且未开演示 ⇒ `未连接本地服务：…VITE_BAIZ_GATEWAY…`（`client/factory.ts:43,67`
+//     ——把环境变量名糊到用户脸上）；
+//   · 5xx 正文非 JSON ⇒ `response.json()` 解包即败（`http.ts:72`）：`Unexpected token '<' …`。
+// 这些**都不是**"账号密码错"，也不该让用户去猜 —— 一律转人话（`login.unreachable`）。
+//
+// 判据纪律：**逐字面型**（上列各条＋同族通用名）——照本仓 `utils/errors.ts` 的
+// `POLICY_DENIED_RE`／`authFailure.ts` 的 `ENGINE_HINT` 同法："看着像就归"一律禁。
+// **不**按裸数字判 5xx（`\b5\d\d\b` 会把"500 字节"这类计数误归 ⇒ 反而盖掉真因）。
+const TRANSPORT_FAILURE_RE = new RegExp(
+  [
+    'failed to fetch', // 浏览器 fetch 失败（网络不通／被拦／DNS）
+    'network\\s*error', // Firefox 实形 `NetworkError when attempting to fetch resource`／RN 同族
+    'network request failed',
+    'load failed', // Safari 同族
+    'http stream failed', // 本仓 http.ts:57（5xx 的 status 原文挂在此句尾）
+    'transport not connected', // 本仓 tauri.ts:174（壳未连通）
+    '未连接本地服务', // 本仓 factory.ts:43,67（未配网关、未开演示）
+    'econnrefused',
+    'etimedout',
+    'network is unreachable',
+    'connection refused',
+    'connection reset',
+    'connection closed',
+    'timed out',
+    'timeout',
+    '超时',
+    'unexpected token', // 5xx 非 JSON 正文 ⇒ json() 解包失败
+    'is not valid json',
+    'malformed rpc response', // 本仓 http.ts:77（应答不成形）
+  ].join('|'),
+  'i',
+)
+
+/**
+ * 是否「连不上服务／服务端没给出可用应答」一族（**非**账号密码错）。
+ * 纯函数·可机判；命中的调用方应上屏**人话**（`login.unreachable`），不得透传原文。
+ */
+export function isTransportFailure(text: string | undefined | null): boolean {
+  const raw = String(text ?? '')
+  if (!raw.trim()) return false
+  return TRANSPORT_FAILURE_RE.test(raw)
 }
