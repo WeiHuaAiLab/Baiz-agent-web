@@ -6,6 +6,9 @@ import { computed, onMounted, onBeforeUnmount, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { type TaskItem } from '../../stores/workspace'
 import { useUiStore } from '../../stores/ui'
+import { useAuthStore } from '../../stores/auth'
+import { isIdentityMissing } from '../../utils/authFailure'
+import { useRouter } from 'vue-router'
 import { getClient } from '../../client/singleton'
 import {
   humanizeRpcError,
@@ -21,6 +24,19 @@ import EmptyCompents from '../common/EmptyCompents.vue'
 
 const { t } = useI18n()
 const ui = useUiStore()
+const auth = useAuthStore()
+const router = useRouter()
+
+/** MSG-3558 ③（老板 2026-09-24）：**未登录面（空 uid）**不得伪装成"你没建过"——
+ *  daemon 侧对空账号 `schedule.list` 返**空表**（fail-closed），若照旧渲染空态，
+ *  用户只会看到「暂无定时任务」而永远不知道该去登录。 */
+// 口径：**已持令牌但身份未建立**（daemon 空 uid 面）——纯未登录态由登录闸/reouter 处理，
+// 故这里以 `loggedIn && 空 uid` 为判（既有"scheduledView 空表 ⇒ 空态"用例不受扰）。
+const identityMissing = computed(() => auth.loggedIn && isIdentityMissing(auth.userId))
+
+function goLogin() {
+  void router.push('/login')
+}
 
 /** 定时任务：来自 **daemon**（本拘前为内存 store） */
 const remoteTasks = ref<TaskItem[]>([])
@@ -130,6 +146,13 @@ onBeforeUnmount(() => {
 <template>
   <div>
     <div v-if="loadError" class="scheduled-error" role="alert">{{ loadError }}</div>
+    <!-- MSG-3558 ③：未登录／身份未建立 ⇒ **显式提示条**（含登录入口），**不得**落空态 -->
+    <div v-if="identityMissing" class="identity-notice" role="status" data-identity-notice="1">
+      <span class="identity-notice-text">{{ t('identity.notEstablished') }}</span>
+      <button type="button" class="identity-login" @click="goLogin">
+        {{ t('identity.goLogin') }}
+      </button>
+    </div>
     <header class="scheduled-header">
       <div class="scheduled-head-text">
         <h2 class="scheduled-title">{{ t('working.scheduled') }}</h2>
@@ -222,7 +245,7 @@ onBeforeUnmount(() => {
     </div>
 
     <EmptyCompents
-      v-else
+      v-else-if="!identityMissing"
       icon="alarm"
       :title="t('working.emptyScheduledTitle')"
       :description="t('working.emptyScheduled')"

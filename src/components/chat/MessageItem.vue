@@ -11,11 +11,13 @@
 //   ④ToolRow／FileCard → MSG-3233 ③ 预览型走我方 FileCard（不带上游「运行」按钮）；
 //   ⑤ApprovalCard → 我方 1.0.17 九态规格卡（694 行，非上游 116 行旧卡）。
 import { computed } from 'vue'
+import { isModelAuthFailure } from '../../utils/authFailure'
 import { useMessageStore } from '../../stores/message'
 import { formatTime } from '../../utils/time'
 import AssistantMessage from './message/AssistantMessage.vue'
 import UserMessage from './message/UserMessage.vue'
 import StatusMessage from './message/StatusMessage.vue'
+import AuthErrorCard from './message/AuthErrorCard.vue'
 import ToolRow from './message/ToolRow.vue'
 import ApprovalCard from './message/ApprovalCard.vue'
 import RunBlocks from './message/RunBlocks.vue'
@@ -38,6 +40,12 @@ const showStatusRunBlocks = computed(() => {
   if (current.reasoning === '' && current.trace.length === 0 && !current.decision) return false
   return props.message.kind === 'status' && props.message.meta?.status === 'error'
 })
+
+/** MSG-3558：模型鉴权失败（`engine_error` 一类 ＋ 401/403/Unauthorized/invalid）⇒ 人话错误卡。
+ *  判定放在**渲染层**（既有的 daemon `error` 帧原文即带该文案，无需改 store／动行数基线）。 */
+const isAuthFailure = computed(
+  () => props.message.kind === 'status' && isModelAuthFailure(props.message.text),
+)
 </script>
 
 <template>
@@ -54,7 +62,9 @@ const showStatusRunBlocks = computed(() => {
     <template v-else>
       <!-- MSG-3001 ②：失败径 status 消息的过程区（assistant 径见 AssistantMessage） -->
       <RunBlocks v-if="showStatusRunBlocks" :run="run!" />
-      <StatusMessage v-if="message.kind === 'status'" :message="message" />
+      <!-- MSG-3558：模型鉴权失败 ⇒ **就地人话错误卡**（标题／掩码原因／模型名／设置入口／重试） -->
+      <AuthErrorCard v-if="isAuthFailure" :message="message" />
+      <StatusMessage v-else-if="message.kind === 'status'" :message="message" />
       <ToolRow v-else-if="message.kind === 'tool_call'" :message="message" />
       <ApprovalCard v-else-if="message.kind === 'approval'" :message="message" />
     </template>

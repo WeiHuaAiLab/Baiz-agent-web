@@ -11,9 +11,12 @@ export default {
     elapsed: '耗时',
     // MSG-3503 A10：web_fetch 取件在途人话（抓网页期间不再"静止"）
     fetchingWeb: '正在抓取网页…（单次取件受上界约束，超时即回人话）',
-    modelPro: 'DeepSeek V4 Pro',
-    modelFlash: 'DeepSeek V4 Flash',
-    demoMode: '演示模式（未连接）',
+  modelPro: 'DeepSeek V4 Pro',
+  modelFlash: 'DeepSeek V4 Flash',
+  modelAuthTitle: '模型密钥无效／未授权', modelAuthReason: '服务端原因：{reason}', modelAuthModel: '当前模型：{model}',
+  modelAuthGuide: '请在「设置 → 模型／凭据」重新填写该模型密钥（改完可直接重试上一条）。', modelAuthGoSettings: '去设置填写密钥', modelAuthRetry: '重试上一条',
+  modelAuthChip: '模型密钥无效', modelAuthChipHint: '最近一次请求因模型密钥无效失败——点此去设置',
+  demoMode: '演示模式（未连接）',
     sceneCustomer: '客户总结',
     sceneRust: 'Rust 编程',
     sceneReport: '研究报告',
@@ -95,6 +98,7 @@ export default {
     toolGroupExpand: '展开工具调用',
     toolGroupCollapse: '收起工具调用',
   },
+  identity: { notEstablished: '当前未登录／身份未建立：会话与定时任务都归属账号，请先登录后再试', goLogin: '去登录', headerHint: '最近一次请求因模型密钥无效失败' },
   files: {
     title: '文件',
     upload: '上传',

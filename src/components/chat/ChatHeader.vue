@@ -5,21 +5,38 @@
 // 「打开文件面板」按钮在 ChatView 与 ExtensionPanel 同层级、悬浮于 chatView 右上角（见 .panel-toggle-btn）。
 import { computed, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
+import { useRouter } from 'vue-router'
 import { useSessionStore } from '../../stores/session'
 import { useMessageStore } from '../../stores/message'
 import { useSettingsStore } from '../../stores/settings'
 import { useUiStore } from '../../stores/ui'
 import { downloadText, exportConversation } from '../../utils/export'
+import { isModelAuthFailure } from '../../utils/authFailure'
 import Icon from '../common/Icon.vue'
 
 const { t } = useI18n()
+const router = useRouter()
 const session = useSessionStore()
 const messages = useMessageStore()
 const settings = useSettingsStore()
 const ui = useUiStore();
 
+/** MSG-3558：页头「模型密钥无效」角标 ⇒ 一键直达设置（模型／凭据页） */
+function goSettings() {
+  void router.push('/settings')
+}
+
 const exportOpen = ref(false)
 const streamingRuns = computed(() => messages.activeRuns(session.activeId))
+/** MSG-3558 ④：页头可辨——本会话**最近一条 status 行**若是模型鉴权失败 ⇒ 挂角标 */
+const authFailureInSession = computed(() => {
+  const rows = messages.list(session.activeId)
+  for (let i = rows.length - 1; i >= 0; i -= 1) {
+    if (rows[i].kind !== 'status') continue
+    return isModelAuthFailure(rows[i].text)
+  }
+  return false
+})
 // MSG-2870 DEBT-592：连链稳判定——connected/resync（订阅在——run 终帧
 // 可达——思考中文案成立）；reconnecting/connecting/idle（订阅断重建中
 // ——run 终帧缺源——卡死诚实报断面）
@@ -63,6 +80,17 @@ function doExport(format: 'md' | 'json') {
           }}
         </span>
         <span v-if="settings.demoMode" class="demo-chip">{{ t('chat.demoMode') }}</span>
+        <!-- MSG-3558 ④（老板 2026-09-24）：鉴权失败期**页头可辨**——不必逐条点开才知道是 key 问题 -->
+        <button
+          v-if="authFailureInSession"
+          type="button"
+          class="auth-failure-chip"
+          data-auth-badge="model"
+          :title="t('chat.modelAuthChipHint')"
+          @click="goSettings"
+        >
+          {{ t('chat.modelAuthChip') }}
+        </button>
         <!-- MSG-2722 L3 编程 UI：编程模式徽标（ui.programmingMode——toolchain
             任务态随动） -->
         <span v-if="ui.programmingMode" class="prog-chip">{{ t('chat.programModeOn') }}</span>
