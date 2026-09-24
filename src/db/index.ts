@@ -117,7 +117,7 @@ export function accountReadDbNames(userId: string | null | undefined): string[] 
  * ＝**无法清点**（调用方据此**只读当前库**，绝不"猜着开库"——不带版本地 `open` 一个
  * 不存在的库会**建出空库**，故开库前必须先清点）。
  */
-async function existingDbNames(): Promise<Set<string> | null> {
+export async function listExistingDbNames(): Promise<Set<string> | null> {
   try {
     if (typeof indexedDB.databases !== 'function') return null
     const list = await indexedDB.databases()
@@ -210,7 +210,7 @@ export async function readConversationsUnion(
     }
   })
   if (others.length > 0) {
-    const existing = await existingDbNames()
+    const existing = await listExistingDbNames()
     if (existing) {
       for (const name of others) {
         if (!existing.has(name)) continue

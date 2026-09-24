@@ -30,7 +30,6 @@ const i18n = createI18n({
 const EMAIL = '1554408909@qq.com'
 const NORM = 'x-h-1b7249424147d193'
 const OLD_SEG_DB = 'baiz-u-h70813df3'
-const CURRENT = 'u-3561'
 
 /** 造一个"旧库"（raw indexedDB·只用于喂迁移器） */
 function seedRawDb(
@@ -93,7 +92,11 @@ describe('MSG-3561 库名稳定映射＋结果面全文', () => {
       [{ id: 'c-oldseg', title: '旧段会话', createdAt: 2, updatedAt: 2 }],
       [{ id: 'm-oldseg', conversationId: 'c-oldseg', kind: 'user', text: '旧段消息', createdAt: 2 }],
     )
-    setDbAccount(CURRENT)
+    // **MSG-3578 · P10**：迁移源**限本账号字面集** ⇒ 本用例把账号设为该旧段库的**真实归属字面**
+    // （归一形），并经登录径登记邮箱形（`MSG-3573` 的别名唯一写入点）——**断言逐字未改**。
+    const { rememberAccountLogin } = await import('../src/db/alias')
+    rememberAccountLogin(EMAIL, NORM)
+    setDbAccount(NORM)
     await useSessionStore().load()
     const rows = await db.conversations.toArray()
     expect(rows.map((r) => r.id).sort(), '旧库数据须只增导入当前库（改前＝0）').toEqual([

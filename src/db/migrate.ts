@@ -7,7 +7,14 @@
 //   · **迁移器带 `schema_version` ＋幂等标记**（`localStorage['baiz.migration']`）：同一源库
 //     计数未变 ⇒ **直接跳过**；**连跑两次结果一致**（计数与行数均不增）。
 import Dexie from 'dexie'
-import { LEGACY_DB_NAME, currentDbName, db } from './index'
+import {
+  LEGACY_DB_NAME,
+  accountReadDbNames,
+  currentDbAccount,
+  currentDbName,
+  db,
+  listExistingDbNames,
+} from './index'
 
 /** 迁移状态持久键 */
 export const MIGRATION_KEY = 'baiz.migration'
@@ -49,24 +56,38 @@ function writeMigrationState(state: MigrationState): void {
   }
 }
 
-/** 列出候选源库（当前库除外）：旧无账号库 ＋ 任何 `baiz-u-*` 旧段库 */
+/**
+ * **MSG-3578 · P10**（裁示新增）：列出候选源库（当前库除外）——**限本账号字面集**。
+ *
+ * 病灶（旧口径）：源＝`baiz` ＋ **任意** `baiz-u-*` ⇒ **跨账号导入**（他人账号分段库的会话/消息
+ * 被并入**当前账号**库＝串档）。
+ *
+ * 新口径（三条）：
+ *   ① **只取本账号同一"字面集"的库**——`accountReadDbNames()`（复用 `MSG-3573` 的
+ *      `accountReadLiterals()`＋别名表口径：当前稳定段库＋各字面**旧口径段**库）；
+ *   ② 另含**旧无账号库 `baiz`**（无账号维·不归任何账号；`MSG-3561 B2/B3`「旧库只增导入」
+ *      口径**保留**——未被本刀改变）；
+ *   ③ **他账号 `baiz-u-*` 一律不作源**（保留原库·**零删除**·只读都不开）。
+ *
+ * 注：无法清点库（旧内核）时**只回本账号字面集**（不再无条件回 `baiz` 之外的任何库）。
+ */
 export async function candidateSourceDbs(): Promise<string[]> {
   const current = currentDbName()
+  const own = new Set(accountReadDbNames(currentDbAccount()))
+  own.delete(current)
+  const existing = await listExistingDbNames()
   const out: string[] = []
-  try {
-    if (typeof indexedDB.databases !== 'function') {
-      return [LEGACY_DB_NAME].filter((n) => n !== current)
-    }
-    const list = await indexedDB.databases()
-    for (const entry of list) {
-      const name = entry?.name ?? ''
+  if (existing) {
+    for (const name of existing) {
       if (!name || name === current) continue
-      if (name === LEGACY_DB_NAME || name.startsWith('baiz-u-')) out.push(name)
+      // **P10**：只认「本账号字面集」与「旧无账号库」；他账号库**不相交即不迁**
+      if (name === LEGACY_DB_NAME || own.has(name)) out.push(name)
     }
-  } catch {
-    return [LEGACY_DB_NAME].filter((n) => n !== current)
+  } else {
+    for (const name of own) out.push(name)
+    if (current !== LEGACY_DB_NAME) out.push(LEGACY_DB_NAME)
   }
-  return out.sort()
+  return [...new Set(out)].filter((name) => name !== current).sort()
 }
 
 interface RawSnapshot {
