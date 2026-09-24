@@ -27,6 +27,8 @@ export default {
     attachUnsupported: 'Attachments unsupported in this shell version',
     dropHint: 'Drop to upload images, text files, or any file',
     dropUnsupported: 'Drag-and-drop upload is unsupported in this shell version',
+    // T11/DEBT-872: size limit / current volume / sendable / progress / over-limit notice (kept dense — this file sits on the loc red line)
+    attProcessing: 'Reading attachments… {done}/{total}', attLimit: 'Current {total} / {limit} per file', attSendable: 'Ready to send', attNotSendable: 'Over the limit — cannot send. Remove it or pick a smaller file', attOverHint: 'Over limit · cannot send (max {limit})',
     stop: 'Stop',
     programModeOn: 'Programming mode on (toolchain tasks)',
     programModeOff: 'Enable programming mode (toolchain tasks)',
@@ -384,6 +386,7 @@ export default {
       notConfigured: 'Not configured',
       /** DEBT-875 (MSG-3502·A8): "cannot read" ≠ "never configured" — kept apart */
       stateReadFailed: 'Read failed (retryable)',
+      stateUnread: 'Not signed in — cannot read the config yet (check back after signing in)',
       stateNotReady: 'Service not ready (read failed · retryable)',
       keyFp: 'fingerprint {fp}',
       source: { env: 'source: env', file: 'source: local file', none: '' },

@@ -31,8 +31,12 @@
             :disabled="auth.loading"
           />
         </label>
-        <p v-if="auth.error" class="login-error">{{ auth.error }}</p>
-        <button class="login-submit" type="submit" :disabled="auth.loading || !email || !password">
+        <!-- T3／DEBT-875(a)：前端校验人话优先于后端回执（有前端问题先说前端问题） -->
+        <p v-if="formError" class="login-error" role="alert">{{ formError }}</p>
+        <p v-else-if="auth.error" class="login-error" role="alert">{{ auth.error }}</p>
+        <!-- 改前 `|| !email || !password` 把按钮按死 ⇒ 用户点了没反应、**一句人话都没有**。
+             现只要不在登录中即可点：点了由 submit() 的本地闸给出人话。 -->
+        <button class="login-submit" type="submit" :disabled="auth.loading">
           {{ auth.loading ? "登录中…" : "登录" }}
         </button>
       </form>
@@ -54,6 +58,8 @@ import { useI18n } from "vue-i18n";
 import { useRouter } from "vue-router";
 import { useAuthStore } from "../stores/auth";
 import { useSettingsStore } from "../stores/settings";
+// T3／DEBT-875(a)：前端闸——空／明显非法输入**本地拦下并给人话**
+import { validateLoginInput } from "../utils/authFailure";
 
 const { t } = useI18n();
 const router = useRouter();
@@ -61,8 +67,17 @@ const auth = useAuthStore();
 const settings = useSettingsStore();
 const email = ref("");
 const password = ref("");
+// 前端校验人话（与 auth.error＝后端回执分开摆：两条并存会让人不知道先改哪个）
+const formError = ref("");
 
 async function submit() {
+  // T3／DEBT-875(a)：**先本地闸**——改前此处直接 `auth.login()`，空白串/乱输入一路照发
+  const problem = validateLoginInput(email.value, password.value);
+  if (problem) {
+    formError.value = problem;
+    return;
+  }
+  formError.value = "";
   const ok = await auth.login(email.value.trim(), password.value);
   if (ok) {
     void router.push("/");

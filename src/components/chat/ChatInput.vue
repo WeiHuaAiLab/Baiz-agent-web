@@ -20,13 +20,14 @@ import { useExecModeStore } from "../../stores/execMode";
 import type { ExecMode } from "../../stores/execMode";
 import { getBridge } from "../../bridge";
 import { clearDraft, loadDraft, saveDraft } from "../../drafts";
-import { formatFileSize, shortMime } from "../../utils/format";
 import {
     commandRiskFlag,
     translateCommand,
 } from "../../utils/commandTranslator";
 import Icon from "../common/Icon.vue";
 import TaskForm from "../common/TaskForm.vue";
+// T11／DEBT-872：附件行抽为共享件（ChatInput 与 ComposerBox 同一实现）
+import AttachmentRow from "./AttachmentRow.vue";
 
 const emit = defineEmits<{ (e: "submitted"): void }>();
 
@@ -243,6 +244,12 @@ async function sendWith(text: string) {
         ui.closeInbox();
         ui.toast(t("chat.inboxClosedForSend"), "info");
     }
+    // T11／DEBT-872：有超限件 ⇒ **不发、不清场**，给一句人话并留住用户已选的附件与草稿
+    // （位置在乐观清理**之前**——清理一执行，超限件就被抹掉、用户还得重选一遍）。
+    if (!files.attachmentsSendable) {
+        ui.toast(t("chat.attNotSendable"), "error");
+        return;
+    }
     const attachments = [...files.attachments];
     void files.clearAttachments();
     void session.touch(activeId.value);
@@ -413,42 +420,7 @@ watch(
             @dragleave="onDragLeave"
             @drop="onDrop"
         >
-            <div v-if="files.attachments.length" class="attachment-row">
-                <div
-                    v-for="att in files.attachments"
-                    :key="att.id"
-                    class="attachment-chip"
-                    :class="{
-                        'is-image': att.kind === 'image',
-                        'is-file': att.kind === 'file',
-                    }"
-                >
-                    <img
-                        v-if="att.kind === 'image' && att.dataUrl"
-                        class="att-thumb"
-                        :src="att.dataUrl"
-                        :alt="att.name"
-                        :title="att.name"
-                    />
-                    <div v-else class="att-meta">
-                        <div class="att-name" :title="att.name">
-                            {{ att.name }}
-                        </div>
-                        <div class="att-tag">
-                            {{ shortMime(att.mimeType) }} ·
-                            {{ formatFileSize(att.size) }}
-                        </div>
-                    </div>
-                    <button
-                        type="button"
-                        class="att-remove"
-                        :title="t('common.delete')"
-                        @click="files.removeAttachment(att.id)"
-                    >
-                        <Icon name="x" :size="12" />
-                    </button>
-                </div>
-            </div>
+            <AttachmentRow />
 
             <div class="composer-input">
                 <textarea
@@ -561,8 +533,12 @@ watch(
                     v-else
                     type="submit"
                     class="send-btn"
-                    :disabled="!input.trim()"
-                    :title="t('chat.send')"
+                    :disabled="!input.trim() || !files.attachmentsSendable"
+                    :title="
+                        files.attachmentsSendable
+                            ? t('chat.send')
+                            : t('chat.attNotSendable')
+                    "
                 >
                     <Icon name="send" :size="16" />
                 </button>

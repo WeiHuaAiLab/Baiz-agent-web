@@ -50,3 +50,46 @@ export function modelDisplayName(model: string | undefined | null): string {
 export function isIdentityMissing(userId: string | undefined | null): boolean {
   return String(userId ?? '').trim().length === 0
 }
+
+// ── T3／DEBT-875(a)：「乱输入也能登录」的**前端面**闸 ──
+//
+// 病灶（DEBT-875 原文 · 测试员 T3a）：`LoginView.vue` 改前对账号密码**只判非空、不判形态**——
+// `:disabled="auth.loading || !email || !password"` 连「纯空白串」都挡不住（`'   '` 是 JS 真值），
+// 更遑论 `asdf` 这类明显不是账号的输入：一律原样发给后端。
+//
+// **本闸只拦"明显非法"**：空／纯空白／无 @／多 @／@ 两侧缺／域名无点／含空白字符。
+// 三条自我约束（勿越界）：
+//   ① **不做**口令复杂度、长度、字符集策略——那是口径决策，不是前端该自拟的东西；
+//   ② **不替代**后端校验——前端闸从来不是安全边界，后端**仍须独立校验**（本条不改后端）；
+//   ③ 判据是**纯函数**，故可机判、可单测，不依赖组件挂载。
+
+/**
+ * 账号形态判据：**只认明显非法** ⇒ true。
+ *
+ * 邮箱形有据：`LoginView.vue:5` 的登录提示（"请使用 https://kb.ruiac.net/ 的账号登录"）
+ * 与 `:20` 的 `placeholder="邮箱"`，且 `stores/auth.ts:167` 的别名写入点即按「邮箱形／归一形」
+ * 登记 ⇒ 本产品的账号**就是邮箱形**。
+ * 若日后放开非邮箱用户名，**只需放宽本函数**（唯一判据点），组件与测试无须动。
+ */
+export function isObviouslyInvalidAccount(raw: string): boolean {
+  const value = String(raw ?? '').trim()
+  if (!value) return true
+  if (/\s/.test(value)) return true
+  const parts = value.split('@')
+  if (parts.length !== 2) return true
+  const [local, domain] = parts
+  if (!local) return true
+  // 域名须至少一段点分层级（`a@b` 属明显非法；`a@b.c` 放行）
+  return !/^[^@.\s]+(\.[^@.\s]+)+$/.test(domain)
+}
+
+/**
+ * 登录表单校验（纯函数·可机判）：**空串＝通过**；否则返回**人话**（组件直接上屏）。
+ * 顺序固定：先账号后口令——一次只说一条，免得两句同时挂着让人不知道先改哪个。
+ */
+export function validateLoginInput(account: string, password: string): string {
+  if (!String(account ?? '').trim()) return '请输入账号'
+  if (isObviouslyInvalidAccount(account)) return '账号格式不对——请填完整邮箱，例如 you@example.com'
+  if (!String(password ?? '').trim()) return '请输入密码'
+  return ''
+}

@@ -30,6 +30,8 @@ export default {
     attachUnsupported: '当前版本不支持附件（请更新壳）',
     dropHint: '放开即可上传图片、文本与任意文件',
     dropUnsupported: '当前版本不支持拖拽上传（请更新壳）',
+    // T11／DEBT-872：大附件——上限／当前体积／可否发送／进行态／超限人话（本文件紧贴 loc 红线，故照本文件惯例一行多键）
+    attProcessing: '正在读取附件… {done}/{total}', attLimit: '当前 {total} / 单件上限 {limit}', attSendable: '可发送', attNotSendable: '超限，暂不可发送——请移除该附件，或换更小的文件', attOverHint: '超限·不可发送（上限 {limit}）',
     stop: '停止',
     programModeOn: '编程模式已开启（任务走工具链）',
     programModeOff: '开启编程模式（任务走工具链）',
@@ -391,6 +393,7 @@ export default {
       notConfigured: '未配置',
       /** DEBT-875（MSG-3502·A8）：读不到 ≠ 没配过——失败／未就绪**分开说** */
       stateReadFailed: '读取失败（可重试）',
+      stateUnread: '未登录，暂无法读取配置（登录后再看；不显示 ≠ 已清空）',
       stateNotReady: '服务端未就绪（读取失败·可重试）',
       keyFp: '指纹 {fp}',
       source: { env: '来源：环境变量', file: '来源：本机配置', none: '' },

@@ -103,6 +103,15 @@ export const useKbStore = defineStore('kb', {
     savedBaseUrl: '' as string,
     /** **MSG-3575 A1**：当前显示值**属于哪个账号**（空＝未登录面）——换账号据此清场 */
     account: '' as string,
+    /**
+     * **T3／DEBT-875(b)**：显示面**读不到的原因**（`''`＝未发生或读回成功）。
+     *
+     * 存在的理由：`status === 'unconfigured'` 有**两种语义**——「读回成功、确实没配过」
+     * 与「**没有身份、根本没读**」。两者在界面上必须分开说（T3(b) 要的正是这个区分），
+     * 而判据**只此一处**（本 store 的 `load()` 早退支）——组件读本字段即可，
+     * **不得**在组件里重抄一遍条件（抄了必漂；本件首跑即栽在这上面）。
+     */
+    unreadReason: '' as '' | 'unauthenticated',
   }),
   getters: {
     loading: (state) => state.status === 'loading',
@@ -116,6 +125,8 @@ export const useKbStore = defineStore('kb', {
      *  缓存由 `clearKbAccountCache()` 单管；本动作**不动数据面**（不写不删任何配置）。 */
     resetAccountFace() {
       this.account = ''
+      // 中性复位（不预设原因）：紧随其后的 `load()` 才是原因的唯一权威（KbCard onMounted 必调）
+      this.unreadReason = ''
       this.baseUrl = ''
       this.configured = false
       this.source = ''
@@ -129,9 +140,22 @@ export const useKbStore = defineStore('kb', {
     async load() {
       const auth = useAuthStore()
       const account = (auth.userId ?? '').trim()
-      // **A1①**：未登录面 ⇒ **不显示**他人/全局 KB，且**不发读 RPC**（写径不受影响——
-      // 「连接知识库」独立页仍可配：干净机开箱路径 MSG-3340 不破）
-      if (!account) {
+      const token = auth.sessionToken
+      // **A1①**：**无令牌且无身份** ＝ 真·未登录面 ⇒ **不显示**他人/全局 KB，且**不发读 RPC**
+      // （写径不受影响——「连接知识库」独立页仍可配：干净机开箱路径 MSG-3340 不破）。
+      //
+      // **T3／DEBT-875(b)**：改前此处**只判 `!account`（uid）**，把「**有令牌但 uid 暂空**」
+      // 一并误判成未登录面 ⇒ 清空显示值并落 `unconfigured` ＝ 用户**明明登录着**、
+      // 服务端配置也在，界面却写「未配置」＋空表单 ⇒ 观感即"**配置重开即空**"。
+      // 何时会 uid 暂空：daemon 的 `auth.login` 响应缺 `user_id` 时 `stores/auth.ts:160` 落空串，
+      // 而补 uid 的 `ensureIdentityUserId()` **只在 ChatPanel／ScheduledView 调用**
+      // （`ChatPanel.vue:28`／`ScheduledView.vue:189`）——**设置页与 /kb-setup 之前没人补**
+      // ⇒ 进程重启后直奔设置页即命中本径（web 形态尤甚：token 只在 sessionStorage）。
+      // 判据改为「**两样都没有**」：有令牌即**有权读**，读接口本就以 token 定 owner
+      // （见下方 `weknoraGetConfig(token ? { token } : {})`）。
+      if (!account && !token) {
+        // T3(b)：落**原因**（不是"没配过"，是"没身份、没读"）——界面据此改文案
+        this.unreadReason = 'unauthenticated'
         this.account = ''
         this.baseUrl = ''
         this.configured = false
@@ -143,6 +167,9 @@ export const useKbStore = defineStore('kb', {
         this.status = 'unconfigured'
         return
       }
+      // T3(b)：能走到这里 = **真读了**（有令牌或有身份）⇒ 清掉"没读"的原因，
+      // 免得上一次未登录面的文案残留到本次读回结果上
+      this.unreadReason = ''
       // **A1②**：换账号 ⇒ **先清上一账号的显示值**（旧账号的值绝不残留上屏），
       // 同账号 ⇒ 先按**本账号缓存**即时填充（再走服务端刷新）
       if (this.account !== account) {
@@ -164,7 +191,6 @@ export const useKbStore = defineStore('kb', {
       this.status = 'loading'
       this.error = ''
       this.errorKey = ''
-      const token = auth.sessionToken
       try {
         const config = await getClient().weknoraGetConfig(token ? { token } : {})
         // 响应回来时若**已换账号** ⇒ 丢弃本次结果（禁旧响应盖新账号面）
@@ -175,7 +201,9 @@ export const useKbStore = defineStore('kb', {
           source: config?.source ?? '',
           keyFp: config?.key_fp ?? '',
         }
-        accountKbCache.set(account, snapshot)
+        // **T3(b) 配套**：account 为空（有令牌、uid 暂空）时**不得入缓存**——键 '' 会被下一个
+        // 同样 uid 暂空的账号读到 ⇒ 跨账号串值。显示值本次已由响应直接填充，无须缓存。
+        if (account) accountKbCache.set(account, snapshot)
         this.baseUrl = snapshot.baseUrl
         this.configured = snapshot.configured
         this.source = snapshot.source
