@@ -76,6 +76,9 @@ async function confirmReset() {
   <div v-if="available" class="settings-card" data-demo-card="1">
     <h2>{{ t('settings.demo') }}</h2>
     <p class="section-desc">{{ t('settings.demoHint') }}</p>
+    <!-- **DEBT-886 · E3**：「重置演示数据」在正式版**不渲染**＝`demoResetAvailable()` **按设计收口**
+         ——出说明（**零行为改动**），免得被当成"功能没做"反复立案 -->
+    <p class="section-desc demo-dev-only">{{ t('settings.demoDevOnly') }}</p>
 
     <button v-if="!open" type="button" class="btn-ghost danger" @click="start">
       {{ t('settings.resetDemo') }}

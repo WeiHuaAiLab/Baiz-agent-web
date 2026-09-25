@@ -286,6 +286,10 @@ export default {
     model: '模型',
     modelHint: '模型路由由 daemon 决定，此处为偏好设置',
     dirHint: '授权目录用于文件访问与工作区绑定',
+    /** **DEBT-883**：工作区**按账号隔离**（daemon 侧按身份分段）——换账号会换根，此处明写 */
+    workspaceIsolation: '工作区按账号隔离：登录或切换账号会切换工作区根——旧账号下的目录不会被自动带过来（这是安全设计：各账号互不可见）。',
+    workspaceLegacyHint: '如果某个目录属于之前用过的账号（或未登录时用过的目录），选中它即可重新加入授权根，不必搬动文件。',
+    workspaceLegacyEntry: '找回旧工作区目录',
     mcp: {
       title: 'MCP 服务',
       hint: '管理外部 MCP 服务。保存后写入配置，由 daemon 在下一次运行时加载',
@@ -342,6 +346,8 @@ export default {
     version: '版本',
     slogan: 'Baiz Agent · 通万物之情',
     demoHint: '清空本地数据并重新生成演示会话',
+    /** **DEBT-886 · E3**：「重置演示数据」在正式版不渲染＝**按设计收口**（非缺陷）——出说明，免反复立案 */
+    demoDevOnly: '「重置演示数据」仅开发／演示构建可用——正式版按设计不提供此入口（避免误清本机数据）。',
     memory: '记忆设置',
     memoryHint: '记忆由 daemon 蒸馏与检索管理，此处为前端偏好',
     memoryEnabled: '记忆开关',
@@ -420,10 +426,16 @@ export default {
     scheduledRefreshed: '已刷新',
     runsLabel: '执行记录',
     runsEmpty: '暂无执行记录', openRunSession: '打开该次会话',
+    /** **DEBT-885**：单次执行「看结果」入口——原「打开该次会话」跳镜像会话（空）⇒ 改展示结果全文 */
+    openRunResult: '查看本次执行结果', hideRunResult: '收起本次结果',
+    runResultLoading: '正在读取本次结果…',
+    runResultEmpty: '本次执行未产出可展示的结果文本（无摘要、无错误、无全文）',
     scheduledList: '定时任务列表',
     emptyScheduledTitle: '暂无定时任务', emptyScheduled: '点击「创建新任务」开始配置，定时任务会出现在此',
     /** **MSG-3575 · 预设项 UI**：预置项软隐藏＋清理入口（清理须二次确认） */
     presetHidden: '已隐藏 {n} 个预置项（首次安装自带的模板项，可清理）', clearPresets: '清理预置项',
+    /** **DEBT-886**：发现性引导（软隐藏 ≠ 人间蒸发——讲清"仍在本地／为何看不到／怎么办"） */
+    presetHint: '预置项仍在本地（仅默认不在列表上屏）：想用时可按同样配置新建，或点「清理预置项」一并删除。',
     clearPresetsConfirm: '将删除 {n} 个预置项。它们只是首次安装自带的模板项，需要时可随时重新创建；其它任务不受影响。确定删除？', clearPresetsDone: '已清理 {n} 个预置项', clearPresetsPartial: '{n} 个预置项删除失败（服务端未生效）——请稍后重试', // MSG-3575
     extensionsHint: '扩展插件市场（演示数据），启用后即生效',
   },

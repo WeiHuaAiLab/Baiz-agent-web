@@ -114,6 +114,8 @@ function getProjectTitle(projectId?: string) {
       <button type="button" class="preset-clear" @click="clearPresets">
         {{ t('working.clearPresets') }}
       </button>
+      <!-- **DEBT-886**：发现性引导——与 ScheduledView 同口径（**零行为改动**） -->
+      <span class="preset-bar-hint">{{ t('working.presetHint') }}</span>
     </div>
 
     <div v-if="visibleTasks.length" class="task-list-wrap">

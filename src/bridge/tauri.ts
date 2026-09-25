@@ -138,7 +138,14 @@ export function createTauriBridge(): Bridge {
     // 壳侧已注册——check→available/version——install 触发 downloadAndInstall 被动装）
     async checkUpdate(): Promise<UpdateCheckResult | null> {
       const { check } = await import('@tauri-apps/plugin-updater')
-      const update = await check().catch(() => null)
+      // **DEBT-884**：检查面的异常**不得吞**——插件 `check()` 在 网络／DNS／端点 4xx／
+      // 签名-公钥不匹配／超时 任一失败时 **reject**；旧口径 `.catch(() => null)` 把失败
+      // 吃成 `null` ⇒ 下一行 `{ available: false }` ⇒ 界面显「已是最新版本」（**假绿**）。
+      // 现口径二分：**确无更新**＝`check()` 正常返回 `null`（下 `if (!update)`）；
+      // **检查失败**＝照抛给调用方既有 `catch`（`UpdateCard.vue:56-57` ⇒ `updateFailed`）。
+      // ⚠ 安装面**不在此闸**：`:install()` 内的重取语义（返 `null` 即视为已无更新·
+      // 静默收口·不误报失败）**一字不动**——见本函数下方 `fresh` 处注释。
+      const update = await check()
       if (!update) return { available: false }
       // rust-expert MSG-3203 复审 D 点（三陷阱）：
       // ① `Update` 是 Resource（JS 持 Rust 侧 rid）——本闭包**强引用**它，

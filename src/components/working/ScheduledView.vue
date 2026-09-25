@@ -19,7 +19,6 @@ import {
   runStatusLabel,
 } from '../../utils/scheduleWire'
 import type { ScheduleRun } from '../../client/types'
-import { useSessionStore } from '../../stores/session'
 import { scheduleText } from '../../utils/tasks'
 import { splitPresetItems } from '../../utils/presetItems'
 import Icon from '../common/Icon.vue'
@@ -29,7 +28,6 @@ const { t } = useI18n()
 const ui = useUiStore()
 const auth = useAuthStore()
 const router = useRouter()
-const session = useSessionStore()
 
 /** MSG-3558 ③（老板 2026-09-24）：**未登录面（空 uid）**不得伪装成"你没建过"——
  *  daemon 侧对空账号 `schedule.list` 返**空表**（fail-closed），若照旧渲染空态，
@@ -101,11 +99,38 @@ async function toggleRuns(task: TaskItem) {
   }
 }
 
-/** **MSG-3561 C3**：「打开该次会话」——落到定时任务的**镜像会话** `scheduled-<task_id>` */
-async function openRunSession(task: TaskItem) {
-  const id = `scheduled-${task.id}`
-  await session.createWithId(id, task.title || t('working.runsLabel'))
-  await router.push('/')
+/** **DEBT-885**：单次执行**结果面板**的展开态（点开才置——无结果时也给**明确空态**，不留白） */
+const runOpened = ref<Record<number, boolean>>({})
+/** 结果读取中的 run（懒加载：超出最近 3 条自动预取窗口的，点开时才拉 `schedule.run_detail`） */
+const runLoading = ref<Record<number, boolean>>({})
+
+/**
+ * **DEBT-885 甲案**：原「打开该次会话」跳**镜像会话** `scheduled-<task_id>`——而定时径
+ * `chat.send` 的消息**不进前端所读会话库** ⇒ **点进去是空会话**（"有执行记录却打不开"）。
+ * 现口径：本入口改为**展示该次执行的结果全文**（数据源＝既有 `schedule.run_detail`，
+ * 即 `loadRunDetail`——**不新增后端接口**）；无全文回退 `summary`／`error`；
+ * 三者皆无 ⇒ **明确空态**（`runResultEmpty`，**不得留白**）。
+ */
+async function toggleRunResult(task: TaskItem, run: ScheduleRun) {
+  const opened = { ...runOpened.value }
+  if (opened[run.id]) {
+    delete opened[run.id]
+    runOpened.value = opened
+    return
+  }
+  opened[run.id] = true
+  runOpened.value = opened
+  // 已预取（`toggleRuns` 的最近 3 条）或已拉过 ⇒ 不重复请求
+  if (runsFull.value[run.id] !== undefined) return
+  runLoading.value = { ...runLoading.value, [run.id]: true }
+  try {
+    const full = await loadRunDetail(getClient(), task.id, run.id)
+    runsFull.value = { ...runsFull.value, [run.id]: full }
+  } finally {
+    const busy = { ...runLoading.value }
+    delete busy[run.id]
+    runLoading.value = busy
+  }
 }
 
 /** 同一行人话：`状态 · 时间 [· 摘要/错误]` */
@@ -229,6 +254,9 @@ onBeforeUnmount(() => {
       <button type="button" class="preset-clear" @click="clearPresets">
         {{ t('working.clearPresets') }}
       </button>
+      <!-- **DEBT-886**：发现性引导——软隐藏**≠ 人间蒸发**：讲清"仍在本地／为何看不到／怎么办"
+           （**零行为改动**：不自动显示、不自动删除） -->
+      <span class="preset-bar-hint">{{ t('working.presetHint') }}</span>
     </div>
 
     <div v-if="scheduledTasks.length" class="task-list-wrap">
@@ -310,9 +338,30 @@ onBeforeUnmount(() => {
                 class="task-run-full"
                 data-run-full="1"
               >{{ runResultText(run, runsFull[run.id]) }}</pre>
-              <button type="button" class="task-run-open" @click="openRunSession(task as TaskItem)">
-                {{ t('working.openRunSession') }}
+              <!-- **DEBT-885 甲案**：原「打开该次会话」跳**镜像会话** `scheduled-<task_id>`——
+                   定时径消息不进前端所读会话库，**点进去是空会话**。现改为**展开该次结果全文**
+                   （面板见下）；无结果给**明确空态**（不留白）。 -->
+              <button
+                type="button"
+                class="task-run-open"
+                :data-run-open="run.id"
+                @click="toggleRunResult(task as TaskItem, run)"
+              >
+                {{ runOpened[run.id] ? t('working.hideRunResult') : t('working.openRunResult') }}
               </button>
+              <div v-if="runOpened[run.id]" class="task-run-result" :data-run-result="run.id">
+                <p v-if="runLoading[run.id]" class="task-run-loading" role="status">
+                  {{ t('working.runResultLoading') }}
+                </p>
+                <pre
+                  v-else-if="runResultText(run, runsFull[run.id])"
+                  class="task-run-full"
+                  data-run-full="1"
+                >{{ runResultText(run, runsFull[run.id]) }}</pre>
+                <p v-else class="task-run-empty" :data-run-empty="run.id">
+                  {{ t('working.runResultEmpty') }}
+                </p>
+              </div>
             </li>
           </ul>
         </li>
