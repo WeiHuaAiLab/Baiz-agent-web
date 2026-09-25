@@ -53,6 +53,20 @@ describe('片 E ①／② 可逆性标签：只认 daemon 实测事实（三径�
     resetClientForTests()
   })
 
+  // **令·补25 §一**：三态分立之「未接通」态——三径字段**全缺**（daemon 尚未下发 reversibility 面）。
+  // 与「无据」（字段存在且俱假）**必须分立**：把未接通按字面挂红字 ⇒ 装机面每张卡皆红＝噪音并误导。
+  it('⓪三径全缺（未接通）⇒ **不渲染徽章** ∧ 卡面无「可撤销」字样（双向）', () => {
+    const wrapper = mountCard({ ...RESOLVED })
+    expect(wrapper.find('.rev').exists()).toBe(false)
+    expect(wrapper.text()).not.toContain('可撤销')
+  })
+
+  it('⓪b 待决卡（另一渲染分支）同：未接通 ⇒ 不渲染徽章 ∧ 无「可撤销」字样', () => {
+    const wrapper = mountCard({ ...RESOLVED, approved: undefined })
+    expect(wrapper.find('.rev').exists()).toBe(false)
+    expect(wrapper.text()).not.toContain('可撤销')
+  })
+
   it('①三径俱在 ⇒ 显「可撤销（回收站／清单／备份）」', () => {
     const wrapper = mountCard({
       ...RESOLVED,
@@ -74,8 +88,15 @@ describe('片 E ①／② 可逆性标签：只认 daemon 实测事实（三径�
     expect(wrapper.find('.rev').text()).not.toContain('回收站')
   })
 
-  it('②无任何事实依据 ⇒ 红字「不可撤销」（fail-closed）', () => {
-    const wrapper = mountCard({ ...RESOLVED })
+  // 取址修正（令·补25 §一）：本态＝**已接通且俱假**（「无据」态）。原夹具三径全缺，属「未接通」态
+  // ——断言文本与强度一字未动，仅把夹具挪到令文所指之态（未接通面由 ⓪／⓪b 覆盖）。
+  it('②三径俱假（已接通·无据）⇒ 红字「不可撤销」（fail-closed）', () => {
+    const wrapper = mountCard({
+      ...RESOLVED,
+      recycleBin: false,
+      changeManifest: false,
+      backupVerified: false,
+    })
     const rev = wrapper.find('.rev')
     expect(rev.exists()).toBe(true)
     expect(rev.text()).toBe('不可撤销')
@@ -124,8 +145,15 @@ describe('片 E ③ 撤销入口：就在该条消息下方、可点、发出正
     expect(undo).toHaveBeenCalledWith({ request_id: 'r-undo' })
   })
 
-  it('③b 不可逆 ⇒ **不给**撤销钮（按不动的钮比没钮更坏）', () => {
-    const wrapper = mountCard({ ...RESOLVED, requestId: 'r-no' })
+  // 取址修正（同上）：本态＝「无据」（俱假），非「未接通」。
+  it('③b 不可逆（三径俱假）⇒ **不给**撤销钮（按不动的钮比没钮更坏）', () => {
+    const wrapper = mountCard({
+      ...RESOLVED,
+      requestId: 'r-no',
+      recycleBin: false,
+      changeManifest: false,
+      backupVerified: false,
+    })
     expect(wrapper.find('.rev').text()).toBe('不可撤销')
     expect(wrapper.find('.approval-undo').exists()).toBe(false)
   })

@@ -1,7 +1,8 @@
 // **令·补24**（危险动作「逐次提权卡」MVP）**卡面判据**（纯函数·可机判）：
 //   · 高危卡（片 A P0-1）：档位区不渲染、「同意」不得为 accent 实心（后端本已禁复用，前端对齐）；
 //   · 复用可见（片 A P0-1 ④）：daemon 下发的「本动作已免卡执行 M 次」＋撤销落点；
-//   · 可逆性三径（片 E P1-8）：**只认 daemon 实测事实**——三径皆无 ⇒ 按「不可撤销」呈现。
+//   · 可逆性三径（片 E P1-8＋**令·补25 §一**）：**只认 daemon 实测事实**，且**三态分立**——全缺（未接通）
+//     ⇒ 不渲染徽章；存在且俱假（无据）⇒ 红字「不可撤销」；至少一径为真（有据）⇒ 显落点。
 //
 // 三条纪律（照 `approvalText.ts` 的 `normalizeRisk`／`authFailure.ts` 的 `hasLoginHint` 同法）：
 //   ① **判据是纯函数** ⇒ 可机判、可单测，不依赖组件挂载；
@@ -29,6 +30,18 @@ export function reuseRuleId(meta?: MessageMeta | null): string {
 /** 片 E：可逆性三径（与 daemon 面钉死的三径同名，勿改名——协议对卯点） */
 export type ReversibilityPath = 'recycle' | 'manifest' | 'backup'
 
+/** 三径 ↔ meta 字段名（**唯一真源**：加径只动此处＋`REV_LABEL_KEY` 与两语文件——防第二套真源） */
+const REV_FIELDS: Record<ReversibilityPath, keyof MessageMeta> = {
+  recycle: 'recycleBin',
+  manifest: 'changeManifest',
+  backup: 'backupVerified',
+}
+
+/**
+ * 片 E **三态**（**令·补25 §一**）：未接通／有据／无据。判定见 `reversibilityState`。
+ */
+export type RevState = 'unwired' | 'grounded' | 'baseless'
+
 /** 三径 → i18n 键（唯一映射点；加径只动这里＋两语文件） */
 export const REV_LABEL_KEY: Record<ReversibilityPath, string> = {
   recycle: 'approval.revRecycle',
@@ -38,18 +51,33 @@ export const REV_LABEL_KEY: Record<ReversibilityPath, string> = {
 
 /**
  * 片 E：可逆性判据——**只认 `=== true`**。
- * 无任何事实依据 ⇒ **空集** ⇒ 卡面按「不可撤销」呈现（**fail-closed**：不承诺没根据的可逆性）。
+ * **空集 ≠「不可撤销」**（令·补25 §一）：空集只说明"无真径"，卡面呈现须再经 `reversibilityState`
+ * 分「未接通／无据」两态（**fail-closed**：不承诺没根据的可逆性）。
  */
 export function reversibilityPaths(meta?: MessageMeta | null): ReversibilityPath[] {
-  const paths: ReversibilityPath[] = []
-  if (meta?.recycleBin === true) paths.push('recycle')
-  if (meta?.changeManifest === true) paths.push('manifest')
-  if (meta?.backupVerified === true) paths.push('backup')
-  return paths
+  return (Object.keys(REV_FIELDS) as ReversibilityPath[]).filter((path) => meta?.[REV_FIELDS[path]] === true)
+}
+
+/**
+ * 片 E **三态分立**（**令·补25 §一**）——禁把「未接通」说成「不可撤销」：
+ *   · `unwired`  —— 三径字段**全缺**（daemon 尚未下发 reversibility 面）⇒ 卡面**不渲染徽章**，
+ *                   **且不得出现任何「可撤销」字样**；
+ *   · `grounded` —— 三径**至少一径为真** ⇒ 显「可撤销（回收站／清单／备份）」；
+ *   · `baseless` —— 三径**存在且俱假** ⇒ **红字「不可撤销」**。
+ *
+ * 为何分立（令文照录之义）：未接通就按字面全挂红字 ⇒ 装机面每张卡皆红＝噪音并误导。
+ * 边界：字段存在但**非布尔脏值**（`'yes'` 等）⇒ 视作**已接通** ⇒ 落 `baseless`（仍 fail-closed，
+ * 只是不再把它错说成「未接通」）；`meta` 整体缺失 ⇒ 全缺 ⇒ `unwired`。
+ */
+export function reversibilityState(meta?: MessageMeta | null): RevState {
+  if (reversibilityPaths(meta).length > 0) return 'grounded'
+  const wired = (Object.keys(REV_FIELDS) as ReversibilityPath[]).some((path) => meta?.[REV_FIELDS[path]] !== undefined)
+  return wired ? 'baseless' : 'unwired'
 }
 
 /**
  * 片 E：标签文案——有据**只列真有据**的那几径（不凑数）；无据走「不可撤销」。
+ * **未接通态（`unwired`）由调用方挡在门外**（令·补25 §一：该态不渲染徽章）——本函数只处「有据／无据」两态。
  *
  * **取词口由调用方注入**（不引 `locales/runtime`）：`{paths}` 是**带占位符**的串，
  * 而非组件面的 runtime 回落**不做插值**（`locales/runtime.ts::lookupSource` 只取值）——
@@ -79,6 +107,8 @@ export function canUndoAction(meta: MessageMeta | null | undefined, paths: Rever
 /** 卡面渲染面（组件只取此一物——避免组件里散落判据）；文案由组件面取词后拼装 */
 export interface ApprovalCardFace {
   highRisk: boolean
+  /** 片 E 三态（令·补25 §一）：`unwired` ⇒ 卡面**不渲染**徽章 */
+  revState: RevState
   revPaths: ReversibilityPath[]
   revTone: 'low' | 'high'
   reuseCount: number
@@ -90,6 +120,7 @@ export function approvalCardFace(meta?: MessageMeta | null): ApprovalCardFace {
   const revPaths = reversibilityPaths(meta)
   return {
     highRisk: isHighRiskCard(meta),
+    revState: reversibilityState(meta),
     revPaths,
     revTone: reversibilityTone(revPaths),
     reuseCount: reuseCount(meta),

@@ -112,8 +112,8 @@ async function requestEscalation() {
 
 /** **令·补24**：卡面判据（高危／复用可见／可逆性三径）——一律取自 utils/approvalCard.ts */
 const face = computed(() => approvalCardFace(props.message.meta))
-/** 可逆性标签文案（**组件面取词**）：`{paths}` 须真插值——非组件面的 runtime 回落不插值 */
-const revText = computed(() => reversibilityText(face.value.revPaths, t))
+/** 可逆性标签文案（**组件面取词**）：`{paths}` 须真插值；**未接通 ⇒ 空串**（令·补25 §一：卡面不渲染徽章 ∧ 不得出现「可撤销」字样） */
+const revText = computed(() => (face.value.revState === 'unwired' ? '' : reversibilityText(face.value.revPaths, t)))
 /** 默认焦点＝「拒绝」（只在高危卡夺焦——先想清楚再点；常态卡不扰）＋ 撤销失败人话（禁假装成功） */
 const denyRef = ref<HTMLButtonElement | null>(null)
 const undoError = ref('')
@@ -138,7 +138,7 @@ async function undoAction() {
       {{ expired ? t('approval.expired') : message.meta?.approved ? t('approval.approved') : t('approval.denied') }}{{ scopeSuffix }}
     </span>
     <span class="approval-resolved-tool">{{ toolText }}</span>
-    <span class="rev" :class="face.revTone" :data-reversibility="face.revTone === 'low' ? '1' : '0'">{{ revText }}</span>
+    <span v-if="face.revState !== 'unwired'" class="rev" :class="face.revTone" :data-reversibility="face.revTone === 'low' ? '1' : '0'">{{ revText }}</span>
     <!-- 撤销入口就在该条消息下方（**不藏设置页**）；借 `.approval-actions button` 既有样式与 ≥44 热区 -->
     <div v-if="face.canUndo" class="approval-actions">
       <button type="button" class="approval-undo" :data-undo-request-id="requestId" :disabled="working"
@@ -153,7 +153,7 @@ async function undoAction() {
     <!-- A 头部：工具名（13px 次级）＋ 风险徽章（11px）＋ **令·补24 P1-8** 可逆性徽章 -->
     <div class="approval-head">
       <span class="approval-tool">{{ toolText }}</span>
-      <span class="rev" :class="face.revTone" :data-reversibility="face.revTone === 'low' ? '1' : '0'">{{ revText }}</span>
+      <span v-if="face.revState !== 'unwired'" class="rev" :class="face.revTone" :data-reversibility="face.revTone === 'low' ? '1' : '0'">{{ revText }}</span>
       <!-- MSG-3263 ④（P2-6）：档位取不到时**不再显「档位未知」**（对用户零信息，
           与 MSG-3231 理由位同源口径）——只在拿到真实档位时显徽章 -->
       <span v-if="riskLevel !== 'unknown'" class="risk" :class="riskLevel">{{ riskText }}</span>
