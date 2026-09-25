@@ -119,5 +119,17 @@ function cancelQueued() {
     >
       {{ t('errors.relogin') }}
     </button>
+
+    <!-- **令·补24 P0-5**（`-32002` 带回登录出口）：错误帧带 `login_hint` ⇒ 本条错＝身份/会话面。
+         「只报不说去哪」已废——**就在该条消息处**给可点「去登录」。
+         三条口径：①复用既有 `identity.notEstablished`／`identity.goLogin`（不另造文案）；
+         ②daemon 的 `login_hint` **原文不上屏**（只当存在性判据，防内部号/URL 漏到界面）；
+         ③字段缺失（旧 daemon）⇒ 整块不渲染，既有文案零变。 -->
+    <div v-if="message.meta?.loginHint" class="identity-notice" role="status" data-login-hint="1">
+      <span class="identity-notice-text">{{ t('identity.notEstablished') }}</span>
+      <button type="button" class="identity-login" @click="goLogin">
+        {{ t('identity.goLogin') }}
+      </button>
+    </div>
   </div>
 </template>

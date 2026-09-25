@@ -54,6 +54,24 @@ export function isIdentityMissing(userId: string | undefined | null): boolean {
   return String(userId ?? '').trim().length === 0
 }
 
+// ── 令·补24 P0-5：`-32002` 带回登录出口 ──
+//
+// 病灶：`-32002` 若经 **SSE `error` 帧**（而非 RPC 抛错）到达，改前一律落 `errors.unknown`
+// ＋ daemon 原文——**只报不说去哪**，用户无从下手（RPC 抛错径早有「重新登录」钮，帧径没有）。
+//
+// 口径：daemon 在错误帧 `data` 上带 `login_hint` ⇒ 本条错属**身份/会话面**，
+// 该条消息处须给**可点「去登录」**。本函数是**唯一判据点**（纯函数·可机判）。
+//
+// 三条自我约束（照本文件 `isModelAuthFailure` 同法：禁"看着像就归"）：
+//   ① **只认字段本身**——不去猜 `message` 里像不像登录错（那是 `errors.ts` 的语义分流面，另一径）；
+//   ② 只认 **非空字符串** 或 **`true`**（daemon 给文案或给旗标皆可）；其余（空串／空白／数字／
+//      对象／`false`／`null`）一律**不算**——空值当"有"会把出口撒得到处都是；
+//   ③ 字段**原文不上屏**（只当存在性判据）——上屏走 i18n，防 daemon 内部号／URL 漏到界面。
+export function hasLoginHint(hint: unknown): boolean {
+  if (hint === true) return true
+  return typeof hint === 'string' && hint.trim().length > 0
+}
+
 // ── T3／DEBT-875(a)：「乱输入也能登录」的**前端面**闸 ──
 //
 // 病灶（DEBT-875 原文 · 测试员 T3a）：`LoginView.vue` 改前对账号密码**只判非空、不判形态**——

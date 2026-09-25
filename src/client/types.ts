@@ -151,6 +151,15 @@ export interface ApprovalRevokeParams {
   rule_id: string
 }
 
+/**
+ * **令·补24 P1-8**：撤销**已执行**的动作（与「撤销规则」是两件事——`approval.revoke` 撤规则，
+ * 本件撤动作）。**契约先行**：daemon 回滚面属另片，未实装 ⇒ 回 `-32601` ⇒ 调用方人话降级
+ * （照 `schedule.run_detail`／`audit.execModeChanged` 同法，**禁假装成功**）。
+ */
+export interface ApprovalUndoParams {
+  request_id: string
+}
+
 export interface ApprovalEscalateParams {
   request_id: string
   [key: string]: unknown
@@ -269,6 +278,13 @@ export interface DoneData {
 export interface ErrorData {
   task_id: string
   message: string
+  /**
+   * **令·补24 P0-5**（`-32002` 带回登录出口）：daemon 明示「这条错＝身份/会话面，去登录」。
+   * 前端**只当存在性判据**用（非空串／true ⇒ 置位），**不把原文上屏**——上屏文案一律走
+   * 既有 `identity.notEstablished`／`identity.goLogin`（禁内部号与 daemon 原文糊到用户脸上）。
+   * 字段缺失（旧 daemon）⇒ 前端零行为变化，走既有文案。
+   */
+  login_hint?: string
 }
 
 export interface DaemonNotifyData {

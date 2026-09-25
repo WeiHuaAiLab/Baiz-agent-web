@@ -73,6 +73,16 @@ export interface MessageMeta {
   status?: string
   statusKey?: string
   errorKey?: string
+  /** **令·补24 P0-5**：本条错经 daemon `login_hint` 判定为身份/会话面 ⇒ 该条消息处给「去登录」出口 */
+  loginHint?: boolean
+  /** **令·补24 P0-1 ④**：daemon 下发「本动作已免卡执行 M 次」（缺省 ⇒ 不渲染，禁伪造次数） */
+  reuseCount?: number
+  /** 上述免卡执行的**规则 id**——复用面「撤销」的落点；缺 ⇒ 事实照说但不给按不动的假钮 */
+  reuseRuleId?: string
+  /** **令·补24 P1-8**：可逆性三径——**只认 daemon 实测事实**（`=== true` 才算；缺省 ⇒ 不可撤销） */
+  recycleBin?: boolean
+  changeManifest?: boolean
+  backupVerified?: boolean
   streaming?: boolean
   /** 用户消息随消息携带的附件（图片缩略图 / 文件概要），随消息持久化到 DB */
   attachments?: AttachmentItem[]

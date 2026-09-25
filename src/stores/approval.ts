@@ -232,6 +232,23 @@ export const useApprovalStore = defineStore('approval', {
       this.rules = this.rules.filter((rule) => rule.rule_id !== ruleId)
       useUiStore().toast('已撤销该规则——下次同类操作会重新弹卡确认', 'info')
     },
+    /**
+     * **令·补24 P1-8**：撤销**已执行**的动作（与「撤销规则」分家：本件撤动作，不撤规则）。
+     * **契约先行**（照 MSG-3561 C3 的 `schedule.run_detail` 同法）：daemon 回滚面未实装 ⇒
+     * `-32601` ⇒ **人话上屏 ＋ 返回给卡面**，**禁假装成功**（卡面不得出现「已撤销」）。
+     */
+    async undoAction(requestId: string): Promise<{ ok: boolean; error?: string }> {
+      const { client } = getClientSetup()
+      try {
+        await client.approvalUndo({ request_id: requestId })
+      } catch (error) {
+        const reason = (error as Error).message
+        useUiStore().toast(`撤销失败：${reason}`, 'error')
+        return { ok: false, error: reason }
+      }
+      useUiStore().toast('已请求回滚——结果以服务端为准', 'info')
+      return { ok: true }
+    },
     /** 设置页展示的优先级表（§B approval.policy） */
     async loadPolicy() {
       const { client } = getClientSetup()

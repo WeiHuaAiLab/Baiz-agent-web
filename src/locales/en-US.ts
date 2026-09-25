@@ -551,6 +551,8 @@ export default {
     rulesTitle: 'Remembered rules',
     revoke: 'Revoke',
     revokeHint: 'After revoking, the same action asks again',
+    // 令·补24 片 A/E（新键·只增）：高危卡复用可见 ＋ 可逆性三径 ＋ 已执行动作撤销
+    irreversible: 'Cannot be undone', reversible: 'Undoable ({paths})', revRecycle: 'Recycle bin', revManifest: 'Change manifest', revBackup: 'Backup', reuseNotice: 'This action ran {n} time(s) without asking', undoHint: 'Ask the service to roll this executed action back (hidden when not undoable)', undoFailed: 'Undo failed: {msg}',
   },
   // MSG-3189 E1/E2: intervention mode selector (three tiers; current always visible)
   execMode: {

@@ -4,6 +4,8 @@ import { db } from '../db'
 import { getClient } from '../client/singleton'
 import type { AttachmentItem } from './files'
 import { isPolicyDenied, mapRpcError, POLICY_DENIED_HUMAN } from '../utils/errors'
+// 令·补24 P0-5：错误帧带 `login_hint` ⇒ 该条消息处给「去登录」出口（判据唯一＝本函数）
+import { hasLoginHint } from '../utils/authFailure'
 import { createDecisionStreamFilter } from '../utils/decisionStream'
 import type { DecisionStreamFilter } from '../utils/decisionStream'
 import { createProtocolLeakFilter } from '../utils/protocolLeak'
@@ -952,10 +954,7 @@ export const useMessageStore = defineStore('message', {
       const conversationId = this.conversationOf(data.task_id)
       if (conversationId) {
         // 批0 循环提示：消息本身已带提示（如 demo/上游）则不重复追加
-        const hint =
-          data.message.includes('建议别再硬修')
-            ? null
-            : loopHintForError(conversationId, data.message)
+        const hint = data.message.includes('建议别再硬修') ? null : loopHintForError(conversationId, data.message)
         const text = hint ? `${data.message}\n\n💡 ${hint}` : data.message
         void this.push(
           conversationId,
@@ -964,6 +963,7 @@ export const useMessageStore = defineStore('message', {
             statusKey: 'taskError',
             errorKey: 'unknown',
             taskId: data.task_id,
+            loginHint: hasLoginHint(data.login_hint) ? true : undefined, // 缺字段 ⇒ 不置位（旧 daemon 零变）
           }),
         )
       }

@@ -8,6 +8,7 @@ import type {
   ApprovalPolicyResult,
   ApprovalRevokeParams,
   ApprovalRule,
+  ApprovalUndoParams,
   AuditExecModeChangedParams,
   AuthHandshakeParams,
   AuthLoginParams,
@@ -61,6 +62,11 @@ export interface BaizClient {
   approvalRules(): Promise<ApprovalRule[]>
   /** 标准 §B：撤销规则——撤销后必重弹 */
   approvalRevoke(params: ApprovalRevokeParams): Promise<unknown>
+  /**
+   * **令·补24 P1-8**：撤销**已执行**的动作（契约先行）。
+   * daemon 回滚面未实装 ⇒ `-32601` ⇒ 调用方**人话降级**（禁假装成功）。
+   */
+  approvalUndo(params: ApprovalUndoParams): Promise<unknown>
   /** 标准 §B：可机判优先级表（设置页展示） */
   approvalPolicy(): Promise<ApprovalPolicyResult>
   /** 标准 §B：申请放行（升级≠免审——批准后仍走审批执行） */
@@ -179,6 +185,8 @@ export function createClient(transport: RpcTransport): BaizClient {
       return Array.isArray(result?.rules) ? result.rules : []
     },
     approvalRevoke: (params) => rpc.call('approval.revoke', params),
+    // 令·补24 P1-8：撤销已执行动作（daemon 回滚面·契约先行；未实装时 -32601 ⇒ 界面人话）
+    approvalUndo: (params) => rpc.call('approval.undo', params),
     approvalPolicy: () => rpc.call('approval.policy'),
     approvalEscalate: (params) => rpc.call('approval.escalate', params),
     a2aStatus: () => rpc.call('a2a.status'),
