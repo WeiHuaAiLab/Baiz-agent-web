@@ -220,7 +220,8 @@ function stopVoice() {
 
 function send() {
     const trimmed = input.value.trim();
-    if (!trimmed) return;
+    // A3（1.0.29 体验债丙）：**仅附件**为合法发送面 ⇒ 空正文**且无附件**方静默返回。
+    if (!trimmed && files.attachments.length === 0) return;
     sendWith(trimmed);
 }
 
@@ -237,7 +238,8 @@ function send() {
 async function sendWith(text: string) {
     const trimmed = text.trim();
     // MSG-3236 ④：空文本属"用户没输入"（非拒发），保持静默；其余一律不得静默吞。
-    if (!trimmed) return;
+    // A3（1.0.29）：同上——**空正文＋有附件**放行（`send()` 与本函数两道闸同语义）。
+    if (!trimmed && files.attachments.length === 0) return;
     // MSG-3236 ④：收件箱遮罩在途时，发送曾被**静默吞掉**（mask 吃掉指点事件）。
     // 这里先让路（关收件箱＋回焦点），**并给人话提示**——要发就真发出去，绝不静默。
     if (ui.inboxOpen) {
@@ -533,7 +535,7 @@ watch(
                     v-else
                     type="submit"
                     class="send-btn"
-                    :disabled="!input.trim() || !files.attachmentsSendable"
+                    :disabled="(!input.trim() && files.attachments.length === 0) || !files.attachmentsSendable"
                     :title="
                         files.attachmentsSendable
                             ? t('chat.send')

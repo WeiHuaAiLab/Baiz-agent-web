@@ -131,7 +131,7 @@ function submit() {
       >
         <Icon name="stop" :size="15" />
       </button>
-      <button v-else type="submit" class="send-btn" :disabled="!text.trim()" :title="t('chat.send')">
+      <button v-else type="submit" class="send-btn" :disabled="!text.trim() && files.attachments.length === 0" :title="t('chat.send')">
         <Icon name="send" :size="16" />
       </button>
     </div>
