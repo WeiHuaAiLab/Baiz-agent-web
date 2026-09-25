@@ -140,6 +140,16 @@ function runLine(r: ScheduleRun): string {
   return `${runStatusLabel(r.status)} · ${at}${extra ? `· ${extra}` : ''}`
 }
 
+/** **1.0.28 · UI 整改**（规格件 §三）：状态徽章四态——`ok`／`fail`／`running`／`unknown`。
+ *  **未知态走中性色**（`--text-secondary`＋`--surface-2`）——**不得伪装成功**。 */
+function runBadgeTone(r: ScheduleRun): 'ok' | 'fail' | 'running' | 'unknown' {
+  const s = (r.status || '').toLowerCase()
+  if (s === 'success' || s === 'once_done' || s === 'ok') return 'ok'
+  if (s === 'error' || s === 'failed' || s === 'fail') return 'fail'
+  if (s === 'running' || s === 'pending' || s === 'in_progress' || s === 'queued') return 'running'
+  return 'unknown'
+}
+
 /** 启停：接 daemon（失败人话·不改界面状态） */
 async function toggleTask(task: TaskItem) {
   const next = !isEnabled(task)
@@ -330,33 +340,46 @@ onBeforeUnmount(() => {
               {{ t('working.runsEmpty') }}
             </li>
             <li v-for="run in runsOf[task.id]" :key="run.id" class="task-run-line">
-              <div class="task-run-head">{{ runLine(run) }}</div>
+              <!-- **1.0.28 · UI 整改**（规格件 §二/§三）：行首 ＝ 状态徽章 ＋ **单行摘要** ＋
+                   右侧「查看结果」（次按钮·热区 ≥44×44 由 `::after` 扩）。 -->
+              <div class="task-run-head">
+                <span class="run-badge" :class="`tone-${runBadgeTone(run)}`" :data-run-badge="run.id">
+                  {{ runStatusLabel(run.status) }}
+                </span>
+                <span class="task-run-summary" :title="runLine(run)">{{ runLine(run) }}</span>
+                <!-- **DEBT-885 甲案**：原「打开该次会话」跳**镜像会话** `scheduled-<task_id>`——
+                     定时径消息不进前端所读会话库，**点进去是空会话**。现改为**展开该次结果全文**
+                     （面板见下）；无结果给**明确空态**（不留白）。 -->
+                <button
+                  type="button"
+                  class="task-run-open"
+                  :data-run-open="run.id"
+                  @click="toggleRunResult(task as TaskItem, run)"
+                >
+                  {{ runOpened[run.id] ? t('working.hideRunResult') : t('working.openRunResult') }}
+                </button>
+              </div>
               <!-- MSG-3561 C3：结果面**全文**（优先 `full_text`；后端未落地时回退 summary/error）
-                   ——**不再只显示 200 字截断**（渲染层零截断） -->
+                   ——**不再只显示 200 字截断**（渲染层零截断）。
+                   **1.0.28 整改**：展开面板已承载该次全文时，本块**不再渲染**（同一段只出现一次）；
+                   面板**未**展开时保持 C3「自动全文」面（既有已验断言面不动）。 -->
               <pre
-                v-if="runResultText(run, runsFull[run.id])"
+                v-if="runResultText(run, runsFull[run.id]) && !runOpened[run.id]"
                 class="task-run-full"
                 data-run-full="1"
+                tabindex="0"
+                aria-label="执行结果全文"
               >{{ runResultText(run, runsFull[run.id]) }}</pre>
-              <!-- **DEBT-885 甲案**：原「打开该次会话」跳**镜像会话** `scheduled-<task_id>`——
-                   定时径消息不进前端所读会话库，**点进去是空会话**。现改为**展开该次结果全文**
-                   （面板见下）；无结果给**明确空态**（不留白）。 -->
-              <button
-                type="button"
-                class="task-run-open"
-                :data-run-open="run.id"
-                @click="toggleRunResult(task as TaskItem, run)"
-              >
-                {{ runOpened[run.id] ? t('working.hideRunResult') : t('working.openRunResult') }}
-              </button>
               <div v-if="runOpened[run.id]" class="task-run-result" :data-run-result="run.id">
-                <p v-if="runLoading[run.id]" class="task-run-loading" role="status">
+                <p v-if="runLoading[run.id]" class="task-run-loading" role="status" aria-busy="true">
                   {{ t('working.runResultLoading') }}
                 </p>
                 <pre
                   v-else-if="runResultText(run, runsFull[run.id])"
                   class="task-run-full"
                   data-run-full="1"
+                  tabindex="0"
+                  aria-label="执行结果全文"
                 >{{ runResultText(run, runsFull[run.id]) }}</pre>
                 <p v-else class="task-run-empty" :data-run-empty="run.id">
                   {{ t('working.runResultEmpty') }}
