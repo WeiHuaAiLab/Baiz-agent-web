@@ -557,7 +557,7 @@ export default {
     rulesTitle: '已记住的规则',
     revoke: '撤销',
     revokeHint: '撤销后，同类操作会重新弹卡确认',
-    irreversible: '不可撤销', reversible: '可撤销（{paths}）', revRecycle: '回收站', revManifest: '清单', revBackup: '备份', reuseNotice: '本动作已免卡执行 {n} 次', undoHint: '让服务端把这次已执行的动作回滚（不可逆时此钮不出现）', undoFailed: '撤销失败：{msg}', // 令·补24 片 A/E（新键·只增）
+    irreversible: '不可撤销', reversible: '可撤销（{paths}）', revRecycle: '回收站', revManifest: '清单', revBackup: '备份', reuseNotice: '本动作已免卡执行 {n} 次', undoHint: '让服务端把这次已执行的动作回滚（不可逆时此钮不出现）', undoFailed: '撤销失败：{msg}', undoUnsupported: '本次改动不可自动回滚', // 令·补24 片 A/E ＋令·补26 §一（新键·只增）
   },
   // MSG-3189 E1／E2：介入方式选择器（三档·当前档常显·默认每次确认）
   execMode: {

@@ -120,11 +120,11 @@ const undoError = ref('')
 onMounted(() => { if (face.value.highRisk && !resolved.value) denyRef.value?.focus() })
 /** 复用面「撤销」：撤的是**那条免卡规则**（撤后同类操作重新弹卡）——复用既有 revokeRule */
 function revokeReuse() { void approval.revokeRule(face.value.reuseRuleId) }
-/** 已执行动作「撤销」：走后端回滚面（契约先行；daemon 未实装 ⇒ -32601 ⇒ 人话上屏，不假装成功） */
+/** 已执行动作「撤销」（**令·补26 §一**）：未实装 -32601 ⇒ 记档 ⇒ 钮置灰＋「不可自动回滚」（禁假成功／禁静默） */
 async function undoAction() {
-  if (working.value) return
+  if (working.value || approval.undoUnsupported) return
   const result = await approval.undoAction(requestId.value)
-  undoError.value = result.ok ? '' : (result.error ?? t('errors.unknown'))
+  undoError.value = result.ok || result.unsupported ? '' : (result.error ?? t('errors.unknown'))
 }
 </script>
 
@@ -139,14 +139,15 @@ async function undoAction() {
     </span>
     <span class="approval-resolved-tool">{{ toolText }}</span>
     <span v-if="face.revState !== 'unwired'" class="rev" :class="face.revTone" :data-reversibility="face.revTone === 'low' ? '1' : '0'">{{ revText }}</span>
-    <!-- 撤销入口就在该条消息下方（**不藏设置页**）；借 `.approval-actions button` 既有样式与 ≥44 热区 -->
+    <!-- 撤销入口就在该条消息下方（**不藏设置页**）；借 `.approval-actions button` 既有样式与 ≥44 热区；**令·补26 §一**：回滚面未实装（-32601）⇒ 钮**置灰**＋明白话。 -->
     <div v-if="face.canUndo" class="approval-actions">
-      <button type="button" class="approval-undo" :data-undo-request-id="requestId" :disabled="working"
+      <button type="button" class="approval-undo" :data-undo-request-id="requestId" :disabled="working || approval.undoUnsupported"
         :title="t('approval.undoHint')" @click="undoAction">
         {{ t('approval.revoke') }}
       </button>
     </div>
     <span v-if="undoError" class="approval-error" data-undo-error="1">{{ t('approval.undoFailed', { msg: undoError }) }}</span>
+    <span v-if="face.canUndo && approval.undoUnsupported" class="approval-note" data-undo-unsupported="1">{{ t('approval.undoUnsupported') }}</span>
   </div>
 
   <div v-else class="approval-card" :data-state="state" @keydown.esc.prevent="decide(false)">
@@ -346,8 +347,7 @@ async function undoAction() {
   white-space: nowrap;
 }
 
-/* **令·补24 P1-8** 可逆性徽章（与 risk 徽章同族 token：有据＝绿档／无据＝红档）；类名**不复用 `.risk`**——
-   既有红证 `approval-card-design.test.ts` 以 `.risk` 存在性判「档位徽章是否渲染」，混用会让那条判据失真。 */
+/* **令·补24 P1-8** 可逆性徽章（与 risk 徽章同族 token：有据＝绿档／无据＝红档）；类名**不复用 `.risk`**——既有红证 `approval-card-design.test.ts` 以 `.risk` 存在性判「档位徽章是否渲染」，混用会让那条判据失真。 */
 .approval-head .rev { margin-left: auto; }
 
 .rev.high, .risk.high {
@@ -476,8 +476,8 @@ async function undoAction() {
   color: var(--text-primary);
 }
 
-/* —— 来自后台任务（__inbox__）／**令·补24 A-4** 复用可见（同属「卡内附注」一行式） —— */
-.approval-from-inbox, .approval-reuse {
+/* —— 来自后台任务（__inbox__）／**令·补24 A-4** 复用可见／**令·补26 §一** 回滚面未实装之明白话（同属「卡内附注」一行式） —— */
+.approval-from-inbox, .approval-reuse, .approval-note {
   margin: 0;
   color: var(--text-secondary);
   font-size: 13px;

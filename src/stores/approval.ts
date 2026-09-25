@@ -11,6 +11,7 @@ import { getClientSetup } from '../client/singleton'
 import { INBOX_CONVERSATION_ID, isInboxConversation } from '../client/types'
 import type { ApprovalRule, ApprovalScope } from '../client/types'
 import { normalizeRisk } from '../utils/approvalText'
+import { mapRpcError } from '../utils/errors'
 import { useMessageStore } from './message'
 import { useUiStore } from './ui'
 
@@ -43,6 +44,12 @@ export const useApprovalStore = defineStore('approval', {
     staleReconciled: 0,
     rules: [] as ApprovalRule[],
     rulesLoaded: false,
+    /**
+     * **令·补26 §一**：daemon 回滚面**未实装·已观测**——`approval.undo` 回一次 `-32601` 即记档；
+     * 卡面据此**置灰撤销钮 ＋ 明白话**「本次改动不可自动回滚」（禁假成功／禁静默吞掉）。
+     * 记在**daemon 面**（非单卡）：方法缺失是进程级事实，不因换卡而变。仅本次会话在册（刷新即重探）。
+     */
+    undoUnsupported: false,
     policy: [] as Array<{ name: string; priority: number }>,
   }),
   getters: {
@@ -234,14 +241,21 @@ export const useApprovalStore = defineStore('approval', {
     },
     /**
      * **令·补24 P1-8**：撤销**已执行**的动作（与「撤销规则」分家：本件撤动作，不撤规则）。
-     * **契约先行**（照 MSG-3561 C3 的 `schedule.run_detail` 同法）：daemon 回滚面未实装 ⇒
-     * `-32601` ⇒ **人话上屏 ＋ 返回给卡面**，**禁假装成功**（卡面不得出现「已撤销」）。
+     * **令·补26 §一**（撤销「诚实降级」）：daemon 回滚面未实装 ⇒ `-32601` **不是**普通失败——
+     * 记档 `undoUnsupported` ＋ 回 `unsupported=true`，交卡面**置灰撤销钮 ＋ 明白话**
+     * 「本次改动不可自动回滚」；**禁**渲染成成功、**禁**静默吞掉（其余失败仍走人话＋原样重试径）。
+     * 判据唯一＝`mapRpcError`（`-32601 ⇒ methodNotFound`）——**只认码面**（`RpcError.code`），
+     * 禁拿消息文本"看着像就归"（第二套真源；与 `stores/kb.ts`／`memory.ts` 同法）。
      */
-    async undoAction(requestId: string): Promise<{ ok: boolean; error?: string }> {
+    async undoAction(requestId: string): Promise<{ ok: boolean; error?: string; unsupported?: boolean }> {
       const { client } = getClientSetup()
       try {
         await client.approvalUndo({ request_id: requestId })
       } catch (error) {
+        if (mapRpcError(error).key === 'methodNotFound') {
+          this.undoUnsupported = true
+          return { ok: false, unsupported: true }
+        }
         const reason = (error as Error).message
         useUiStore().toast(`撤销失败：${reason}`, 'error')
         return { ok: false, error: reason }
