@@ -19,7 +19,8 @@ const { t } = useI18n()
 const approval = useApprovalStore()
 const working = ref(false)
 const showDiff = ref(false)
-const escalated = ref(false)
+/** **T5①**：已申请放行——读 store（仅成功径入册；旧口径本地 ref 无条件置真＝谎称成功） */
+const escalated = computed(() => approval.escalatedIds.includes(requestId.value))
 /** 动作摘要展开（超长命令单行截断 → 展开） */
 const expanded = ref(false)
 /** error 态：提交失败人话（不销卡，可重试） */
@@ -101,12 +102,11 @@ async function decide(approved: boolean) {
   working.value = false
 }
 
-/** B4：被沙箱拒绝时的「申请放行」——升级≠免审（批准后仍走审批执行） */
+/** B4：申请放行——升级≠免审。**T5①**：`-32601`（daemon 无该分派）⇒ store 记档、钮置灰＋明白话（**错误码保留**）；普通失败⇒store toast 人话可重试；「已申请」**只在成功径**落 store（旧口径无条件置真＝谎称成功） */
 async function requestEscalation() {
-  if (!requestId.value || working.value || escalated.value) return
+  if (!requestId.value || working.value || escalated.value || approval.escalateUnsupported) return
   working.value = true
   await approval.escalate(requestId.value)
-  escalated.value = true
   working.value = false
 }
 
@@ -221,9 +221,7 @@ async function undoAction() {
     </div>
 
     <!-- error 态：卡内一行「提交失败：<人话>」＋ 保留可重试（不销卡） -->
-    <p v-if="submitError" class="approval-error">
-      {{ t('approval.submitFailed', { msg: submitError }) }}——{{ t('approval.retryHint') }}
-    </p>
+    <p v-if="submitError" class="approval-error">{{ t('approval.submitFailed', { msg: submitError }) }}——{{ t('approval.retryHint') }}</p>
 
     <!-- F 按钮区：同意（--accent 实心）／拒绝（中性描边·**非红**） -->
     <div class="approval-actions">
@@ -255,9 +253,7 @@ async function undoAction() {
         {{ t('approval.deny') }}
       </button>
     </div>
-    <!-- B4：两行按钮——记住这条（会话/项目/永久档）＋ 申请放行（被沙箱拒时）。
-         **令·补24 A-1**：高危卡档位区已不渲染 ⇒ 档位恒为「一次」⇒ 本钮恒禁用——
-         留个按不动的死钮是新问题，故与档位区**同闭**。 -->
+    <!-- B4：记住这条（会话/项目/永久档）＋ 申请放行（被沙箱拒时）。**令·补24 A-1**：高危卡档位区已不渲染 ⇒ 档位恒「一次」⇒ 本钮恒禁用——留个死钮是新问题，故与档位区**同闭**。 -->
     <div class="approval-actions approval-actions-secondary">
       <button
         v-if="!face.highRisk"
@@ -269,16 +265,18 @@ async function undoAction() {
       >
         {{ t('approval.remember') }}
       </button>
+      <!-- **T5①** 未实装 ⇒ 钮置灰（死钮不反复打服务端）；`escalated` 只在**成功**径为真 ⇒ 不谎称「已申请」 -->
       <button
         type="button"
         class="escalate"
-        :disabled="working || escalated"
+        :disabled="working || escalated || approval.escalateUnsupported"
         :title="t('approval.escalateHint')"
         @click="requestEscalation"
       >
         {{ escalated ? t('approval.escalateSent') : t('approval.escalate') }}
       </button>
     </div>
+    <p v-if="approval.escalateUnsupported" class="approval-note" data-escalate-unsupported="1">{{ t('approval.escalateUnsupported') }}</p>
   </div>
 </template>
 

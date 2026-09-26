@@ -50,6 +50,19 @@ export const useApprovalStore = defineStore('approval', {
      * 记在**daemon 面**（非单卡）：方法缺失是进程级事实，不因换卡而变。仅本次会话在册（刷新即重探）。
      */
     undoUnsupported: false,
+    /**
+     * **令·1.0.30 T批 · T5①**：daemon 侧 `approval.escalate` **无分派·已观测**——「申请放行」点一次
+     * 回一次 `-32601`（与 `approval.undo` 同型：契约先行未落地）。记档在 **daemon 面**（进程级事实，
+     * 不因换卡而变）：卡面据此**置灰「申请放行」钮 ＋ 明白话（保留错误码 -32601）**，
+     * **禁**静默、**禁**谎称成功（旧口径失败也标「已申请放行」——本刀之根）。仅本次会话在册（刷新即重探）。
+     */
+    escalateUnsupported: false,
+    /**
+     * **令·1.0.30 T批 · T5①**：**已申请放行**的 `request_id` 集——**仅成功径**入册。
+     * 卡面据此显「已申请放行」并锁钮；旧口径由组件本地 `ref` **无条件**置真 ⇒ 未实装也标「已申请」
+     * ＝**谎称成功**（本刀之根）。状态内聚于 store：组件零本地态，且**换卡/重挂**后仍据实。
+     */
+    escalatedIds: [] as string[],
     policy: [] as Array<{ name: string; priority: number }>,
   }),
   getters: {
@@ -273,16 +286,38 @@ export const useApprovalStore = defineStore('approval', {
         this.policy = []
       }
     },
-    /** 申请放行（§B approval.escalate）——升级≠免审：批准后仍走审批执行 */
-    async escalate(requestId: string) {
+    /**
+     * 申请放行（§B approval.escalate）——升级≠免审：批准后仍走审批执行。
+     *
+     * **令·1.0.30 T批 · T5①**（真机 R5①：该钮**必报错**）：daemon 侧**无 `approval.escalate` 分派**
+     * （契约先行未落地）⇒ `-32601` **不是**普通失败——旧口径两点病：
+     *   ① 失败也把裸码糊上屏（`申请放行失败：RPC -32601: method not found`）；
+     *   ② 调用方无条件标「已申请放行」（**谎称成功**）。
+     * 本刀照 `undoAction` 同法：`-32601` ⇒ 记档 `escalateUnsupported` ＋ 回 `unsupported=true`，
+     * 交卡面**置灰钮 ＋ 明白话（**保留错误码 -32601**）**；其余失败仍走人话＋原样可重试径。
+     * 判据唯一＝`mapRpcError`（`-32601 ⇒ methodNotFound`）——**只认码面**（`RpcError.code`），
+     * 禁拿消息文本"看着像就归"（第二套真源）。
+     * 返回值：`{ ok }` 供调用方**据实**处置（成功才可标「已申请」）。
+     */
+    async escalate(requestId: string): Promise<{ ok: boolean; error?: string; unsupported?: boolean }> {
       const { client } = getClientSetup()
       try {
         await client.approvalEscalate({ request_id: requestId })
       } catch (error) {
-        useUiStore().toast(`申请放行失败：${(error as Error).message}`, 'error')
-        return
+        if (mapRpcError(error).key === 'methodNotFound') {
+          this.escalateUnsupported = true
+          // 「保留错误码」：人话里带上码，便于测试员/客服对卯，且不吐整串机器语
+          useUiStore().toast('申请放行：本期未开放（服务端错误码 -32601）——已记录，重试不会成功', 'error')
+          return { ok: false, unsupported: true }
+        }
+        const reason = (error as Error).message
+        useUiStore().toast(`申请放行失败：${reason}`, 'error')
+        return { ok: false, error: reason }
       }
+      // **T5①**：成功径才入册——卡面「已申请放行」由**服务端受理**这一事实支撑（禁谎称成功）
+      if (!this.escalatedIds.includes(requestId)) this.escalatedIds.push(requestId)
       useUiStore().toast('已申请放行——批准后仍会走一次审批执行', 'info')
+      return { ok: true }
     },
   },
 })

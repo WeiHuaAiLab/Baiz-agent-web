@@ -540,7 +540,7 @@ export default {
     rememberNeedsScope: 'Pick session / project / always first, then click remember',
     escalate: 'Request clearance',
     escalateSent: 'Clearance requested',
-    escalateHint: 'When the sandbox blocked it, request clearance — approval still runs the audit step',
+    escalateHint: 'When the sandbox blocked it, request clearance — approval still runs the audit step', escalateFailed: 'Clearance request failed: {msg}', escalateUnsupported: 'Not available in this release: the service has no “request clearance” method yet (error -32601) — recorded; retrying will not help', // T5①（新键·只增·同行以守件行数闸）
     inboxTitle: 'Approval inbox',
     inboxShort: 'Inbox',
     inboxBanner: '{n} pending approval(s) · open inbox',

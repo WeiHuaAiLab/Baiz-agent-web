@@ -546,7 +546,7 @@ export default {
     rememberNeedsScope: '先选「本会话／本项目／永久」，再点这里记住',
     escalate: '申请放行',
     escalateSent: '已申请放行',
-    escalateHint: '操作被沙箱拒绝时可申请放行——批准后仍会走一次审批执行',
+    escalateHint: '操作被沙箱拒绝时可申请放行——批准后仍会走一次审批执行', escalateFailed: '申请放行未成功：{msg}', escalateUnsupported: '本期未开放：服务端尚未提供「申请放行」（错误码 -32601）——已记录，重试不会成功', // 令·1.0.30 T批 T5①（新键·只增·同行以守件行数闸）
     inboxTitle: '待办收件箱',
     inboxShort: '待办',
     inboxBanner: '待办 {n} 张卡 · 打开收件箱',
