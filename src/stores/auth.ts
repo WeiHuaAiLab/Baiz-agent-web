@@ -15,6 +15,7 @@ import { reconnectClient } from "../client/singleton";
 import { getBridge } from "../bridge";
 import {
   clearStoredAccount,
+  currentDbAccount,
   readStoredAccount,
   rememberAccountLogin,
   setDbAccount,
@@ -258,7 +259,14 @@ export const useAuthStore = defineStore("auth", {
       const session = useSessionStore();
       session.conversations = [];
       session.activeId = "";
-      if (account.length === 0) return;
+      // **令·1.0.30 T批 · T4**：**入参是权威来源**——库面（`db` 模块级全局）若落后于入参
+      // （登出后停在 `baiz-anon`／切换中停在上一段），`session.load()` 读的就是**别的段**：
+      // 真机 R4「退出登录→再登 ⇒ 会话历史消失（重开/重登又恢复）」正是此形；登出径不同步
+      // 还会让未登录期读到**上一账号的库**（串档）。故**先对齐、再 load**＝「等账号段就绪」。
+      // 空白归一：`dbNameFor` 内部 trim，但库面与入参须**同形**才能比对，故此处先 trim 再比。
+      const target = (account ?? "").trim();
+      if (currentDbAccount() !== target) setDbAccount(target);
+      if (target.length === 0) return;
       await session.load();
       if (!session.activeId) await session.create();
     },

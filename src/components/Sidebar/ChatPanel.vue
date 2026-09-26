@@ -77,6 +77,16 @@ function toggleSearch() {
     <p v-if="session.legacyNotice" class="legacy-notice" role="status">
       {{ session.legacyNotice }}
     </p>
+    <!-- **令·1.0.30 T批 · T4**：读面异常人话（读空而库非空、重试一次后仍空）——与上一条同族、
+          **不静默空态**；空串＝无痕（无异常即不占位）。 -->
+    <p
+      v-if="session.loadNotice"
+      class="legacy-notice"
+      role="status"
+      data-load-notice="1"
+    >
+      {{ session.loadNotice }}
+    </p>
     <!-- MSG-3558 ③（老板 2026-09-24）：未登录／身份未建立 ⇒ **显式提示条**；
          历史／会话列表**不得**以「暂无」空态呈现（空 uid 下"没有会话"其实是"没有身份"）。 -->
     <div v-if="identityMissing" class="identity-notice" role="status" data-identity-notice="1">

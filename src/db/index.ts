@@ -221,6 +221,27 @@ export async function readConversationsUnion(
   return rows
 }
 
+/**
+ * **令·1.0.30 T批 · T4**：「读面空 ≠ 数据不在」的**独立判据**——当前账号**全部候选库**的
+ * 会话行数，走 **raw `indexedDB` 通道**（`readConversationsFrom`），**绕开** `db` 懒门面的
+ * Dexie 打开/升级时序：Dexie 侧读到空、raw 侧非空 ⇒ 正是「未就绪」那一类，调用方据此**重试一次**。
+ *
+ * 返回 `-1` ＝**不可判**（旧内核无 `indexedDB.databases()` ⇒ 无法清点）——调用方**不得**据此重试
+ * （不可判即不猜：宁可静默空态，也不得凭空重试或误报）。
+ */
+export async function countAccountConversationsRaw(
+  userId: string | null | undefined = currentAccount,
+): Promise<number> {
+  const existing = await listExistingDbNames()
+  if (!existing) return -1
+  let total = 0
+  for (const name of accountReadDbNames(userId)) {
+    if (!existing.has(name)) continue
+    total += (await readConversationsFrom(name)).length
+  }
+  return total
+}
+
 function instanceFor(name: string): BaizDatabase {
   let inst = instances.get(name)
   if (!inst) {
