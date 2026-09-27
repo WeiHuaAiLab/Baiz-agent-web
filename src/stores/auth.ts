@@ -12,6 +12,8 @@
 import { defineStore } from "pinia";
 import { createDefaultClient } from "../client/factory";
 import { reconnectClient } from "../client/singleton";
+// 52f300a（老板第①条）：dev 信封容错 ⇒ 取双方
+import type { AuthLoginResult } from "../client/types";
 import { getBridge } from "../bridge";
 import {
   clearStoredAccount,
@@ -154,7 +156,20 @@ export const useAuthStore = defineStore("auth", {
         // invoke 前即败（零 daemon 触达）；login 前先 connect 建 real＋
         // listen（mock/http 径幂等；RPC 九点既通面零触）
         await client.connect();
-        const result = await client.authLogin({ email, password });
+        const raw = await client.authLogin({ email, password });
+        // dev 径容错：某些 transport 未剥 JSON-RPC 信封，返回
+        // { id, jsonrpc, result: { session_token, user_id } }——识别后解包
+        const envelope = raw as unknown as {
+          jsonrpc?: string
+          result?: AuthLoginResult
+        };
+        const result: AuthLoginResult =
+          envelope && typeof envelope === 'object' && envelope.result
+            ? envelope.result
+            : (raw as AuthLoginResult);
+        if (!result?.session_token) {
+          throw new Error('登录失败，请检查账号密码');
+        }
         this.sessionToken = result.session_token;
         // **MSG-3592 P0（兜底）**：响应缺 `user_id`（或层错未修期）不得把 `undefined` 传下去
         // ——旧口径直接赋值 ⇒ 下游 `rememberAccountLogin(email, undefined)` 抛
