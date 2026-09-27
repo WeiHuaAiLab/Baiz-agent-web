@@ -55,6 +55,10 @@ export default defineConfig({
   },
   server: {
     port: 5173,
+    watch: {
+      // cargo 编译时会锁定 target 下的 dll，Windows 上监听会抛 EBUSY 导致 dev server 崩溃
+      ignored: ['**/src-tauri/target/**'],
+    },
   },
   build: {
     target: 'es2022',
