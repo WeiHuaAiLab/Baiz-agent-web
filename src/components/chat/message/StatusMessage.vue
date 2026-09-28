@@ -54,12 +54,16 @@ function cancelQueued() {
     </template>
   </div>
   <div v-else class="status-text" :class="message.meta?.status">
-    <template v-if="message.meta?.statusKey">
-      {{ t('status.' + message.meta.statusKey) }}
-      <template v-if="message.meta?.errorKey">：{{ t('errors.' + message.meta.errorKey) }}</template>
-      <span v-if="message.text">（{{ message.text }}）</span>
-    </template>
-    <template v-else>{{ message.text }}</template>
+    <!-- 文本包 status-msg：error 态走 flex（文本 flex:1 + 按钮靠右），
+         非 error 态 span 为 inline 无副作用 -->
+    <span class="status-msg">
+      <template v-if="message.meta?.statusKey">
+        {{ t('status.' + message.meta.statusKey) }}
+        <template v-if="message.meta?.errorKey">：{{ t('errors.' + message.meta.errorKey) }}</template>
+        <span v-if="message.text">（{{ message.text }}）</span>
+      </template>
+      <template v-else>{{ message.text }}</template>
+    </span>
     <button
       v-if="
         message.meta?.statusKey === 'sendFailed' ||

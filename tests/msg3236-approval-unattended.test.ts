@@ -25,7 +25,7 @@ const i18n = createI18n({
   messages: { 'zh-CN': zhCN },
 })
 
-function seedApproval(conversationId: string, requestId: string) {
+function seedApproval(conversationId: string, requestId: string, taskId = 't-1') {
   const messages = useMessageStore()
   const approvals = useApprovalStore()
   routeFrame(
@@ -33,7 +33,7 @@ function seedApproval(conversationId: string, requestId: string) {
       event: 'approval.required',
       data: {
         request_id: requestId,
-        task_id: 't-1',
+        task_id: taskId,
         tool_name: 'shell_exec',
         args_preview: '{"command":"npm ci"}',
       },
@@ -84,7 +84,7 @@ describe('MSG-3236 ① 未决卡常驻 DOM（UIA 可达）', () => {
     const session = useSessionStore()
     session.activeId = 'c-2'
     messages.ensureRun('t-2', 'c-2')
-    seedApproval('c-2', 'r-2')
+    seedApproval('c-2', 'r-2', 't-2')
     const wrapper = mount(ChatContent, { global: { plugins: [i18n] } })
     await wrapper.vm.$nextTick()
     expect(wrapper.find('[data-uia="pending-approval"]').exists()).toBe(true)

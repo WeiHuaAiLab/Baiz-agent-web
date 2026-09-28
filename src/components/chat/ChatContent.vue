@@ -20,6 +20,7 @@ import SkeletonChatView from "./SkeletonChatView.vue";
 // MSG-3335 G-4：RunBlocks 随 kind 分发迁入 chat/message/（本件随迁改 import，行为零改）
 import RunBlocks from "./message/RunBlocks.vue";
 import ApprovalStack from "./message/ApprovalStack.vue";
+import ActivityLine from "./ActivityLine.vue";
 import StreamingMarkdownView from "../markdown/StreamingMarkdownView.vue";
 import Icon from "../common/Icon.vue";
 
@@ -666,10 +667,7 @@ async function onStreamingClick(event: MouseEvent) {
                             :key="run.taskId"
                             class="msg assistant streaming-block"
                         >
-                            <div class="activity-line">
-                                <span class="activity-dot" />
-                                {{ activityText(run) }}
-                            </div>
+                            <ActivityLine :text="activityText(run)" />
                             <!-- MSG-2998 修②（DEBT-544 目二）：三分离归组——思考/执行命令/  执行结果各自成区（流式态与终态同构，RunBlocks 两态一源）；
                                  未决审批卡容器（本 run 的待审批权限卡）挂在执行命令/执行结果之间 -->
                             <RunBlocks

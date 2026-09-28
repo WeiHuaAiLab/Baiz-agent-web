@@ -588,6 +588,14 @@
   word-break: break-word;
 }
 
+/* 思考对话过程中的审批卡容器：仿 .block-list 同源（padding + 上边框）——
+   **不**复制 max-height / overflow-y ——审批是活性决策点，每张卡都须可见，
+   不可滚动隐藏。commands/results 是历史总览，可滚动无碍。 */
+.run-block .approvals-body {
+  padding: 8px 12px;
+  border-top: 1px solid var(--border);
+}
+
 /* MSG-2413 工具执行行（命令/URL） */
 .tool-cmd {
   display: block;
@@ -1419,14 +1427,20 @@
 .retry-btn {
   margin-left: 12px;
   font-size: 13px;
+  /* 错误卡背景偏红：按钮用 --surface（白）做中性底，色相责不凌驾于警示卡；
+   文字保留 --accent 蓝——既作按钮的可点性暗示，又不与红卡争抢注意力 */
   color: var(--accent);
+  background: var(--surface);
   border: 1px solid var(--border);
   border-radius: 8px;
   padding: 4px 8px;
 }
 
 .retry-btn:hover {
-  background: var(--hover);
+  /* 勿用 --hover（rgba 半透明黑）——叠在错误卡的红色底上会透出粉红；
+   用不透明 --surface-2（浅灰）保持按钮自身色相稳定 */
+  background: var(--surface-2);
+  border-color: var(--border-strong);
 }
 
 /* 批0 体验层（2026-08-27）：人话字幕 / 语音监听态 / 成本小字 */

@@ -79,6 +79,12 @@ const results = computed<TraceItem[]>(() =>
 const commandsOpen = ref(false)
 const resultsOpen = ref(false)
 
+// 思考对话过程中的审批卡容器折叠态：仿 commands/results 结构（block-head +
+// icon + title + count + toggle），但**默认展开**——审批是活性决策点（agent 卡
+// 在审批等用户动作），收起会埋没入口；commands/results 是历史总览（看完不需
+// 操作）——本质差异。视觉同源、操作同型。
+const approvalsOpen = ref(true)
+
 /** MSG-3001 ⑪：结果行按 callId 归属工具名——并行/乱序回包不误配
  *  （勿按 filter 序错配） */
 function toolNameOf(callId?: string): string {
@@ -159,11 +165,31 @@ function toolNameOf(callId?: string): string {
 
     <!-- 未决审批卡容器：本 run 待审批的权限卡，以卡片列表呈现
          （编号选项 1 允许 / 2 本会话始终允许 / 3 拒绝，直点决策）——
-         位置在执行命令与执行结果之间（审批是对「命令」的把关，先于结果） -->
-    <ApprovalStack
-      v-if="pendingApprovals?.length"
-      :messages="pendingApprovals"
-    />
+         位置在执行命令与执行结果之间（审批是对「命令」的把关，先于结果）——
+         头部仿 blockCommands 容器：icon「?」（待决）+ 标题「待审批」+ 计数 + ▾/▸。
+         默认**展开**（审批是活性决策点，收起用户看不见入口）。 -->
+    <section v-if="pendingApprovals?.length" class="run-block pendingApprovals-container">
+      <button
+        type="button"
+        class="block-head"
+        :class="{ open: approvalsOpen }"
+        @click="approvalsOpen = !approvalsOpen"
+      >
+        <span class="block-icon">?</span>
+        <!-- TODO(i18n)：暂硬编码——zh-CN/en-US 已抵 599 黄栅（LOC gate 红证防「把闸调松」），
+             加 i18n key 会撞闸；与 commands/results 不同键（`blockCommands`／`blockResults`）
+             是早期入场时才进的基线，此处后入只能硬编码。后续若 locales 拆分或阈值调整再补 t()。 -->
+        <span class="block-title">待审批</span>
+        <span class="block-count">×{{ pendingApprovals.length }}</span>
+        <span class="block-toggle">{{ approvalsOpen ? '▾' : '▸' }}</span>
+      </button>
+      <div v-show="approvalsOpen" class="approvals-body">
+        <ApprovalStack
+          v-if="pendingApprovals?.length"
+          :messages="pendingApprovals"
+        />
+      </div>
+    </section>
 
     <!-- 区三：执行结果（tool.result）——默认收起（解双渲重），点击展开总览 -->
     <section v-if="results.length" class="run-block results">
