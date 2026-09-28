@@ -6,38 +6,60 @@
 // 数据源＝run.trace 有序事件（568 六型帧谱在案：text/reasoning/tool.call/
 // tool.result 俱备）——渲染归组、非协议重造。流式态与终态同构（同组件两态）：
 // 流式态思考常显（边想边写可见）、终态思考默认收起（MSG-2413 交互保留）。
-import { computed, ref } from 'vue'
+import { computed, nextTick, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
-import type { RunState, TraceItem } from '../../../models'
+import type { ChatMessage, RunState, TraceItem } from '../../../models'
+import ApprovalStack from './ApprovalStack.vue'
 
-const props = defineProps<{ run: RunState; streaming?: boolean }>()
+const props = defineProps<{
+  run: RunState
+  streaming?: boolean
+  /** 本 run 的未决审批卡：迁入「执行命令/执行结果」之间的审批卡容器（尾流径） */
+  pendingApprovals?: ChatMessage[]
+}>()
 const { t } = useI18n()
 
 const reasoning = computed(() => props.run.reasoning)
 
-// MSG-3229（折叠单行）＋**MSG-3248（老板 2026-09-21 01:5x 口径修正）**：
-// 思考区＝**默认折叠的实时流**，且折叠行＝**跑马灯式"吐字"**——
-// ① 折叠态固定单行（nowrap＋overflow:hidden，行高恒定，不换行不撑高）；
-// ② ★ 该行实时显示 reasoning **增量文本**：新字从**右端**出现、旧字向左**滚出**
-//    （机制＝尾部窗口截取＋右对齐裁切；令明许"文本尾部截取"为等价判据）；
-// ③ 流式期随帧更新（Vue 渲染调度天然按微任务/帧合并 ⇒ 无额外抖动；单行零重排）；
-// ④ 回合结束（streaming 落 false）⇒ **定格在最后一段文字**（停滚、去跑动指示）；
-//    **不再显示字数/秒数**（老板原话："不是几个数字在滚动"；耗时另有消息头 `.elapsed` 承载）；
-// ⑤ 整行（热区 ≥44）可点：展开看全文、再点收起，三角随态（▸／▾）；正文 message.text 零改；
-// ⑥ 无 reasoning ⇒ 整块不渲染（不留空壳）；
-// ⑦ 本机制**零动画**（纯文本位移）⇒ 天然满足 prefers-reduced-motion（"不滚动·只更新文字"）。
-const thinkingOpen = ref(false)
-/** 跑马灯窗口：尾部保留字符数（超出即从左侧滚出）——细调只影响观感，不影响判据 */
-const MARQUEE_WINDOW = 80
-/**
- * 单行跑马灯文本＝reasoning 的**尾部窗口**（换行折叠为空格 ⇒ 恒为一行）。
- * 新字从右端进（`endsWith` 最新增量）、旧字向左滚出（超出窗口即被裁掉）。
- */
-const marqueeText = computed(() => {
-  const flat = reasoning.value.replace(/\s+/g, ' ').trim()
-  if (!flat) return props.streaming ? t('chat.thinkingLive') : ''
-  return flat.length > MARQUEE_WINDOW ? flat.slice(-MARQUEE_WINDOW) : flat
-})
+// 思考区折叠头：结构化 reasoning-head（⋯ dots + 标题 + ▾/▸）。
+// 折叠默认值随态切换：思考过程中（streaming，边想边写）默认**展开**；
+// 思考完毕（终态，MessageItem/AssistantMessage 径）默认**折叠**。
+// 用户点击后锁定用户选择（userToggledThinking），不再跟随默认值翻转。
+const thinkingOpen = ref(props.streaming === true)
+const userToggledThinking = ref(false)
+
+function toggleThinking() {
+  userToggledThinking.value = true
+  thinkingOpen.value = !thinkingOpen.value
+}
+
+// 流式 reasoning 局部贴底：reasoning-body 是 max-height 220px 的滚动区，
+// reasoning 随帧增长（内容变高）时保持滚动到底部——最新增量追加在末尾，
+// 不贴底用户只能看到开头一段。nextTick 等 DOM 排版完再量高。
+const thinkingBodyRef = ref<HTMLElement | null>(null)
+
+async function pinThinkingBottom() {
+  await nextTick()
+  const el = thinkingBodyRef.value
+  if (el) el.scrollTop = el.scrollHeight
+}
+
+watch(
+  () => reasoning.value.length,
+  (len, prev) => {
+    // 内容变高（新增量）且展开态才贴底；折叠态不看正文，无需滚动
+    if (thinkingOpen.value && len > prev) void pinThinkingBottom()
+  },
+)
+
+watch(
+  thinkingOpen,
+  (open) => {
+    // 折叠→展开：贴底看最新思考增量（与终态展开口径一致）
+    if (open) void pinThinkingBottom()
+  },
+  { flush: 'post' },
+)
 
 /** MSG-3216：内部决策载荷（决策 JSON）——受控折叠区，默认收起，勿与正文混流 */
 const decision = computed(() => props.run.decision ?? '')
@@ -70,8 +92,10 @@ function toolNameOf(callId?: string): string {
 
 <template>
   <div class="run-blocks">
-    <!-- 区一：思考（reasoning）——MSG-3229：**默认折叠的实时流**（流式/终态同一块）
-         标题行：跑动指示（流式）＋思考中…／深度思考 已完成＋实时字数＋秒级计时＋右侧三角 -->
+    <!-- 区一：思考（reasoning）——结构化头部（reasoning-head：⋯ + 深度思考 + ▾/▸）：
+         思考过程中（streaming）默认展开（边想边写可见）＋dots 呼吸动画；
+         思考完毕（终态）默认折叠，头部显示「已完成」。内容区超 220px 局部滚动，
+         流式增长/展开由 pinThinkingBottom 保持贴底 -->
     <template v-if="reasoning">
       <section
         class="run-block thinking reasoning-block"
@@ -80,24 +104,17 @@ function toolNameOf(callId?: string): string {
         <button
           type="button"
           class="reasoning-head"
-          :class="{ open: thinkingOpen, live: streaming }"
-          :aria-expanded="thinkingOpen"
-          :title="t('chat.reasoningLabel')"
-          @click="thinkingOpen = !thinkingOpen"
+          :class="{ open: thinkingOpen }"
+          @click="toggleThinking"
         >
-          <span v-if="streaming" class="reasoning-dots live" aria-hidden="true">⋯</span>
-          <span class="reasoning-title">
-            {{ t('chat.deepThink') }}
-          </span>
-          <!-- MSG-3248 ★：单行跑马灯吐字——新字右端进、旧字向左滚出（尾部窗口＋右对齐裁切） -->
-          <span class="reasoning-marquee" data-uia="reasoning-marquee">
-            <span class="reasoning-marquee-text">{{ marqueeText }}</span>
-          </span>
+          <span class="reasoning-dots" :class="{ live: streaming }">⋯</span>
+          <span class="reasoning-title">{{ t('chat.deepThink') }}</span>
           <span v-if="!streaming" class="reasoning-done">{{ t('chat.thoughtDone') }}</span>
           <span class="reasoning-toggle">{{ thinkingOpen ? '▾' : '▸' }}</span>
         </button>
         <div
-          v-if="thinkingOpen"
+          v-show="thinkingOpen"
+          ref="thinkingBodyRef"
           class="reasoning-body"
           :class="{ 'reasoning-stream-body': streaming }"
         >{{ reasoning }}</div>
@@ -139,6 +156,14 @@ function toolNameOf(callId?: string): string {
         </li>
       </ul>
     </section>
+
+    <!-- 未决审批卡容器：本 run 待审批的权限卡，以卡片列表呈现
+         （编号选项 1 允许 / 2 本会话始终允许 / 3 拒绝，直点决策）——
+         位置在执行命令与执行结果之间（审批是对「命令」的把关，先于结果） -->
+    <ApprovalStack
+      v-if="pendingApprovals?.length"
+      :messages="pendingApprovals"
+    />
 
     <!-- 区三：执行结果（tool.result）——默认收起（解双渲重），点击展开总览 -->
     <section v-if="results.length" class="run-block results">

@@ -222,7 +222,18 @@ export const useMessageStore = defineStore('message', {
     async load(conversationId: string) {
       if (this.byConversation[conversationId]) return
       const rows = await db.messages.where('conversationId').equals(conversationId).sortBy('createdAt')
-      this.byConversation[conversationId] = rows
+      // 竞态防护：await 期间可能有 push 落地（流式收口/审批卡等）——按 id 去重
+      // 合并（createdAt 升序），禁整组覆盖丢消息（并行高负载下 db 查询变慢时必现）
+      const existing = this.byConversation[conversationId]
+      if (existing) {
+        const seen = new Set(existing.map((item) => item.id))
+        for (const row of rows) {
+          if (!seen.has(row.id)) existing.push(row)
+        }
+        existing.sort((a, b) => a.createdAt - b.createdAt)
+      } else {
+        this.byConversation[conversationId] = rows
+      }
       // 补建审批索引（§C B6／B9）：本地历史里的未决卡也进 request→message 映射——
       // 重连补拉的档位回填（updateRisk）与销卡帧（onApprovalResolved）据此联动到卡面，
       // 否则刷新后「卡还在、点同意不转已决态」。

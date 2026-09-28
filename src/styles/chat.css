@@ -109,7 +109,7 @@
 /* 组内相邻工具行之间的空隙：补 margin-top 而非 margin-bottom——
    .message-inner .msg 已把 margin-bottom 归零（item 间距统一由父层 padding 承担），
    在相邻兄弟上补间距既不与它冲突，也不需要靠特异性取胜 */
-.tool-group-body .msg + .msg {
+.tool-group-body .msg+.msg {
   margin-top: 8px;
 }
 
@@ -241,19 +241,21 @@
 }
 
 .reasoning-head {
+  /* 口径与 .run-block .block-head 一致（同构折叠头）：紧凑 padding、
+     字重 500、继承字体；区别仅在于结构（dots 呼吸/已完成徽标/右置三角） */
   display: flex;
   align-items: center;
   gap: 8px;
   width: 100%;
-  /* MSG-3229：整行可点（老板口径「点右边的三角形按钮展开」）——热区 ≥44 */
-  min-height: 44px;
-  padding: 8px 12px;
+  padding: 4px 12px;
   border: none;
   background: var(--code-bg, rgba(0, 0, 0, 0.04));
   color: var(--muted);
-  cursor: pointer;
+  font-weight: 500;
   font-size: 13px;
+  font-family: inherit;
   text-align: left;
+  cursor: pointer;
 }
 
 .reasoning-head .reasoning-dots {
@@ -268,6 +270,7 @@
 }
 
 @keyframes reasoning-pulse {
+
   0%,
   100% {
     opacity: 0.35;
@@ -309,6 +312,7 @@
 
 /* 弱动效偏好：显式声明"不滚动"（本机制本无动画，此处为口径留痕） */
 @media (prefers-reduced-motion: reduce) {
+
   .reasoning-marquee,
   .reasoning-marquee-text {
     transition: none;
@@ -325,8 +329,21 @@
   color: var(--muted);
   white-space: pre-wrap;
   word-break: break-word;
-  max-height: 320px;
+  /* 最高 220px：超出即局部滚动（思考正文/内部决策同款）；
+     流式增长时由组件侧保持贴底（最新增量在末尾） */
+  max-height: 220px;
   overflow-y: auto;
+  border-top: 1px solid var(--border);
+}
+
+/* 无头思考块（终态 RunReasoning）：body 是块内唯一/首子元素，
+   border-top 会多出一条分隔线——去掉 */
+.reasoning-block>.reasoning-body {
+  border-top: none;
+}
+
+/* 有头思考块（RunBlocks reasoning-head）：头部与正文间的分隔线恢复 */
+.reasoning-block>.reasoning-head+.reasoning-body {
   border-top: 1px solid var(--border);
 }
 
@@ -340,18 +357,21 @@
   font-size: 13px;
   background: var(--bg-soft, rgba(127, 127, 127, 0.04));
 }
+
 .reasoning-stream-head {
   padding: 4px 12px;
   color: var(--muted);
   font-weight: 500;
 }
+
 .reasoning-stream-body {
   margin: 0;
   padding: 8px 12px 8px;
   color: var(--muted);
   white-space: pre-wrap;
   word-break: break-word;
-  max-height: 320px;
+  /* 与 .reasoning-body 同口径：220px 上限局部滚动，流式增长由组件保持贴底 */
+  max-height: 220px;
   overflow-y: auto;
   border-top: 1px solid var(--border);
 }
@@ -464,6 +484,7 @@
   width: 100%;
   margin: 0 auto;
 }
+
 .run-blocks {
   display: flex;
   flex-direction: column;
@@ -472,14 +493,15 @@
 }
 
 .run-block {
-  max-width: 640px;
+  width: 100%;
   border: 1px solid var(--border);
   border-radius: 8px;
   overflow: hidden;
   font-size: 13px;
 }
 
-/* 与既有折叠块/流式块共存：块间距交给 .run-blocks gap，勿叠 margin */
+/* run-block 容器宽度已默认 100%（与 reasoning-block 同宽），无单类覆写需求；
+   块间距交给 .run-blocks gap，勿叠 margin */
 .run-blocks .run-block {
   margin: 0;
 }
@@ -577,28 +599,14 @@
   word-break: break-all;
 }
 
-/* 流式尾条 */
-.streaming-tail {
-  width: 100%;
+.streaming-block {
   max-width: 720px;
   margin: 0 auto;
-  padding: 0 0 4px;
-}
-
-.streaming-block {
-  background: var(--code-bg);
-  border-radius: 8px;
-  padding: 12px 16px;
+  background: var(--panel);
 }
 
 .caret {
-  display: inline-block;
-  width: 7px;
-  height: 14px;
-  vertical-align: -2px;
-  margin-left: 4px;
-  background: var(--text);
-  animation: blink 1s steps(1) infinite;
+  display: none;
 }
 
 @keyframes blink {
@@ -607,16 +615,9 @@
   }
 }
 
-/* 输入区容器：绝对定位于消息滚动区底部（bottom: 10px 与底部保持距离），
-   宽度撑满 chat-body，高度由内容（.composer）撑开——随 textarea 输入行数 /
-   附件行数自动变化。脱离文档流后消息区完整占满 chat-body，
-   底部预留空间由 chat-body 的 padding-bottom（--chat-input-h + 20px）承担。 */
 .chat-input {
-  position: absolute;
-  left: 0;
-  right: 0;
-  bottom: 10px;
-  z-index: 10;
+  flex: none;
+  padding: 0 0 10px;
 }
 
 .composer {
@@ -625,7 +626,7 @@
   width: 100%;
   max-width: 720px;
   margin: 0 auto;
-  /* 顶部 8px 呼吸；底部 0——下沿间距已由 .chat-input 的 bottom: 10px 承担 */
+  /* 顶部 8px 呼吸；底部 0——下沿间距已由 .chat-input 的 padding-bottom: 10px 承担 */
   padding: 8px 0 0;
 }
 
@@ -952,8 +953,10 @@
   height: 98px;
   min-height: 98px;
   max-height: 300px;
-  resize: none; /* 去掉拖拽把手 */
-  overflow-y: auto; /* 内容超高时输入框内滚动 */
+  resize: none;
+  /* 去掉拖拽把手 */
+  overflow-y: auto;
+  /* 内容超高时输入框内滚动 */
   border: none;
   outline: none;
   background: transparent;
@@ -1247,7 +1250,7 @@
 }
 
 /* 右侧 ✓ 标识：自然排放（绝对定位的勾已删除，改为在 flex 末尾） */
-.picker-item > svg {
+.picker-item>svg {
   flex: none;
 }
 
@@ -1302,7 +1305,8 @@
 
 .attachment-chip.is-file {
   max-width: 220px;
-  padding: 8px 28px 8px 12px; /* 给右上角删除按钮留 28px 内嵌位置 */
+  padding: 8px 28px 8px 12px;
+  /* 给右上角删除按钮留 28px 内嵌位置 */
   min-height: 40px;
 }
 
@@ -1453,7 +1457,6 @@
   background: rgba(37, 99, 235, 0.12);
   border-radius: 4px;
   padding: 4px 8px;
-  margin-top: 4px;
 }
 
 .xp-subtitle-text {
@@ -1466,20 +1469,27 @@
 }
 
 @keyframes xp-pulse {
+
   0%,
   100% {
     opacity: 1;
   }
+
   50% {
     opacity: 0.45;
   }
 }
 
 .xp-cost {
+  /* 成本小字：absolute 锚定在 .chat-main（已 position:relative）右下角——
+     脱离 ChatInput 文档流，不占位、不推挤输入框高度；小字贴右下沿 */
+  position: absolute;
+  right: 12px;
+  bottom: 4px;
   font-size: 11px;
   color: var(--muted);
   text-align: right;
-  padding: 4px 4px 4px;
+  padding: 4px;
 }
 
 /* 批0 命令翻译条（输入框内实时提示） */
@@ -1515,7 +1525,8 @@
 /* 批0 工具调用行的人话说明 */
 .xp-tool-human {
   display: flex;
-  align-items: flex-start;
+  align-items:center;
+  justify-content: flex-start;
   gap: 8px;
   margin: 4px 0 0;
   padding: 4px 12px;
@@ -1706,8 +1717,15 @@
 }
 
 @keyframes drag-overlay-in {
-  from { opacity: 0; transform: scale(0.98); }
-  to { opacity: 1; transform: scale(1); }
+  from {
+    opacity: 0;
+    transform: scale(0.98);
+  }
+
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
 }
 
 .composer-hint .hint-dot {
