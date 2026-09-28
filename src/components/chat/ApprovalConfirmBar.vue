@@ -23,6 +23,16 @@
 //   · 多条 pending 时纵向堆叠，max-height 封顶 160px 避免压扁输入框；
 //   · 点击行（除按钮外）展开 details；点 Approve/Deny 直接调用
 //     approvals.respond，与 ApprovalCard.decide 共用 IPC 路径。
+//
+// 稳定 id/data-*（UIA／自动化契约·**口径迁移承接**）：
+//   老板第④条「审核卡移到输入框上方」（见 ChatInput.vue 顶部接线注释）后，
+//   「未决审批卡 UIA 可达」这一契约由**本组件**承接（原承载者＝ ChatContent
+//   常驻区的孤儿 ApprovalStack，已随「隐藏未决审批卡」注释下线）。
+//   前缀用 `approval-bar-`：与消息流／尾流径的 `approval-<requestId>` 同屏
+//   共存（聊天区与输入区同时渲染同一 requestId），前缀区分避免 id 撞车。
+//   行：id=approval-bar-<requestId> / data-approval-request-id / data-uia="pending-approval-bar"
+//   钮：id=approval-bar-<requestId>-approve|-deny / data-uia="approval-bar-approve|approval-bar-deny"
+//   requestId 缺失时不落 id（避免 `approval-bar-undefined` 这类伪契约值）。
 import { computed, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useApprovalStore } from '../../stores/approval'
@@ -90,6 +100,14 @@ function riskClass(risk: string | undefined): 'high' | 'medium' | 'low' {
   return 'medium'
 }
 
+/** 稳定 id（UIA／自动化契约）：`approval-bar-<requestId>[-suffix]`。
+ *  requestId 缺失 ⇒ undefined（Vue 不落 id 属性），不造伪契约值。 */
+function domId(item: ChatMessage, suffix?: string): string | undefined {
+  const requestId = item.meta?.requestId
+  if (!requestId) return undefined
+  return suffix ? `approval-bar-${requestId}-${suffix}` : `approval-bar-${requestId}`
+}
+
 async function decide(item: ChatMessage, approved: boolean) {
   const requestId = item.meta?.requestId
   if (!requestId || working.value[item.id]) return
@@ -139,6 +157,9 @@ function prettyDetails(details?: string): string {
         v-for="item in pendingApprovals"
         :key="item.id"
         class="needApprovalListItem"
+        :id="domId(item)"
+        :data-approval-request-id="item.meta?.requestId"
+        data-uia="pending-approval-bar"
         :data-expanded="expandedId === item.id ? '1' : undefined"
       >
         <div class="approval-confirm-row" @click="toggle(item)">
@@ -163,6 +184,9 @@ function prettyDetails(details?: string): string {
             <button
               type="button"
               class="deny"
+              :id="domId(item, 'deny')"
+              :data-approval-request-id="item.meta?.requestId"
+              data-uia="approval-bar-deny"
               :disabled="!!working[item.id]"
               @click="decide(item, false)"
             >
@@ -171,6 +195,9 @@ function prettyDetails(details?: string): string {
             <button
               type="button"
               class="approve"
+              :id="domId(item, 'approve')"
+              :data-approval-request-id="item.meta?.requestId"
+              data-uia="approval-bar-approve"
               :disabled="!!working[item.id]"
               @click="decide(item, true)"
             >

@@ -1,10 +1,13 @@
 {
   "_note": "MSG-3417 web 面行数基线（自测于 beac29cd·口径见 scripts/loc-scan.mjs 头注）。基线**只准减不准增**。",
   "_convention": "lines = count('\\n') + (末行非空 ? 1 : 0)；范围 src/**（排除 dist/node_modules）；测试件单列不入门禁",
-  "_measuredAt": "2026-09-22 (feat/web-1.0.21-loc-gate @ beac29cd)；2026-09-26 下调 ApprovalCard.vue 693→691（令·1.0.30 T批 web 侧；门禁 advisory「BASELINE_SHRANK」建议·方向＝只减）",
+  "_measuredAt": "2026-09-22 (feat/web-1.0.21-loc-gate @ beac29cd)；2026-09-26 下调 ApprovalCard.vue 693→691（令·1.0.30 T批 web 侧；门禁 advisory「BASELINE_SHRANK」建议·方向＝只减）；2026-09-28 **基线重出**（见 _rebaselinedAt）",
+  "_rebaselinedAt": "2026-09-28（参谋5 裁②·1.0.37 web 侧）——**基线变更·治理面·禁静默改**。改由：基线停在上一条 _measuredAt 两点，与 1.0.37 扫描现值脱节；本席于 d9e5508 实跑 `npm run loc:gate` ⇒ FAIL（3 红：ChatContent.vue／zh-CN.ts 判「基线外新件 ≥600」，message.ts 判 BASELINE_GREW 980→1004）。按**扫描现值**重出，件数 2→4。逐件 改前→改后：message.ts 980→1004（+24）／ApprovalCard.vue 691→691（不动）／ChatContent.vue（不在基线）→764（新入）／zh-CN.ts（不在基线）→600（新入）；ChatInput.vue 605（旧测试钉值）→ 现值 588 ⇒ **<600 不入门禁**，故不列。**方向说明**：本次含上调，属异常——非「把闸调松」，而是把基线对齐到真实现值并纳入治理可见（改动前该闸恒红＝等同失效）；生效后仍**只准减不准增**（规则④不变）。",
   "_command": "node scripts/loc-scan.mjs --json",
   "files": {
-    "src/stores/message.ts": 980,
-    "src/components/chat/message/ApprovalCard.vue": 691
+    "src/stores/message.ts": 1004,
+    "src/components/chat/ChatContent.vue": 764,
+    "src/components/chat/message/ApprovalCard.vue": 691,
+    "src/locales/zh-CN.ts": 600
   }
 }
