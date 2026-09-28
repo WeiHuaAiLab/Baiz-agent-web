@@ -218,11 +218,15 @@ export const useMessageStore = defineStore('message', {
       return this.byConversation[conversationId] ?? []
     },
     async load(conversationId: string) {
-      if (this.byConversation[conversationId]) return
+      // 已有缓存 ⇒ 直接返回（**原口径**）。先取到本地再判：下方竞态合并复用同一
+      // 读数，且避开「同一索引表达式经 `if (…) return` 后，在 `await` 之后的
+      // 再读处被 TS 真值收窄成 `never`」的路径（纯类型修·运行时逐点等价）。
+      const cached: ChatMessage[] | undefined = this.byConversation[conversationId]
+      if (cached) return
       const rows = await db.messages.where('conversationId').equals(conversationId).sortBy('createdAt')
       // 竞态防护：await 期间可能有 push 落地（流式收口/审批卡等）——按 id 去重
       // 合并（createdAt 升序），禁整组覆盖丢消息（并行高负载下 db 查询变慢时必现）
-      const existing = this.byConversation[conversationId]
+      const existing: ChatMessage[] | undefined = this.byConversation[conversationId]
       if (existing) {
         const seen = new Set(existing.map((item) => item.id))
         for (const row of rows) {
