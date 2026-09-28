@@ -615,10 +615,10 @@ async function onStreamingClick(event: MouseEvent) {
              历史遗留）由常驻区以 ApprovalStack 容器呈现（与尾流径同口径——
              编号选项列表直点决策、稳定 id/data-* 全保留）。归属尾流 run
              的未决卡已迁入 RunBlocks 审批卡容器内，此处仅兜底孤儿。 -->
-        <ApprovalStack
+        <!-- <ApprovalStack
             v-if="orphanApprovals.length"
             :messages="orphanApprovals"
-        />
+        /> -->
 
         <div
             v-if="displayItems.length > 0 || streamingRuns.length > 0"
