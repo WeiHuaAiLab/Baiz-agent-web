@@ -2,6 +2,8 @@
 // 思考（reasoning）／执行命令（tool.call）／执行结果（tool.result）三类
 // 分开展示——渲染归组（run.trace 已有有序事件），非协议重造。
 // 红证面：三类分组各渲染一枚（流式态）＋终态气泡同构图。
+// 改版口径（2026-09-28）：思考区**头部存在＋流式默认展开**——内容区直显全文。
+// （原"无头常显"口径已弃）
 import { beforeEach, describe, expect, it } from 'vitest'
 import { createPinia, setActivePinia } from 'pinia'
 import { mount } from '@vue/test-utils'
@@ -72,8 +74,10 @@ describe('MSG-2998 修② 三分离渲染（流式态）', () => {
     await wrapper.vm.$nextTick()
     const block = wrapper.find('.run-block.thinking')
     expect(block.exists()).toBe(true)
-    // 改版口径（2026-09-27）：思考区**无头常显**——内容区直显全文
-    expect(block.find('.reasoning-head').exists()).toBe(false)
+    // 改版口径：思考区**头部存在＋流式默认展开**——内容区直显全文
+    const head = block.find('.reasoning-head')
+    expect(head.exists()).toBe(true)
+    expect(head.classes()).toContain('open')
     expect(block.find('.reasoning-body').exists()).toBe(true)
     expect(block.text()).toContain('先看目录结构')
     void conversationId
@@ -122,7 +126,7 @@ describe('MSG-2998 修② 三分离渲染（流式态）', () => {
     expect(commands.exists()).toBe(true)
     expect(results.exists()).toBe(true)
     // 分域钉：思考文本只在思考区；命令只在命令区；结果只在结果区
-    // 改版口径：思考区无头常显——直接验"只有思考文本"（分组不混入）
+    // 改版口径：思考区头部存在＋流式默认展开——直接验"只有思考文本"（分组不混入）
     expect(thinking.text()).toContain('思考中：检查依赖')
     expect(thinking.text()).not.toContain('list_dir')
     expect(commands.text()).toContain('list_dir')

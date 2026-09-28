@@ -19,6 +19,7 @@ import ToolCallGroup from "./ToolCallGroup.vue";
 import SkeletonChatView from "./SkeletonChatView.vue";
 // MSG-3335 G-4：RunBlocks 随 kind 分发迁入 chat/message/（本件随迁改 import，行为零改）
 import RunBlocks from "./message/RunBlocks.vue";
+import ApprovalStack from "./message/ApprovalStack.vue";
 import StreamingMarkdownView from "../markdown/StreamingMarkdownView.vue";
 import Icon from "../common/Icon.vue";
 // MSG-3575 P5（A 谱系补丁·非 372ae2f 面）：同类重复失败合并条分型与压缩
@@ -664,24 +665,13 @@ async function onStreamingClick(event: MouseEvent) {
         </div>
 
         <!-- 未决审批卡**孤儿兜底区**：不属于任何在跑 run 的未决卡（后台任务/
-             历史遗留）仍以常驻区呈现（原九态卡面）；归属尾流 run 的已迁入
-             RunBlocks 审批卡容器（编号选项直点决策）。稳定 id/data-* 保留。 -->
-        <!-- <div
+             历史遗留）由常驻区以 ApprovalStack 容器呈现（与尾流径同口径——
+             编号选项列表直点决策、稳定 id/data-* 全保留）。归属尾流 run
+             的未决卡已迁入 RunBlocks 审批卡容器内，此处仅兜底孤儿。 -->
+        <ApprovalStack
             v-if="orphanApprovals.length"
-            class="pending-approvals"
-            data-uia="pending-approvals"
-        >
-            <div
-                v-for="card in orphanApprovals"
-                :key="card.id"
-                class="pending-approval-slot"
-                :id="`approval-${card.meta?.requestId ?? card.id}`"
-                :data-approval-request-id="card.meta?.requestId ?? ''"
-                data-uia="pending-approval"
-            >
-                <MessageItem :message="card" />
-            </div>
-        </div> -->
+            :messages="orphanApprovals"
+        />
 
         <div
             v-if="displayItems.length > 0 || streamingRuns.length > 0"

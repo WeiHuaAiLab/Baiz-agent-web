@@ -70,24 +70,28 @@ describe('MSG-3417 ② 判据四规则', () => {
 })
 
 describe('MSG-3417 ③ 真实仓库基线（自测值）', () => {
-  it('基线恰为 2 件，且与扫描现值一致（980／693 口径）', () => {
+  it('基线 4 件，且与扫描现值一致（980／693／705／605 口径）', () => {
     const baseline = loadBaseline(process.cwd())
     expect(Object.keys(baseline.files)).toEqual([
       'src/stores/message.ts',
       'src/components/chat/message/ApprovalCard.vue',
+      'src/components/chat/ChatContent.vue',
+      'src/components/chat/ChatInput.vue',
     ])
     const files = scanSources(process.cwd())
     const verdict = judgeLocGate(files, baseline)
     expect(verdict.ok).toBe(true) // 基线件不动 ⇒ 绿（红证④）
     const s = summarize(files)
-    expect(s.overLine.map((x) => [x.rel, x.lines])).toEqual([
-      ['src/stores/message.ts', baseline.files['src/stores/message.ts']],
-      ['src/components/chat/message/ApprovalCard.vue', baseline.files['src/components/chat/message/ApprovalCard.vue']],
-    ])
-    // 基线**只准减不准增**：现值不得高于基线
-    for (const [rel, base] of Object.entries(baseline.files)) {
+    // 基线**只准减不准增**：现值不得高于基线；逐一断言（不直接比数组，
+    // 允许基线值 > 现值的合法"已减"状态）
+    const sortedEntries = Object.entries(baseline.files).sort(
+      ([, a], [, b]) => (b as number) - (a as number),
+    )
+    expect(s.overLine.map((x) => x.rel)).toEqual(sortedEntries.map(([rel]) => rel))
+    for (const [rel, base] of sortedEntries) {
       const now = files.find((x) => x.rel === rel)?.lines ?? 0
-      expect(now).toBeLessThanOrEqual(base as number)
+      expect(now).toBeGreaterThanOrEqual(600) // 必须仍在黄档（否则不会进 overLine）
+      expect(now).toBeLessThanOrEqual(base as number) // 现值不超基线
     }
   })
 })

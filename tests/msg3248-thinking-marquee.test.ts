@@ -1,7 +1,7 @@
-// MSG-3248 改版红证：思考区**无头部行、内容常显**（2026-09-27 口径）。
-// 原单行跑马灯折叠行（data-uia="reasoning-marquee"）已随头部一并移除：
-// 思考内容区（.reasoning-body）默认展开、全文直显，超 220px 局部滚动，
-// 流式增长由组件保持贴底（jsdom 无真实布局，贴底行为不做 DOM 断言）。
+// MSG-3248 红证：思考区**有结构化头部**——流式（streaming）默认展开
+// （边想边写可见），终态默认折叠（点击头部展开/收起）；不再有单行
+// 跑马灯折叠行（data-uia="reasoning-marquee"）。reasoning-body 内容区直显全文、
+// 超 220px 局部滚动，流式增长由 RunBlocks 推底。
 import { beforeEach, describe, expect, it } from 'vitest'
 import { readFileSync } from 'node:fs'
 import { createPinia, setActivePinia } from 'pinia'
@@ -39,12 +39,12 @@ function makeRun(overrides: Partial<RunState> = {}): RunState {
 const mountBlocks = (run: RunState, streaming: boolean) =>
   mount(RunBlocks, { props: { run, streaming }, global: { plugins: [i18n] } })
 
-describe('MSG-3248 思考区：无头常显（原跑马灯折叠行已移除）', () => {
+describe('MSG-3248 思考区：有结构化头部（流式展开 / 终态折叠，跑马灯行已移除）', () => {
   beforeEach(() => {
     setActivePinia(createPinia())
   })
 
-  it('① 增量 ⇒ 内容区全文实时更新（无头、无跑马灯窗口截取）', async () => {
+  it('① 流式增量 ⇒ 头部现形＋默认展开＋内容区全文实时更新（无跑马灯窗口截取）', async () => {
     const run = reactive(makeRun({ reasoning: '' }))
     const wrapper = mountBlocks(run, true)
     await wrapper.vm.$nextTick()
@@ -53,8 +53,10 @@ describe('MSG-3248 思考区：无头常显（原跑马灯折叠行已移除）'
 
     run.reasoning = '第一步先分析'
     await wrapper.vm.$nextTick()
-    // 有思考 ⇒ 块现形：**无头部行**，内容区直显全文
-    expect(wrapper.find('.reasoning-head').exists()).toBe(false)
+    // 有思考 ⇒ 块现形：头部存在、默认 .open（流式展开），内容区直显全文
+    const head = wrapper.find('.reasoning-head')
+    expect(head.exists()).toBe(true)
+    expect(head.classes()).toContain('open')
     expect(wrapper.find('[data-uia="reasoning-marquee"]').exists()).toBe(false)
     expect(wrapper.find('.reasoning-body').text()).toBe('第一步先分析')
 
@@ -71,7 +73,7 @@ describe('MSG-3248 思考区：无头常显（原跑马灯折叠行已移除）'
     expect(wrapper.find('.reasoning-body').text()).toContain('\n')
   })
 
-  it('② 回合结束 ⇒ 内容区文本定格保留（不再有头部终态切换面）', async () => {
+  it('② 回合结束 ⇒ 头部仍存在＋内容区文本定格保留', async () => {
     const run = reactive(makeRun({ reasoning: '收尾那段话', elapsedMs: 4000 }))
     const wrapper = mountBlocks(run, true)
     await wrapper.vm.$nextTick()
@@ -79,12 +81,14 @@ describe('MSG-3248 思考区：无头常显（原跑马灯折叠行已移除）'
 
     await wrapper.setProps({ streaming: false })
     await wrapper.vm.$nextTick()
+    // 内容文本定格保留（v-show 仅切可见性）
     expect(wrapper.find('.reasoning-body').text()).toBe('收尾那段话')
-    // 无头 ⇒ 无字数/秒数展示面（原"不要数字滚动"口径的机械延伸）
-    expect(wrapper.find('.reasoning-head').exists()).toBe(false)
+    // 终态展示面：头部存在、三角 ▸ 在（无字数/秒数跑马灯）
+    expect(wrapper.find('.reasoning-head').exists()).toBe(true)
+    expect(wrapper.find('[data-uia="reasoning-marquee"]').exists()).toBe(false)
   })
 
-  it('③ 终态 MessageItem：内容区默认展开（非折叠）且 message.text 逐字不变', () => {
+  it('③ 终态 MessageItem：头部存在＋默认折叠＋内容区文本可读；message.text 逐字不变', () => {
     const run = makeRun({
       reasoning: '内部推演：先 A 后 B，逐条核对',
       text: '给你的正文',
@@ -108,9 +112,12 @@ describe('MSG-3248 思考区：无头常显（原跑马灯折叠行已移除）'
       props: { message },
       global: { plugins: [i18n, router] },
     })
-    // 默认非折叠：无头、无三角，body 直接现形全文
-    expect(wrapper.find('.reasoning-head').exists()).toBe(false)
-    expect(wrapper.find('.reasoning-toggle').exists()).toBe(false)
+    // 终态默认折叠：头存在、.open 不在、三角 ▸ 在
+    const head = wrapper.find('.reasoning-head')
+    expect(head.exists()).toBe(true)
+    expect(head.classes()).not.toContain('open')
+    expect(wrapper.find('.reasoning-toggle').exists()).toBe(true)
+    // body 文本仍可读（v-show 仅切可见性）
     expect(wrapper.find('.reasoning-body').text()).toBe('内部推演：先 A 后 B，逐条核对')
     expect(message.text).toBe(before)
   })

@@ -64,7 +64,7 @@ describe('Reasoning 帧 UI 回显', () => {
     await wrapper.vm.$nextTick()
     const block = wrapper.find('.streaming-tail .reasoning-stream')
     expect(block.exists()).toBe(true)
-    // 改版口径（2026-09-27）：思考区**无头常显**——内容区直显全文、随帧增长
+    // 改版口径（2026-09-28）：流式期思考区**头部存在＋默认展开**——内容区直显全文、随帧增长
     expect(wrapper.find('.reasoning-body').exists()).toBe(true)
     expect(wrapper.find('.reasoning-body').text()).toBe('第一步先分析')
 
@@ -91,10 +91,11 @@ describe('Reasoning 帧 UI 回显', () => {
       .filter((i) => i.kind === 'assistant')
     expect(assistants.length).toBe(1)
     expect(store.runs[taskId].reasoning).toContain('深度思考全量内容')
-    // 思考块在（改版口径：无头、默认展开常显）；全量 reasoning 直显
+    // 思考块在（改版口径：有结构化头部，终态默认折叠）；全量 reasoning 文本可读
     const thought = wrapper.find('.reasoning-block')
     expect(thought.exists()).toBe(true)
-    expect(wrapper.find('.reasoning-head').exists()).toBe(false)
+    const head = wrapper.find('.reasoning-head')
+    expect(head.exists()).toBe(true)
     expect(wrapper.find('.reasoning-block .reasoning-body').exists()).toBe(true)
     expect(wrapper.find('.reasoning-body').text()).toContain('深度思考全量内容')
   })
@@ -116,7 +117,7 @@ describe('Reasoning 帧 UI 回显', () => {
     await wrapper.vm.$nextTick()
     await new Promise((resolve) => setTimeout(resolve, 160)) // token flush 100ms 窗
     await wrapper.vm.$nextTick()
-    // 改版口径：思考区无头常显——思考全文直显（内容零丢）
+    // 改版口径：流式期思考区**头部存在＋默认展开**——思考全文直显（内容零丢）
     expect(wrapper.find('.reasoning-body').text()).toContain('边想边写')
     // token 正文照渲（StreamingMarkdownView 区在——run.text 累积）
     const run = useMessageStore().runs[taskId]

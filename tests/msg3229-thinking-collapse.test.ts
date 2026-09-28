@@ -1,6 +1,6 @@
-// MSG-3229（改版 2026-09-27）：思考区**无头部、内容默认展开常显**。
-// 原口径（默认折叠＋点三角展开/收起）已废弃：reasoning-head 与折叠交互一并移除，
-// .reasoning-body 常驻直显全文，超 220px 局部滚动、流式增长贴底。
+// MSG-3229（口径 2026-09-28）：思考区**有结构化头部**——流式（streaming）默认
+// 展开（边想边写可见，dots 呼吸动画）；终态默认折叠（点击头部展开/收起）。
+// .reasoning-body 超 220px 局部滚动，流式增长由 RunBlocks 推底。
 // 本文件保留真链路（ChatView/routeFrame）回归与机械判据面。
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { readFileSync } from 'node:fs'
@@ -43,13 +43,13 @@ function makeRun(overrides: Partial<RunState> = {}): RunState {
 const mountBlocks = (run: RunState, streaming: boolean) =>
   mount(RunBlocks, { props: { run, streaming }, global: { plugins: [i18n] } })
 
-describe('MSG-3229 思考区：无头常显（内容默认展开）', () => {
+describe('MSG-3229 思考区：有结构化头部（流式展开 / 终态折叠）', () => {
   beforeEach(() => {
     setActivePinia(createPinia())
     vi.useRealTimers()
   })
 
-  it('T1 流式增量 ⇒ 内容区全文实时更新（无头、恒展开）', async () => {
+  it('T1 流式增量 ⇒ 头部现形＋默认展开＋内容区全文实时更新', async () => {
     const run = reactive(makeRun())
     const wrapper = mountBlocks(run, true)
 
@@ -58,8 +58,10 @@ describe('MSG-3229 思考区：无头常显（内容默认展开）', () => {
 
     run.reasoning = '第一步先分析'
     await wrapper.vm.$nextTick()
-    // 首个增量后：无头部行，内容区直显全文
-    expect(wrapper.find('.reasoning-head').exists()).toBe(false)
+    // 首个增量后：头部存在、默认 .open（流式展开）、内容区直显全文
+    const head = wrapper.find('.reasoning-head')
+    expect(head.exists()).toBe(true)
+    expect(head.classes()).toContain('open')
     expect(wrapper.find('.reasoning-body').exists()).toBe(true)
     expect(wrapper.find('.reasoning-body').text()).toBe('第一步先分析')
 
@@ -68,20 +70,22 @@ describe('MSG-3229 思考区：无头常显（内容默认展开）', () => {
     expect(wrapper.find('.reasoning-body').text()).toBe('第一步先分析，再设计方案')
   })
 
-  it('T2 回合结束 ⇒ 内容区文本定格保留（无头部终态切换面）', async () => {
+  it('T2 回合结束 ⇒ 头部仍存在＋内容区文本定格保留', async () => {
     const run = reactive(makeRun({ startedAt: Date.now() - 5000, reasoning: '想完了' }))
     const wrapper = mountBlocks(run, true)
     await wrapper.vm.$nextTick()
     expect(wrapper.find('.reasoning-body').text()).toBe('想完了')
 
-    // 回合收口：done/settle 面 ⇒ streaming 落 false
+    // 回合收口：done/settle 面 ⇒ streaming 落 false（终态展示面）
     await wrapper.setProps({ streaming: false })
     await wrapper.vm.$nextTick()
+    // 头部仍现形（终态展示三角）
+    expect(wrapper.find('.reasoning-head').exists()).toBe(true)
+    // 内容文本定格保留（v-show 仅切可见性，DOM 文本不丢）
     expect(wrapper.find('.reasoning-body').text()).toBe('想完了')
-    expect(wrapper.find('.reasoning-head').exists()).toBe(false)
   })
 
-  it('T3 终态 MessageItem：内容区默认展开显示全文；message.text 逐字不变', () => {
+  it('T3 终态 MessageItem：头部存在＋默认折叠＋内容区文本可读；message.text 逐字不变', () => {
     const run = makeRun({
       reasoning: '内部推演：先 A 后 B，逐条核对',
       text: '给你的正文',
@@ -105,9 +109,12 @@ describe('MSG-3229 思考区：无头常显（内容默认展开）', () => {
       props: { message },
       global: { plugins: [i18n, router] },
     })
-    // 默认非折叠：无头、无三角，body 直接现形全文
-    expect(wrapper.find('.reasoning-head').exists()).toBe(false)
-    expect(wrapper.find('.reasoning-toggle').exists()).toBe(false)
+    // 终态默认折叠：头存在、.open 不在、三角 ▸ 在
+    const head = wrapper.find('.reasoning-head')
+    expect(head.exists()).toBe(true)
+    expect(head.classes()).not.toContain('open')
+    expect(wrapper.find('.reasoning-toggle').exists()).toBe(true)
+    // body 文本仍可读（v-show 仅切可见性，正文文本未丢）
     expect(wrapper.find('.reasoning-body').text()).toBe('内部推演：先 A 后 B，逐条核对')
     expect(message.text).toBe(before)
   })
@@ -124,7 +131,8 @@ describe('MSG-3229 思考区：无头常显（内容默认展开）', () => {
     routeFrame({ event: 'reasoning', data: { task_id: 'cv-1', reasoning: '先想一下' } }, messages, approvals)
     routeFrame({ event: 'token', data: { task_id: 'cv-1', token: '答案在正文' } }, messages, approvals)
     await wrapper.vm.$nextTick()
-    // 流式期：思考区**内容常显**（无头部折叠面）
+    // 流式期：思考区头部存在＋默认展开，内容区直显全文
+    expect(wrapper.find('.streaming-tail .reasoning-head').exists()).toBe(true)
     expect(wrapper.find('.streaming-tail .reasoning-body').exists()).toBe(true)
     expect(wrapper.find('.streaming-tail .reasoning-body').text()).toContain('先想一下')
 
