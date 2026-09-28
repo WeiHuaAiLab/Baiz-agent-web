@@ -8,12 +8,7 @@ import { createDecisionStreamFilter } from '../utils/decisionStream'
 import type { DecisionStreamFilter } from '../utils/decisionStream'
 import { createProtocolLeakFilter } from '../utils/protocolLeak'
 import type { ProtocolLeakFilter } from '../utils/protocolLeak'
-import {
-  attachmentDigestSource,
-  buildAttachmentEnvelope,
-  newAttachmentNonce,
-  sha256Hex,
-} from '../utils/attachment'
+import { attachmentDigestSource, buildAttachmentEnvelope, newAttachmentNonce, sha256Hex } from '../utils/attachment'
 import type { AttachmentWire } from '../utils/attachment'
 import { formatFileSize } from '../utils/format'
 import { TOOL_LABELS_ZH as TOOL_NAMES_ZH } from '../utils/approvalText'
@@ -23,23 +18,8 @@ import { useWorkingTreeStore } from './workingTree'
 import { useSessionStore } from './session'
 import { useAuthStore } from './auth'
 import { INBOX_CONVERSATION_ID } from '../client/types'
-import type {
-  ChatMessage,
-  MessageMeta,
-  RunState,
-  SubtitleItem,
-  UsageCost,
-} from '../models'
-import type {
-  ApprovalRequiredData,
-  DaemonNotifyData,
-  DoneData,
-  ErrorData,
-  ReasoningData,
-  TokenData,
-  ToolCallData,
-  ToolResultData,
-} from '../client/types'
+import type { ChatMessage, MessageMeta, RunState, SubtitleItem, UsageCost } from '../models'
+import type { ApprovalRequiredData, DaemonNotifyData, DoneData, ErrorData, ReasoningData, TokenData, ToolCallData, ToolResultData } from '../client/types'
 
 // 流式节流：首个 token 即时生效，后续 token 累积到 100ms 窗口统一刷新 UI。
 const tokenBuffers = new Map<string, string>()

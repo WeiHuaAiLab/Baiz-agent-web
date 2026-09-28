@@ -67,12 +67,15 @@ describe('MSG-2413 思考/执行渲染面', () => {
     }
     // MSG-2998 修②：思考折叠块归组入 RunBlocks 子组件（三分离重构）——
     // shallowMount 会 stub 子组件致断言面不可达，改 mount 实渲。
-    // 改版口径（2026-09-27）：思考区**无头、默认展开常显**——body 直现全文。
+    // 改版口径（2026-09-28）：思考区**头部存在＋终态默认折叠**——body 文本可读
+    // （v-show 仅切可见性，DOM 文本不丢），点击头部展开后可见。
     const wrapper = mount(MessageItem, {
       props: { message: messages.byConversation[conversationId][0] },
       global: { plugins: [i18n, router] },
     })
-    expect(wrapper.find('.reasoning-head').exists()).toBe(false)
+    const head = wrapper.find('.reasoning-head')
+    expect(head.exists()).toBe(true)
+    expect(head.classes()).not.toContain('open')
     expect(wrapper.find('.reasoning-body').exists()).toBe(true)
     expect(wrapper.find('.reasoning-body').text()).toContain('先 A 后 B')
   })

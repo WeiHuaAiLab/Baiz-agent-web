@@ -8,7 +8,7 @@
 import { computed, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useApprovalStore } from '../../../stores/approval'
-import { humanizeArgs } from '../../../utils/approvalText'
+import { humanizeArgs, toolLabel } from '../../../utils/approvalText'
 import type { ChatMessage } from '../../../models'
 import type { ApprovalScope } from '../../../client/types'
 
