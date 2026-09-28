@@ -64,15 +64,12 @@ describe('Reasoning 帧 UI 回显', () => {
     await wrapper.vm.$nextTick()
     const block = wrapper.find('.streaming-tail .reasoning-stream')
     expect(block.exists()).toBe(true)
-    // MSG-3229（折叠单行）＋MSG-3248（跑马灯吐字）：流式期默认折叠，**行内实时出文字**；
-    // 要看全文点标题展开（内容零丢）。
-    expect(wrapper.find('[data-uia="reasoning-marquee"]').text()).toContain('第一步先分析')
-    expect(wrapper.find('.reasoning-body').exists()).toBe(false)
+    // 改版口径（2026-09-27）：思考区**无头常显**——内容区直显全文、随帧增长
+    expect(wrapper.find('.reasoning-body').exists()).toBe(true)
+    expect(wrapper.find('.reasoning-body').text()).toBe('第一步先分析')
 
     routeFrame(reasoningFrame(taskId, '，再设计方案'), messages, approvals)
     await wrapper.vm.$nextTick()
-    expect(wrapper.find('[data-uia="reasoning-marquee"]').text()).toContain('再设计方案')
-    await wrapper.find('.reasoning-head').trigger('click')
     expect(wrapper.find('.reasoning-body').text()).toBe('第一步先分析，再设计方案')
   })
 
@@ -94,11 +91,11 @@ describe('Reasoning 帧 UI 回显', () => {
       .filter((i) => i.kind === 'assistant')
     expect(assistants.length).toBe(1)
     expect(store.runs[taskId].reasoning).toContain('深度思考全量内容')
-    // 思考块在（终态折叠——2413 面）；展开可见全量 reasoning
+    // 思考块在（改版口径：无头、默认展开常显）；全量 reasoning 直显
     const thought = wrapper.find('.reasoning-block')
     expect(thought.exists()).toBe(true)
-    expect(wrapper.find('.reasoning-block .reasoning-body').exists()).toBe(false)
-    await wrapper.find('.reasoning-head').trigger('click')
+    expect(wrapper.find('.reasoning-head').exists()).toBe(false)
+    expect(wrapper.find('.reasoning-block .reasoning-body').exists()).toBe(true)
     expect(wrapper.find('.reasoning-body').text()).toContain('深度思考全量内容')
   })
 
@@ -119,8 +116,7 @@ describe('Reasoning 帧 UI 回显', () => {
     await wrapper.vm.$nextTick()
     await new Promise((resolve) => setTimeout(resolve, 160)) // token flush 100ms 窗
     await wrapper.vm.$nextTick()
-    // MSG-3229：流式期折叠——展开后可见思考全文（内容零丢）
-    await wrapper.find('.reasoning-head').trigger('click')
+    // 改版口径：思考区无头常显——思考全文直显（内容零丢）
     expect(wrapper.find('.reasoning-body').text()).toContain('边想边写')
     // token 正文照渲（StreamingMarkdownView 区在——run.text 累积）
     const run = useMessageStore().runs[taskId]

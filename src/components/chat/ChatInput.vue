@@ -58,6 +58,25 @@ async function chooseExecMode(mode: ExecMode) {
     execMenuOpen.value = false;
     await execMode.setMode(mode);
 }
+
+// 点击空白关闭 exec-mode-menu：菜单开时挂全局 pointerdown，命中点不在
+// 菜单（.exec-mode-menu）也不在触发钮（.exec-mode-btn）内 ⇒ 关闭。
+// pointerdown 先于 click——在触发钮自身 click 翻转前拦下，不会被钮的
+// toggle 重新打开；options 列表项点击由 chooseExecMode 正常处理。
+function onExecMenuPointerDown(event: PointerEvent) {
+    const target = event.target as HTMLElement | null;
+    if (target?.closest(".exec-mode-menu, .exec-mode-btn")) return;
+    execMenuOpen.value = false;
+}
+
+watch(execMenuOpen, (open) => {
+    if (open) document.addEventListener("pointerdown", onExecMenuPointerDown);
+    else document.removeEventListener("pointerdown", onExecMenuPointerDown);
+});
+
+onBeforeUnmount(() => {
+    document.removeEventListener("pointerdown", onExecMenuPointerDown);
+});
 // DEBT-540-B：＋号门禁前置——能力门前置钮层（tauri 壳未注册时禁用＋
 // 单条明示——勿点击后连 toast）
 const attachSupported = computed(() => getBridge().has('fs.pickAttachment'));
@@ -418,7 +437,7 @@ watch(
         </form>
         <form
             ref="composerRef"
-            class="composer composer-block"
+            class="composer composer-block unclipped"
             :class="{ 'is-dragover': dragOver }"
             @submit.prevent="send()"
             @dragenter="onDragEnter"
