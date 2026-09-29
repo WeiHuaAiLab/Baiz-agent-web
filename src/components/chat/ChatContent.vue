@@ -114,6 +114,38 @@ function stopPinLoop() {
 // 有限贴底循环的自动停止定时器
 let pinStopTimer = 0;
 
+/** 「非贴底」自动恢复倒计时（用户主动滚动脱离贴底后，N ms 内未滚回底部也
+ *  未再滚动 ⇒ 恢复程序贴底模式）。仅流式思考期生效——非流式期已无新内容
+ *  要追，强制拉底会破坏阅读位置；只翻标志位（pinned=true），让下一次内容
+ *  增长时自然贴底。N=10s 是用户口径（避免短时间打扰阅读，也不让用户「忘记
+ *  自己在看旧内容」太久而错过新流式增量）。 */
+const UNPIN_RESTORE_MS = 10_000;
+let unpinRestoreTimer = 0;
+
+function scheduleUnpinRestore() {
+    // 非流式期不启倒计时（流式已结束，强拉底无意义且破坏阅读位置）；
+    // 只翻 pinned 标志位，由后续内容变化 watch 走贴底
+    if (streamingRuns.value.length === 0) {
+        pinned.value = true;
+        return;
+    }
+    if (unpinRestoreTimer) clearTimeout(unpinRestoreTimer);
+    unpinRestoreTimer = setTimeout(() => {
+        unpinRestoreTimer = 0;
+        if (pinned.value) return; // 期间已被「滚回底部」分支提前恢复
+        // 仍非贴底：恢复程序贴底（流式期下由 rAF 循环持续贴底）
+        pinned.value = true;
+        startPinLoop();
+    }, UNPIN_RESTORE_MS);
+}
+
+function clearUnpinRestore() {
+    if (unpinRestoreTimer) {
+        clearTimeout(unpinRestoreTimer);
+        unpinRestoreTimer = 0;
+    }
+}
+
 // 首帧测量遮罩：DynamicScroller 第一次把消息渲染进可视区时，库内 ResizeObserver
 // 还在异步测量各 item 的真实高度——「估计高度 → 实测高度」跳变会造成文字重叠等
 // 视觉残影外露。此窗口期盖一层轻量加载占位遮蔽；10 帧（~167ms @60Hz）后库内
@@ -360,6 +392,8 @@ watch(
     async (id) => {
         // 切换会话：重置贴底状态；消息加载完毕后默认滚动到底部
         pinned.value = true;
+        // 跨会话遗留的「10s 自动恢复」倒计时无意义——上会话的滚动状态不应带到新会话
+        clearUnpinRestore();
         // 折叠组展开态随会话切换重置：id 派生自消息，跨会话残留只会是死键
         groupExpanded.value = {};
         if (!id) return;
@@ -393,9 +427,17 @@ function onScroll(event: Event) {
     // 时间窗（120ms > 一次帧间内容增长 + scroll 派发延迟）内忽略；用户真实
     // 滚动持续多帧，窗后第一个 scroll 事件即恢复判定，不影响阅读位置保护。
     if (performance.now() - lastProgrammaticPinAt < 120) return;
-    pinned.value = el.scrollTop + el.clientHeight >= el.scrollHeight - 120;
-    // 用户上滚脱离贴底：停止流式贴底循环（下一帧起不再强制回底）
-    if (!pinned.value) stopPinLoop();
+    const atBottom = el.scrollTop + el.clientHeight >= el.scrollHeight - 120;
+    pinned.value = atBottom;
+    if (atBottom) {
+        // 已回到贴底：清掉「10s 自动恢复」倒计时（已被手动恢复）
+        clearUnpinRestore();
+    } else {
+        // 用户上滚脱离贴底：① 停 rAF 循环（下一帧起不再强制回底）；
+        // ② 启 10s 倒计时——超时仍未回底则恢复程序贴底（流式期）
+        stopPinLoop();
+        scheduleUnpinRestore();
+    }
 }
 
 // 虚拟滚动容器就绪/销毁时：
@@ -443,6 +485,7 @@ onBeforeUnmount(() => {
         clearTimeout(pinStopTimer);
         pinStopTimer = 0;
     }
+    clearUnpinRestore();
     contentRo?.disconnect();
     contentRo = null;
     if (scrollEl) scrollEl.removeEventListener("scroll", onScroll);
