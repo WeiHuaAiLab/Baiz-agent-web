@@ -969,3 +969,13 @@ export const useMessageStore = defineStore('message', {
     },
   },
 })
+
+/** run 是否已收束（终态）。无 run 记录视为已收束（历史/被 trim）。 */
+export const TERMINAL_RUN_STATUSES: ReadonlySet<string> = new Set([
+  'completed',
+  'failed',
+  'cancelled',
+])
+export function isRunTerminal(status: string | undefined): boolean {
+  return !status || TERMINAL_RUN_STATUSES.has(status)
+}

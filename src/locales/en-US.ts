@@ -68,7 +68,6 @@ export default {
     thinking: 'Thinking',
     deepThink: 'Deep think',
     reasoningLabel: 'Thinking',
-    // MSG-3229: thinking block stays collapsed by default and streams live
     thinkingLive: 'Thinking…',
     thoughtDone: 'Done',
     thoughtChars: '{n} chars',
@@ -76,7 +75,6 @@ export default {
     toolResult: 'Result',
     // MSG-3233 ②: file card (ported from upstream) — click opens it in the side panel
     fileCard: { open: 'Opened in panel' },
-    // MSG-3236 ④: hint when the inbox overlay yields to a send (no silent drop)
     inboxClosedForSend: 'Inbox closed — your message was sent',
     // MSG-3263 ②: export feedback (success shows file + where; failure shows the reason)
     exportDone: 'Exported "{name}" (look in {dir})',
@@ -557,6 +555,7 @@ export default {
     rulesTitle: 'Remembered rules',
     revoke: 'Revoke',
     revokeHint: 'After revoking, the same action asks again',
+    pendingTitle: 'Pending approval',
   },
   // MSG-3189 E1/E2: intervention mode selector (three tiers; current always visible)
   execMode: {

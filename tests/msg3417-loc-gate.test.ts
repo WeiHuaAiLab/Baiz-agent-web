@@ -70,7 +70,7 @@ describe('MSG-3417 ② 判据四规则', () => {
 })
 
 describe('MSG-3417 ③ 真实仓库基线（自测值）', () => {
-  it('基线 4 件，且与扫描现值一致（980／693／705／605 口径）', () => {
+  it('基线 4 件，且与扫描现值一致（981／693／746／607 口径）', () => {
     const baseline = loadBaseline(process.cwd())
     expect(Object.keys(baseline.files)).toEqual([
       'src/stores/message.ts',

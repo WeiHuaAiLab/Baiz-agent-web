@@ -27,6 +27,7 @@ import {
 } from "../../utils/commandTranslator";
 import Icon from "../common/Icon.vue";
 import TaskForm from "../common/TaskForm.vue";
+import ApprovalConfirmBar from "./ApprovalConfirmBar.vue";
 
 const emit = defineEmits<{ (e: "submitted"): void }>();
 
@@ -403,6 +404,7 @@ watch(
     </div>
 
     <div ref="inputRoot" class="chat-input">
+        <ApprovalConfirmBar />
         <!-- MSG-2722 L3 编程 UI：Blocked/失败任务人工回传续跑行（daemon
             tool_loop.resume——note 回传文本） -->
         <form

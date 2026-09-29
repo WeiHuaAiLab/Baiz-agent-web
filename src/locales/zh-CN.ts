@@ -9,7 +9,6 @@ export default {
     empty: '发送第一条消息开始对话',
     emptyStart: '新建会话',
     elapsed: '耗时',
-    // MSG-3503 A10：web_fetch 取件在途人话（抓网页期间不再"静止"）
     fetchingWeb: '正在抓取网页…（单次取件受上界约束，超时即回人话）',
   modelPro: 'DeepSeek V4 Pro',
   modelFlash: 'DeepSeek V4 Flash',
@@ -71,7 +70,6 @@ export default {
     thinking: '思考',
     deepThink: '深度思考',
     reasoningLabel: '思考过程',
-    // MSG-3229（老板口径）：思考区＝默认折叠的实时流——标题随增量走，跑完即止
     thinkingLive: '思考中…',
     thoughtDone: '已完成',
     thoughtChars: '{n} 字',
@@ -558,6 +556,7 @@ export default {
     rulesTitle: '已记住的规则',
     revoke: '撤销',
     revokeHint: '撤销后，同类操作会重新弹卡确认',
+    pendingTitle: '待审批',
   },
   // MSG-3189 E1／E2：介入方式选择器（三档·当前档常显·默认每次确认）
   execMode: {

@@ -596,6 +596,153 @@
   border-top: 1px solid var(--border);
 }
 
+/* 「待审批」栏：挂在 ChatInput 顶部·chat-input 容器内（占文档流·撑开 chat-input
+   → flex:1 的 .chat-body 自动收缩，天然不被遮）。
+   与 .run-block .approvals-body 同源（审批卡家族）但**这里是全局待办视图**——
+   max-height: 160px 封顶避免压扁输入框；超出滚动：单条折叠 40px，展开 details
+   后单条约 100-200px，3-4 条不滚，再多则滚——不会埋没决策点。 */
+.approval-confirm {
+  border-top: 1px solid var(--border);
+  border-bottom: 1px solid var(--border);
+  background: var(--bg-soft);
+
+  width: 100%;
+  max-width: 720px;
+}
+
+.approval-confirm-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 12px;
+  font-size: 12px;
+  color: var(--muted);
+}
+
+.approval-confirm-title {
+  font-weight: 600;
+}
+
+.approval-confirm-count {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 18px;
+  height: 18px;
+  padding: 0 6px;
+  border-radius: 9px;
+  background: var(--hover);
+  color: var(--text);
+  font-size: 11px;
+  font-weight: 600;
+}
+
+.approval-confirm-list {
+  list-style: none;
+  margin: 0;
+  padding: 0 12px 8px;
+  max-height: 160px;
+  overflow-y: auto;
+}
+
+.needApprovalListItem {
+  margin: 4px 0;
+  border-radius: 6px;
+  background: var(--bg);
+  border: 1px solid var(--border);
+}
+
+.approval-confirm-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 40px;
+  padding: 6px 10px;
+  cursor: pointer;
+  user-select: none;
+}
+
+.approval-confirm-tool {
+  flex: 1;
+  font-family: var(--mono, ui-monospace, SFMono-Regular, Menlo, monospace);
+  font-size: 12px;
+  color: var(--text);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.approval-confirm-row .risk {
+  flex: 0 0 auto;
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-size: 11px;
+  font-weight: 600;
+}
+
+.approval-confirm-row .risk.high {
+  background: rgba(220, 38, 38, 0.12);
+  color: #b91c1c;
+}
+
+.approval-confirm-row .risk.medium {
+  background: rgba(234, 179, 8, 0.16);
+  color: #a16207;
+}
+
+.approval-confirm-row .risk.low {
+  background: rgba(34, 197, 94, 0.14);
+  color: #15803d;
+}
+
+.approval-confirm-toggle {
+  flex: 0 0 auto;
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.approval-confirm-actions {
+  flex: 0 0 auto;
+  display: flex;
+  gap: 6px;
+}
+
+.approval-confirm-actions .deny,
+.approval-confirm-actions .approve {
+  padding: 4px 10px;
+  border-radius: 4px;
+  border: 1px solid var(--border);
+  background: var(--bg);
+  color: var(--text);
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.approval-confirm-actions .deny:disabled,
+.approval-confirm-actions .approve:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.approval-confirm-actions .approve {
+  background: var(--accent, #2563eb);
+  color: #fff;
+  border-color: var(--accent, #2563eb);
+}
+
+.approval-confirm-details {
+  margin: 0 10px 8px;
+  padding: 8px 10px;
+  background: var(--bg-soft, var(--bg));
+  border-radius: 4px;
+  font-size: 12px;
+  line-height: 1.5;
+  white-space: pre-wrap;
+  word-break: break-word;
+  overflow: auto;
+  max-height: 200px;
+}
+
 /* MSG-2413 工具执行行（命令/URL） */
 .tool-cmd {
   display: block;
@@ -1539,7 +1686,7 @@
 /* 批0 工具调用行的人话说明 */
 .xp-tool-human {
   display: flex;
-  align-items:center;
+  align-items: center;
   justify-content: flex-start;
   gap: 8px;
   margin: 4px 0 0;
