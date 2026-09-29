@@ -1,11 +1,16 @@
 <script setup lang="ts">
 // 工作区 · 能力扩展子页：扩展插件列表（模拟 demo 数据，开关状态本地模拟）。
-import { reactive } from 'vue'
+// 刀 D2（2026-09-29）：**技能面接线**——新增「技能」区块，数据来自 daemon
+// `skills.list`（磁盘真技能目录；测试员加的技能在此现形）。拉取失败 ⇒ 空列表
+// ＋可重试提示（**禁回落假清单**）；启停语义未开 ⇒ 只读展示（**禁假开关**）。
+import { onMounted, reactive } from 'vue'
 import { useI18n } from 'vue-i18n'
 import Icon from '../common/Icon.vue'
 import type { IconName } from '../common/Icon.vue'
+import { useToolStore } from '../../stores/tools'
 
 const { t } = useI18n()
+const tools = useToolStore()
 
 interface ExtensionItem {
   id: string
@@ -87,6 +92,22 @@ const enabled = reactive<Record<string, boolean>>({
 function toggle(id: string) {
   enabled[id] = !enabled[id]
 }
+
+/** 来源层级标签（account／global／workspace ⇒ i18n；未知源照原文展示） */
+function sourceLabel(source: string): string {
+  const known: Record<string, string> = {
+    account: 'skills.sourceAccount',
+    global: 'skills.sourceGlobal',
+    workspace: 'skills.sourceWorkspace',
+  }
+  const key = known[source]
+  return key ? t(key) : source
+}
+
+// 进入本页即拉真技能清单（失败 ⇒ 空列表＋重试；**禁回落假清单**，见 store 口径）
+onMounted(() => {
+  void tools.loadSkills()
+})
 </script>
 
 <template>
@@ -115,5 +136,31 @@ function toggle(id: string) {
         </button>
       </li>
     </ul>
+
+    <div class="settings-card skills-panel">
+      <h2>{{ t('skills.title') }}</h2>
+      <p class="section-desc">{{ t('skills.hint') }}</p>
+      <p v-if="tools.skillsLoading" class="dir-empty">{{ t('skills.loading') }}</p>
+      <p v-else-if="tools.skillsNotReady" class="dir-empty">{{ t('skills.notReady') }}</p>
+      <p v-else-if="tools.skillsFailed" class="dir-empty">
+        {{ t('skills.loadFailed') }}<template v-if="tools.error">：{{ tools.error }}</template>
+        <button type="button" class="btn-ghost" @click="tools.loadSkills()">
+          {{ t('skills.retry') }}
+        </button>
+      </p>
+      <ul v-else-if="tools.skills.length" class="skill-list">
+        <li v-for="skill in tools.skills" :key="skill.name" class="skill-item">
+          <div class="ext-main">
+            <div class="ext-head">
+              <span class="ext-name">{{ skill.name }}</span>
+              <span v-if="skill.source" class="ext-category">{{ sourceLabel(skill.source) }}</span>
+            </div>
+            <p class="ext-desc">{{ skill.description || t('skills.noDescription') }}</p>
+            <div v-if="skill.path" class="ext-meta" :title="skill.path">{{ skill.path }}</div>
+          </div>
+        </li>
+      </ul>
+      <p v-else class="dir-empty">{{ t('skills.empty') }}</p>
+    </div>
   </div>
 </template>

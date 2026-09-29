@@ -151,14 +151,11 @@ export default {
     feedbackSent: 'Received. Thank you!',
   },
   skills: {
-    requirement: 'Requirement analysis',
-    plan: 'Solution design',
-    codingDiscipline: 'Coding discipline',
-    design: 'Design standards',
-    office: 'Office capabilities',
-    security: 'Security audit',
-    evolution: 'Evolution governance',
-    memory: 'Memory management',
+    // D2 (2026-09-29): the old 8 fake labelKeys (no such skills on disk) are removed; real UI copy below
+    title: 'Skills', hint: 'Real list from local skill directories (auto-updated); enable/disable is not supported in the UI yet',
+    loading: 'Loading…', empty: 'No skills', noDescription: '(no description)',
+    loadFailed: 'Failed to load skills', retry: 'Retry', notReady: 'Service not ready (skills.list not available)',
+    sourceAccount: 'Account', sourceGlobal: 'Global', sourceWorkspace: 'Workspace',
   },
   tasks: {
     empty: 'No tasks',

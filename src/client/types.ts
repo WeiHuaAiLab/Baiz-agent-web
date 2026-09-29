@@ -422,3 +422,19 @@ export interface MemoryListResult {
   /** 零令牌面的人话说明（未登录 ⇒ 记忆不可见） */
   note?: string
 }
+
+// 刀 D2（2026-09-29）：**技能面接线**（daemon `skills.list`——磁盘真技能目录）。
+// 契约（D1 题包同字）：出参**裸数组** `[{ name, description, path, source }]`；
+// `description` 可空（界面显「（无描述）」，勿以 labelKey 假造）；
+// `source` ∈ account／global／workspace（来源层级，仅作展示标签）。
+// 取数失败由调用方（`stores/tools.ts`）显式降级——**不得回落写死假清单**。
+export interface SkillEntry {
+  /** 技能目录名（即磁盘上的技能 id，如 `ui-designer`） */
+  name: string
+  /** 技能描述（可空——空 ⇒ 界面显「（无描述）」） */
+  description?: string | null
+  /** 技能目录路径（展示用；可空） */
+  path?: string | null
+  /** 来源层级：account／global／workspace（可空——未知源照原文展示） */
+  source?: string | null
+}

@@ -16,6 +16,11 @@
 //   src/components/chat/ChatInput.vue             605（旧测试钉值）→ 现值 588 ⇒ <600 不入门禁，故不列
 // **未放宽判据**：四规则原样、阈值常量原样、`baseline.files` 仍**只准减不准增**
 // （本次含上调系"把基线对齐到真实现值并纳入可见"，非常态；生效后规则④不变）。
+//
+// ── 2026-09-29·刀 D2（web 侧技能面接线）──────────────────────────────────
+// zh-CN.ts 600 → 597：旧 8 条假 `skills.*` labelKey（磁盘无此技能）删换为真实 UI
+// 文案 ⇒ 净减 3 行、**跌破 600 黄档线** ⇒ 按规则从基线撤出（`baseline.files`
+// 4 件 → 3 件；方向＝只减·非放宽）。超线现值：1004／764／691（同降序）。
 import { describe, expect, it } from 'vitest'
 import {
   TIER_LINE,
@@ -83,14 +88,13 @@ describe('MSG-3417 ② 判据四规则', () => {
   })
 })
 
-describe('MSG-3417 ③ 真实仓库基线（自测值·2026-09-28 按扫描现值重出）', () => {
-  it('基线 4 件，且与扫描现值一致（1004／764／691／600 口径）', () => {
+describe('MSG-3417 ③ 真实仓库基线（自测值·2026-09-29 按扫描现值重出）', () => {
+  it('基线 3 件，且与扫描现值一致（1004／764／691 口径）', () => {
     const baseline = loadBaseline(process.cwd())
     expect(Object.keys(baseline.files)).toEqual([
       'src/stores/message.ts',
       'src/components/chat/ChatContent.vue',
       'src/components/chat/message/ApprovalCard.vue',
-      'src/locales/zh-CN.ts',
     ])
     const files = scanSources(process.cwd())
     const verdict = judgeLocGate(files, baseline)

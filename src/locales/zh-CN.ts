@@ -152,14 +152,11 @@ export default {
     logout: '退出登录',
   },
   skills: {
-    requirement: '需求分析',
-    plan: '方案设计',
-    codingDiscipline: '编程纪律',
-    design: '设计规范',
-    office: '办公能力',
-    security: '安全审计',
-    evolution: '进化治理',
-    memory: '记忆管理',
+    // 刀D2（2026-09-29）：旧 8 条假 labelKey（磁盘无此技能）逐条删除，改为真实 UI 文案
+    title: '技能', hint: '来自本机技能目录的真实清单（随目录自动更新）；暂不支持在界面启停',
+    loading: '读取中…', empty: '暂无技能', noDescription: '（无描述）',
+    loadFailed: '技能列表读取失败', retry: '重试', notReady: '服务端未就绪（skills.list 尚未提供）',
+    sourceAccount: '账号级', sourceGlobal: '全局', sourceWorkspace: '工作区',
   },
   tasks: {
     empty: '暂无任务',
