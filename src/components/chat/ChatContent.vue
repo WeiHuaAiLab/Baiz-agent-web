@@ -6,13 +6,16 @@ import { computed, nextTick, onBeforeUnmount, ref, watch } from "vue";
 import { DynamicScroller, DynamicScrollerItem } from "vue-virtual-scroller";
 import { useI18n } from "vue-i18n";
 import { useSessionStore } from "../../stores/session";
-import { useMessageStore, isRunTerminal } from "../../stores/message";
+import { useMessageStore } from "../../stores/message";
 import { useSettingsStore } from "../../stores/settings";
 import { useUiStore } from "../../stores/ui";
 import { useApprovalStore } from "../../stores/approval";
 import { getBridge } from "../../bridge";
 import type { ChatMessage, RunState } from "../../models";
 import MessageItem from "./MessageItem.vue";
+// 消息流展示分组（未决审批卡剥离＋工具链折叠附着渲染——逻辑外迁 utils，行数闸 MSG-3417）
+import { isPendingApproval, useDisplayItems } from "../../utils/displayItems";
+import type { DisplayItem } from "../../utils/displayItems";
 // MSG-3513 并上游 1712993：工具调用折叠组（`StreamingMarkdownView` 我方第 24 行已 import
 // 同径 ⇒ **不重复引入**，否则重复 import 报错）
 import ToolCallGroup from "./ToolCallGroup.vue";
@@ -20,14 +23,9 @@ import SkeletonChatView from "./SkeletonChatView.vue";
 // MSG-3335 G-4：RunBlocks 随 kind 分发迁入 chat/message/（本件随迁改 import，行为零改）
 import RunBlocks from "./message/RunBlocks.vue";
 import ApprovalStack from "./message/ApprovalStack.vue";
+import ActivityLine from "./ActivityLine.vue";
 import StreamingMarkdownView from "../markdown/StreamingMarkdownView.vue";
 import Icon from "../common/Icon.vue";
-// MSG-3575 P5（A 谱系补丁·非 372ae2f 面）：同类重复失败合并条分型与压缩
-import {
-    classifyRuntimeFailure,
-    compactRuntimeFailures,
-} from "../../utils/failureText";
-import type { RuntimeFailureKind } from "../../utils/failureText";
 
 const { t } = useI18n();
 const session = useSessionStore();
@@ -116,8 +114,72 @@ function stopPinLoop() {
     }
 }
 
+/** 用户交互型高度变化的贴底抑制：折叠块（工具组/思考/命令/结果/工具行）展开或
+ *  收起会增高内容——RO 视角与流式增长同形，回调参数区分不了来源。但此类变化
+ *  源于用户在阅读位置上的**主动点击**，强制贴底等于把视口拽走（体验为「点一下
+ *  折叠头、整页跳到底」）。窗口期内 RO／settle 的贴底分支跳过；流式新帧到达仍
+ *  照常贴底（真内容增长优先级高于抑制）。 */
+const PIN_SUPPRESS_MS = 800;
+let pinSuppressUntil = 0;
+
+function suppressPin() {
+    pinSuppressUntil = performance.now() + PIN_SUPPRESS_MS;
+}
+
+function isPinSuppressed(): boolean {
+    return performance.now() < pinSuppressUntil;
+}
+
+/** 折叠头点击（捕获阶段事件委托）：命中任一已知折叠头 ⇒ 抑制贴底并停循环。
+ *  RunBlocks／ToolRow 的折叠态在组件内部、不上报父层——委托监听免穿组件逐个
+ *  接线；后续新折叠头只需把选择器补进列表。 */
+const COLLAPSIBLE_HEAD_SELECTOR =
+    ".tool-group-head, .reasoning-head, .block-head, .tool-main";
+
+function onCollapsibleHeadClick(event: Event) {
+    const target = event.target as HTMLElement | null;
+    if (target?.closest?.(COLLAPSIBLE_HEAD_SELECTOR)) {
+        suppressPin();
+        // 流式期 rAF 循环可能在跑：先停——是否回贴由「下一帧新内容」决定，
+        // 而非本次点击引起的高度重排
+        stopPinLoop();
+    }
+}
+
 // 有限贴底循环的自动停止定时器
 let pinStopTimer = 0;
+
+/** 「非贴底」自动恢复倒计时（用户主动滚动脱离贴底后，N ms 内未滚回底部也
+ *  未再滚动 ⇒ 恢复程序贴底模式）。仅流式思考期生效——非流式期已无新内容
+ *  要追，强制拉底会破坏阅读位置；只翻标志位（pinned=true），让下一次内容
+ *  增长时自然贴底。N=10s 是用户口径（避免短时间打扰阅读，也不让用户「忘记
+ *  自己在看旧内容」太久而错过新流式增量）。 */
+const UNPIN_RESTORE_MS = 10_000;
+let unpinRestoreTimer = 0;
+
+function scheduleUnpinRestore() {
+    // 非流式期不启倒计时（流式已结束，强拉底无意义且破坏阅读位置）；
+    // 只翻 pinned 标志位，由后续内容变化 watch 走贴底
+    if (streamingRuns.value.length === 0) {
+        pinned.value = true;
+        return;
+    }
+    if (unpinRestoreTimer) clearTimeout(unpinRestoreTimer);
+    unpinRestoreTimer = setTimeout(() => {
+        unpinRestoreTimer = 0;
+        if (pinned.value) return; // 期间已被「滚回底部」分支提前恢复
+        // 仍非贴底：恢复程序贴底（流式期下由 rAF 循环持续贴底）
+        pinned.value = true;
+        startPinLoop();
+    }, UNPIN_RESTORE_MS);
+}
+
+function clearUnpinRestore() {
+    if (unpinRestoreTimer) {
+        clearTimeout(unpinRestoreTimer);
+        unpinRestoreTimer = 0;
+    }
+}
 
 // 首帧测量遮罩：DynamicScroller 第一次把消息渲染进可视区时，库内 ResizeObserver
 // 还在异步测量各 item 的真实高度——「估计高度 → 实测高度」跳变会造成文字重叠等
@@ -192,10 +254,6 @@ function scrollToBottomWithSettle(duration = 400) {
 }
 
 const activeId = computed(() => session.activeId);
-/** MSG-3236 ①：未决审批卡（`kind==='approval'` 且未决）——判定与展示分离 */
-function isPendingApproval(m: ChatMessage): boolean {
-    return m.kind === "approval" && m.meta?.approved === undefined;
-}
 /**
  * MSG-3236 ①：未决卡**脱离虚拟滚动复用**——虚拟列表只收普通消息，
  * 未决卡改由常驻区渲染（DOM 常在＋稳定 id/data-*）⇒ UIA／自动化可稳定命中「同意/拒绝」。
@@ -219,173 +277,36 @@ const orphanApprovals = computed<ChatMessage[]>(() => {
     );
 });
 
-/** 连续工具调用折叠组：≥ TOOL_GROUP_MIN 条连续 tool_call 在收束后合并成一个虚拟 item */
-interface ToolGroup {
-    id: string;
-    kind: "tool-group";
-    /** 摘要文本（工具名去重）：与 ChatMessage.text 同形，让 size 依赖 / 贴底签名
-     *  的取值表达式对两种 item 无需分支 */
-    text: string;
-    messages: ChatMessage[];
-}
-
-/**
- * **MSG-3575 · P5**（A 谱系补丁）：同类重复失败**合并条**——连续同类（外网取件／KB
- * 不可用）失败状态条折成一条（代表项＝首条，`repeat`＝条数）：**不刷屏**，且原文
- * 不上屏（见 `StatusMessage`）。
- */
-interface StatusRepeat {
-    id: string;
-    kind: "status-repeat";
-    message: ChatMessage;
-    repeat: number;
-}
-
-type DisplayItem = ChatMessage | ToolGroup | StatusRepeat;
-
-function isToolGroup(item: DisplayItem): item is ToolGroup {
-    return item.kind === "tool-group";
-}
-
-function isStatusRepeat(item: DisplayItem): item is StatusRepeat {
-    return item.kind === "status-repeat";
-}
-
-/** 本条是否是"外网取件／KB 不可用"失败状态条（本件分型；非本件 ⇒ null） */
-function failureKindOf(item: DisplayItem): RuntimeFailureKind | null {
-    if (item.kind !== "status") return null;
-    if (item.meta?.status !== "error" && item.meta?.statusKey !== "taskError")
-        return null;
-    return classifyRuntimeFailure(item.text);
-}
-
-/** 取 item 的可读文本（三种 item 同形取值；滚动签名用） */
-function itemText(item: DisplayItem | undefined): string {
-    if (!item) return "";
-    if (isToolGroup(item)) return item.text;
-    if (isStatusRepeat(item)) return item.message.text;
-    return item.text;
-}
-
-// 折叠门槛：连续 tool_call ≥ 3 条才收起（不足则逐条散开，行为与既有会话完全一致）
-const TOOL_GROUP_MIN = 3;
-
-/** 「思考完毕」判定：该 tool_call 所属 run 是否已收束（终态）。
- *  未收束 = 流式进行中 —— 此时保持逐条散开（尾流期不折叠，让用户看到实时操作）；
- *  run 已被 trim 或从未登记（从 DB 载入的历史消息）一律视为已收束。
- *  用终态黑名单而非 === 'running'：waiting_approval（审批等待期）仍是活 run
- *  ——该期间工具链不应折叠（与 activeRuns / stopRun 同源修复）。 */
-function isRunSettled(taskId?: string): boolean {
-    if (!taskId) return true;
-    const run = messages.runs[taskId];
-    if (!run) return true;
-    return isRunTerminal(run.status);
-}
-
-/** 折叠组摘要：工具名去重保序（同一工具反复调用时不重复堆字） */
-function summarizeTools(items: ChatMessage[]): string {
-    const names = items
-        .map((message) => message.meta?.toolName)
-        .filter((name): name is string => !!name);
-    return [...new Set(names)].join(" · ");
-}
-
-/**
- * **MSG-3513 合流**（我方 `MSG-3236` ① ＋ 上游 `1712993`「连续工具调用折叠」）：
- * 源＝消息流**去掉未决审批卡**（未决卡走常驻区，见 `pendingApprovals`）
- * ⇒ 再对剩余流做「同 run 连续 `tool_call` ≥ `TOOL_GROUP_MIN` ⇒ 折成一个 `ToolGroup`」。
- * **两侧合取并集**：我方"审批卡常驻区"与上游"工具链折叠"语义各自保留，**零丢弃**。
- */
-const displayItems = computed<DisplayItem[]>(() => {
-    const source = messages
-        .list(activeId.value)
-        .filter((m) => !isPendingApproval(m));
-    const out: DisplayItem[] = [];
-    let buffer: ChatMessage[] = [];
-
-    const flush = () => {
-        const head = buffer[0];
-        // 段内必定同 run（下方断组保证），故只需看首条所属 run 是否收束
-        if (
-            head &&
-            buffer.length >= TOOL_GROUP_MIN &&
-            isRunSettled(head.meta?.taskId)
-        ) {
-            // id 由首条消息 id 派生：段尾追加新条目时 id 不变，虚拟列表不重建
-            out.push({
-                id: `tg:${head.id}`,
-                kind: "tool-group",
-                text: summarizeTools(buffer),
-                messages: buffer,
-            });
-        } else {
-            out.push(...buffer);
-        }
-        buffer = [];
-    };
-
-    for (const message of source) {
-        if (message.kind === "tool_call") {
-            // 同一 run 的连续 tool_call 才归一组：换 run 即断组——否则「上一个 run
-            // 已完成、下一个 run 还在跑」两段相邻时会被并成一段，导致已收束的那半
-            // 也一直不折叠（违背「已完成的默认折叠」）
-            if (
-                buffer.length > 0 &&
-                buffer[0]?.meta?.taskId !== message.meta?.taskId
-            )
-                flush();
-            buffer.push(message);
-            continue;
-        }
-        flush();
-        out.push(message);
-    }
-    flush();
-    // **MSG-3575 · P5**（A 谱系补丁）：再走一道**同类失败合并**（连续同类 ⇒ 一条 ＋ ×N）——
-    // 工具链折叠组与非本件分型项一律原样透传（零误伤）。
-    return compactRuntimeFailures(out, failureKindOf).map(({ item, repeat }) =>
-        repeat > 1 && item.kind === "status"
-            ? {
-                  id: `sf:${item.id}`,
-                  kind: "status-repeat" as const,
-                  message: item,
-                  repeat,
-              }
-            : item,
-    );
-});
-
-// 折叠组展开态：默认收起（「思考完毕后」自动折叠，用户点击可展开）。
-// 存父层而非组组件内部——DynamicScroller 会回收 item 组件，
-// 状态若存组件内，滚出视口再滚回来就丢了。
-const groupExpanded = ref<Record<string, boolean>>({});
-
-function isGroupExpanded(id: string): boolean {
-    return groupExpanded.value[id] === true;
-}
+/** 消息流展示分组（未决审批卡剥离＋工具链折叠，逻辑见 ./displayItems.ts——行数闸
+ *  MSG-3417 基线件只准减不准增，故外迁新件）。工具组**附着**到该 run 落地的
+ *  assistant 消息上，由 AssistantMessage 在过程区（深度思考/执行命令/审批卡/
+ *  执行结果）之后、正文之前渲染——时间顺序复原；无落点（assistant 被删/失败径）
+ *  ⇒ 组原位兜底渲染为独立 item，行为与旧版一致。 */
+const {
+    displayItems,
+    isToolGroup,
+    groupExpanded,
+    isGroupExpanded,
+    attachedGroupOf,
+    attachedGroupExpanded,
+    sizeDeps,
+} = useDisplayItems();
 
 function toggleGroup(id: string) {
     groupExpanded.value = {
         ...groupExpanded.value,
         [id]: !groupExpanded.value[id],
     };
-    // 整组展开/收起是高度突变，且组内工具行的高度还要等 ResizeObserver 落地——
-    // 交给贴底循环吸收「展开 → 重测 → 落定」的多跳；非吸附态不动，尊重阅读位置
-    if (pinned.value) startPinLoop();
+    // 用户主动展开/收起：**不贴底**（抑制窗口吸收「展开 → 重测 → 落定」的多跳
+    // 高度重排；流式新帧到达仍照常贴底，见 PIN_SUPPRESS_MS 注释）
+    suppressPin();
+    stopPinLoop();
 }
 
-/** size 依赖（v3 已 deprecated，ResizeObserver 才是正路）：仅保证两种 item 都取得到值 */
-function sizeDeps(item: DisplayItem): unknown[] {
-    if (isToolGroup(item))
-        return [item.messages.length, isGroupExpanded(item.id)];
-    // A 谱系补丁（MSG-3575 P5）：合并条的高度随条数与原文变化
-    if (isStatusRepeat(item)) return [item.repeat, item.message.text];
-    return [
-        item.text,
-        item.meta?.taskId,
-        item.meta?.attachments?.length,
-        item.meta?.streaming,
-    ];
+/** 切换附着组展开态（无附着组空操作；贴底口径经 toggleGroup 转发天然同覆盖） */
+function toggleAttachedGroup(item: DisplayItem): void {
+    const group = attachedGroupOf(item);
+    if (group) toggleGroup(group.id);
 }
 
 // MSG-3233 ④：消息加载态——**加载中且消息为空**时盖骨架（免空帧闪 empty-state）
@@ -412,6 +333,8 @@ watch(
     async (id) => {
         // 切换会话：重置贴底状态；消息加载完毕后默认滚动到底部
         pinned.value = true;
+        // 跨会话遗留的「10s 自动恢复」倒计时无意义——上会话的滚动状态不应带到新会话
+        clearUnpinRestore();
         // 折叠组展开态随会话切换重置：id 派生自消息，跨会话残留只会是死键
         groupExpanded.value = {};
         if (!id) return;
@@ -445,9 +368,17 @@ function onScroll(event: Event) {
     // 时间窗（120ms > 一次帧间内容增长 + scroll 派发延迟）内忽略；用户真实
     // 滚动持续多帧，窗后第一个 scroll 事件即恢复判定，不影响阅读位置保护。
     if (performance.now() - lastProgrammaticPinAt < 120) return;
-    pinned.value = el.scrollTop + el.clientHeight >= el.scrollHeight - 120;
-    // 用户上滚脱离贴底：停止流式贴底循环（下一帧起不再强制回底）
-    if (!pinned.value) stopPinLoop();
+    const atBottom = el.scrollTop + el.clientHeight >= el.scrollHeight - 120;
+    pinned.value = atBottom;
+    if (atBottom) {
+        // 已回到贴底：清掉「10s 自动恢复」倒计时（已被手动恢复）
+        clearUnpinRestore();
+    } else {
+        // 用户上滚脱离贴底：① 停 rAF 循环（下一帧起不再强制回底）；
+        // ② 启 10s 倒计时——超时仍未回底则恢复程序贴底（流式期）
+        stopPinLoop();
+        scheduleUnpinRestore();
+    }
 }
 
 // 虚拟滚动容器就绪/销毁时：
@@ -458,17 +389,22 @@ watch(
     (s) => {
         if (scrollEl) {
             scrollEl.removeEventListener("scroll", onScroll);
+            scrollEl.removeEventListener("click", onCollapsibleHeadClick, true);
             contentRo?.disconnect();
             contentRo = null;
         }
         scrollEl = (s?.$el as HTMLElement | undefined) ?? null;
         if (scrollEl) {
             scrollEl.addEventListener("scroll", onScroll, { passive: true });
+            // 折叠头点击委托（捕获阶段）：命中即抑制贴底，见 onCollapsibleHeadClick
+            scrollEl.addEventListener("click", onCollapsibleHeadClick, true);
             // 高度观测挂接：① 滚动容器自身（流式尾条增高压缩视口、窗口缩放）；
             // ② 内容 wrapper（item 高度因异步渲染增长）。高度变化时贴底态补贴底。
             if (typeof ResizeObserver !== "undefined") {
                 contentRo = new ResizeObserver(() => {
-                    if (!pinned.value) return;
+                    // 抑制窗口内（用户刚点了折叠头）的高度重排不贴底——
+                    // 该变化源于主动交互而非新内容，拽走视口即「跳到底」坏体验
+                    if (!pinned.value || isPinSuppressed()) return;
                     // 流式期由 rAF 贴底循环持续贴底（startPinLoop），勿重复起定时器
                     if (streamingRuns.value.length > 0) {
                         startPinLoop();
@@ -495,9 +431,13 @@ onBeforeUnmount(() => {
         clearTimeout(pinStopTimer);
         pinStopTimer = 0;
     }
+    clearUnpinRestore();
     contentRo?.disconnect();
     contentRo = null;
-    if (scrollEl) scrollEl.removeEventListener("scroll", onScroll);
+    if (scrollEl) {
+        scrollEl.removeEventListener("scroll", onScroll);
+        scrollEl.removeEventListener("click", onCollapsibleHeadClick, true);
+    }
     scrollEl = null;
 });
 
@@ -520,7 +460,7 @@ watch(
 watch(
     () =>
         displayItems.value.length +
-        itemText(displayItems.value.at(-1)).length +
+        (displayItems.value.at(-1)?.text ?? "").length +
         streamingRuns.value.reduce((sum, run) => sum + run.text.length, 0),
     async () => {
         // 内容变化（含流式增长）：通知外层刷新悬浮滑块（上滚脱离贴底时 scrollTop 不变，需手动 sync）
@@ -691,20 +631,22 @@ async function onStreamingClick(event: MouseEvent) {
                         :size-dependencies="sizeDeps(item)"
                     >
                         <div class="message-inner">
-                            <!-- 收束后的长工具链收成一个虚拟 item；展开体仍是逐条 MessageItem -->
+                            <!-- 位置口径：工具组优先**附着**到 assistant 消息（AssistantMessage
+                                 在过程区：深度思考/执行命令/审批卡/执行结果之后渲染组）；
+                                 此处仅渲染无落点兜底的独立组（展开体仍是逐条 MessageItem） -->
                             <ToolCallGroup
                                 v-if="isToolGroup(item)"
                                 :messages="item.messages"
                                 :expanded="isGroupExpanded(item.id)"
                                 @toggle="toggleGroup(item.id)"
                             />
-                            <!-- MSG-3575 P5（A 谱系补丁）：同类重复失败合并条（代表项 ＋ ×N；原文不上屏） -->
                             <MessageItem
-                                v-else-if="isStatusRepeat(item)"
-                                :message="item.message"
-                                :repeat="item.repeat"
+                                v-else
+                                :message="item"
+                                :tool-group="attachedGroupOf(item)"
+                                :tool-group-expanded="attachedGroupExpanded(item)"
+                                @toggle-tool-group="toggleAttachedGroup(item)"
                             />
-                            <MessageItem v-else :message="item" />
                         </div>
                     </DynamicScrollerItem>
                 </template>
@@ -725,10 +667,7 @@ async function onStreamingClick(event: MouseEvent) {
                             :key="run.taskId"
                             class="msg assistant streaming-block"
                         >
-                            <div class="activity-line">
-                                <span class="activity-dot" />
-                                {{ activityText(run) }}
-                            </div>
+                            <ActivityLine :text="activityText(run)" />
                             <!-- MSG-2998 修②（DEBT-544 目二）：三分离归组——思考/执行命令/  执行结果各自成区（流式态与终态同构，RunBlocks 两态一源）；
                                  未决审批卡容器（本 run 的待审批权限卡）挂在执行命令/执行结果之间 -->
                             <RunBlocks

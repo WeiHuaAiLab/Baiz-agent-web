@@ -1,22 +1,8 @@
 // MSG-3236 红证：审批通道"无人值守四连"。
-// ① 未决卡**可达**＋稳定 id/data-*（**UIA 契约**）；无幽灵卡；
+// ① 未决卡**在 DOM 中**（脱离虚拟滚动复用）＋稳定 id/data-*；无幽灵卡；
 // ② 定位走**组件 API**（scrollToItem）——不直写 scrollTop；
 // ③ 计数以 daemon 权威清单＋终态事件**同轮刷新**（不得只增不减）；
 // ④ 收件箱遮罩不吃事件（指针透传）＋被拒发送**必有提示**（禁静默）。
-//
-// ── ① 口径迁移之由（2026-09-28·参谋5 裁①·**非废弃，是换承载者**）────────────────
-// 原判据：「未决卡**常驻 ChatContent 的 DOM**（脱离虚拟滚动复用）＋稳定 id/data-*」，
-// 断言点在 ChatContent 常驻区的孤儿 ApprovalStack 容器上。
-// 冲突：老板④「**隐藏未决审批卡**」（commit 85921e5 已把该容器注释下线）——原判据
-// 与老板④**直接相抵**，测试即红（本席实跑复现：line 90 expected true received false）。
-// 老板另有第④条落点：「**审核卡移到输入框上方**」（ChatInput.vue:417-418 接线注释、
-// commit b48f03d／81ca112 引入 ApprovalConfirmBar.vue）。
-// 故①之「UIA 可达」判据**迁移**为**输入区上方那张审批卡**（ApprovalConfirmBar）**可达**：
-//   · 稳定 id/data-* 契约**在输入区卡上继续成立**（前缀 `approval-bar-`，与消息流径的
-//     `approval-<requestId>` 同屏共存而不撞 id）；
-//   · 「已决卡不再是未决可达项／无幽灵卡」半条**保留**（迁到同一承载者上断言——
-//     若留在 ChatContent 上，该半条会因孤儿容器已下线而**恒真**，正是本席所禁）。
-// **未废弃**：原要求（未决审批卡可被 UIA 稳定定位）仍须成立，只是由输入区卡承接。
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { readFileSync } from 'node:fs'
 import { createPinia, setActivePinia } from 'pinia'
@@ -39,10 +25,7 @@ const i18n = createI18n({
   messages: { 'zh-CN': zhCN },
 })
 
-/** 播种一条未决审批帧。**注意耦合**：帧内 `task_id` 恒为 `'t-1'`——
- *  输入区卡（ApprovalConfirmBar）有「幽灵过滤」（run 不在内存即隐藏），
- *  故调用方 `ensureRun` 的 taskId 必须同为 `'t-1'` 才可达。 */
-function seedApproval(conversationId: string, requestId: string) {
+function seedApproval(conversationId: string, requestId: string, taskId = 't-1') {
   const messages = useMessageStore()
   const approvals = useApprovalStore()
   routeFrame(
@@ -50,7 +33,7 @@ function seedApproval(conversationId: string, requestId: string) {
       event: 'approval.required',
       data: {
         request_id: requestId,
-        task_id: 't-1',
+        task_id: taskId,
         tool_name: 'shell_exec',
         args_preview: '{"command":"npm ci"}',
       },
@@ -61,19 +44,19 @@ function seedApproval(conversationId: string, requestId: string) {
   void conversationId
 }
 
-describe('MSG-3236 ① 未决卡可达（承载者＝输入区上方审批卡·口径迁移）', () => {
+describe('MSG-3236 ① 未决卡常驻 DOM（UIA 可达）', () => {
   beforeEach(() => {
     setActivePinia(createPinia())
   })
 
-  it('未决卡可达输入区上方审批卡：稳定 id/data-*＋按钮可定位', async () => {
+  it('未决卡不入虚拟滚动：常驻区现形＋稳定 id/data-*＋按钮可定位', async () => {
     const messages = useMessageStore()
     const approvals = useApprovalStore()
     const session = useSessionStore()
     session.activeId = 'c-1'
     messages.ensureRun('t-1', 'c-1')
     seedApproval('c-1', 'r-1')
-    // 再塞一条普通消息（两类并存时，未决卡仍须可达）
+    // 再塞一条普通消息（两类并存时，未决卡仍须在 DOM）
     await messages.push('c-1', {
       id: 'm-1',
       conversationId: 'c-1',
@@ -82,45 +65,33 @@ describe('MSG-3236 ① 未决卡可达（承载者＝输入区上方审批卡·�
       createdAt: 2,
     })
 
-    // 挂**输入区本体**（非单独挂 ApprovalConfirmBar）——顺带证明接线成立：
-    // 卡确在 .chat-input 内、composer 之前（"输入区之上"）
-    const wrapper = mount(ChatInput, { global: { plugins: [i18n] } })
+    const wrapper = mount(ChatContent, { global: { plugins: [i18n] } })
     await wrapper.vm.$nextTick()
 
-    const slot = wrapper.find('[data-uia="pending-approval-bar"]')
-    expect(slot.exists(), '未决卡须在输入区上方审批卡（老板④落点）').toBe(true)
-    expect(slot.attributes('id')).toBe('approval-bar-r-1')
+    const slot = wrapper.find('[data-uia="pending-approval"]')
+    expect(slot.exists(), '未决卡须在常驻区（脱离虚拟滚动）').toBe(true)
+    expect(slot.attributes('id')).toBe('approval-r-1')
     expect(slot.attributes('data-approval-request-id')).toBe('r-1')
     // 卡内按钮可被 UIA 直接定位（稳定 id/data-uia）
-    expect(wrapper.find('#approval-bar-r-1-approve').exists()).toBe(true)
-    expect(wrapper.find('[data-uia="approval-bar-deny"]').exists()).toBe(true)
-    // 位置钉死：审批卡在 composer（输入区本体）**之前**
-    const confirmEl = wrapper.find('.approval-confirm').element
-    const composerEl = wrapper.find('form.composer').element
-    expect(
-      confirmEl.compareDocumentPosition(composerEl) & Node.DOCUMENT_POSITION_FOLLOWING,
-      '审批卡须居于输入框之上',
-    ).toBeTruthy()
+    expect(wrapper.find('#approval-r-1-approve').exists()).toBe(true)
+    expect(wrapper.find('[data-uia="approval-deny"]').exists()).toBe(true)
     void approvals
   })
 
-  it('已决卡不再是"未决可达项"（无幽灵卡）', async () => {
+  it('已决卡不再是"未决常驻项"（无幽灵卡）', async () => {
     const messages = useMessageStore()
     const approvals = useApprovalStore()
     const session = useSessionStore()
     session.activeId = 'c-2'
-    // taskId 须与 seedApproval 帧内 task_id 一致（'t-1'）：否则 run 不在内存，
-    // 输入区卡按幽灵过滤隐藏 ⇒ 前置断言不可达（原 case 2 用 't-2' 的错配即此）
-    messages.ensureRun('t-1', 'c-2')
-    seedApproval('c-2', 'r-2')
-    const wrapper = mount(ChatInput, { global: { plugins: [i18n] } })
+    messages.ensureRun('t-2', 'c-2')
+    seedApproval('c-2', 'r-2', 't-2')
+    const wrapper = mount(ChatContent, { global: { plugins: [i18n] } })
     await wrapper.vm.$nextTick()
-    // 前置：未决 ⇒ 可达（否则下面的"消失"会因从未出现过而**恒真**）
-    expect(wrapper.find('[data-uia="pending-approval-bar"]').exists()).toBe(true)
+    expect(wrapper.find('[data-uia="pending-approval"]').exists()).toBe(true)
 
     routeFrame({ event: 'approval.resolved', data: { request_id: 'r-2', approved: true } }, messages, approvals)
     await wrapper.vm.$nextTick()
-    expect(wrapper.find('[data-uia="pending-approval-bar"]').exists()).toBe(false)
+    expect(wrapper.find('[data-uia="pending-approval"]').exists()).toBe(false)
   })
 })
 

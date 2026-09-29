@@ -20,15 +20,13 @@ import { useExecModeStore } from "../../stores/execMode";
 import type { ExecMode } from "../../stores/execMode";
 import { getBridge } from "../../bridge";
 import { clearDraft, loadDraft, saveDraft } from "../../drafts";
+import { formatFileSize, shortMime } from "../../utils/format";
 import {
     commandRiskFlag,
     translateCommand,
 } from "../../utils/commandTranslator";
 import Icon from "../common/Icon.vue";
 import TaskForm from "../common/TaskForm.vue";
-// T11／DEBT-872：附件行抽为共享件（ChatInput 与 ComposerBox 同一实现）
-import AttachmentRow from "./AttachmentRow.vue";
-// 20c3736（老板意图④）：审核卡移到输入框上方 ⇒ 需 ApprovalConfirmBar
 import ApprovalConfirmBar from "./ApprovalConfirmBar.vue";
 
 const emit = defineEmits<{ (e: "submitted"): void }>();
@@ -241,8 +239,7 @@ function stopVoice() {
 
 function send() {
     const trimmed = input.value.trim();
-    // A3（1.0.29 体验债丙）：**仅附件**为合法发送面 ⇒ 空正文**且无附件**方静默返回。
-    if (!trimmed && files.attachments.length === 0) return;
+    if (!trimmed) return;
     sendWith(trimmed);
 }
 
@@ -259,19 +256,12 @@ function send() {
 async function sendWith(text: string) {
     const trimmed = text.trim();
     // MSG-3236 ④：空文本属"用户没输入"（非拒发），保持静默；其余一律不得静默吞。
-    // A3（1.0.29）：同上——**空正文＋有附件**放行（`send()` 与本函数两道闸同语义）。
-    if (!trimmed && files.attachments.length === 0) return;
+    if (!trimmed) return;
     // MSG-3236 ④：收件箱遮罩在途时，发送曾被**静默吞掉**（mask 吃掉指点事件）。
     // 这里先让路（关收件箱＋回焦点），**并给人话提示**——要发就真发出去，绝不静默。
     if (ui.inboxOpen) {
         ui.closeInbox();
         ui.toast(t("chat.inboxClosedForSend"), "info");
-    }
-    // T11／DEBT-872：有超限件 ⇒ **不发、不清场**，给一句人话并留住用户已选的附件与草稿
-    // （位置在乐观清理**之前**——清理一执行，超限件就被抹掉、用户还得重选一遍）。
-    if (!files.attachmentsSendable) {
-        ui.toast(t("chat.attNotSendable"), "error");
-        return;
     }
     const attachments = [...files.attachments];
     void files.clearAttachments();
@@ -414,7 +404,6 @@ watch(
     </div>
 
     <div ref="inputRoot" class="chat-input">
-        <!-- 20c3736（老板第④条）：待审批消息栏——审核卡移到输入框上方 ⇒ 取双方 -->
         <ApprovalConfirmBar />
         <!-- MSG-2722 L3 编程 UI：Blocked/失败任务人工回传续跑行（daemon
             tool_loop.resume——note 回传文本） -->
@@ -445,9 +434,43 @@ watch(
             @dragleave="onDragLeave"
             @drop="onDrop"
         >
-            <AttachmentRow />
+            <div v-if="files.attachments.length" class="attachment-row">
+                <div
+                    v-for="att in files.attachments"
+                    :key="att.id"
+                    class="attachment-chip"
+                    :class="{
+                        'is-image': att.kind === 'image',
+                        'is-file': att.kind === 'file',
+                    }"
+                >
+                    <img
+                        v-if="att.kind === 'image' && att.dataUrl"
+                        class="att-thumb"
+                        :src="att.dataUrl"
+                        :alt="att.name"
+                        :title="att.name"
+                    />
+                    <div v-else class="att-meta">
+                        <div class="att-name" :title="att.name">
+                            {{ att.name }}
+                        </div>
+                        <div class="att-tag">
+                            {{ shortMime(att.mimeType) }} ·
+                            {{ formatFileSize(att.size) }}
+                        </div>
+                    </div>
+                    <button
+                        type="button"
+                        class="att-remove"
+                        :title="t('common.delete')"
+                        @click="files.removeAttachment(att.id)"
+                    >
+                        <Icon name="x" :size="12" />
+                    </button>
+                </div>
+            </div>
 
-            <!-- 输入框的区域 -->
             <div class="composer-input">
                 <textarea
                     v-model="input"
@@ -559,12 +582,8 @@ watch(
                     v-else
                     type="submit"
                     class="send-btn"
-                    :disabled="(!input.trim() && files.attachments.length === 0) || !files.attachmentsSendable"
-                    :title="
-                        files.attachmentsSendable
-                            ? t('chat.send')
-                            : t('chat.attNotSendable')
-                    "
+                    :disabled="!input.trim()"
+                    :title="t('chat.send')"
                 >
                     <Icon name="send" :size="16" />
                 </button>

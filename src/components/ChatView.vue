@@ -59,7 +59,7 @@ onMounted(() => {
     window.addEventListener("keydown", onKeydown);
     // 测量原生滚动条宽度 → CSS 变量 --sb-w：消息滚动区（.vue-recycle-scroller，
     // scrollbar-gutter: stable 常驻预留）被滚动条占去该宽度后，ChatHeader 与
-    // ChatInput 用同值 padding-right 补齐，三者的 720px 居中列保持对齐不错位
+    // ChatInput 用同值 padding-right 补齐，三者的 --chat-content-width 居中列保持对齐不错位
     //（macOS overlay 滚动条测得 0，天然对齐；Windows 经典滚动条约 8px）。
     const probe = document.createElement("div");
     probe.style.cssText =

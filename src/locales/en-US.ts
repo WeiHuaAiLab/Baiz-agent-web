@@ -1,37 +1,61 @@
 export default {
-  app: { title: 'Baiz Agent' }, nav: { chat: 'Chat', workspace: 'Workspace', tools: 'Tools', skills: 'Skills', tasks: 'Tasks', settings: 'Settings' },
+  app: { title: 'Baiz Agent' },
+  nav: { chat: 'Chat', workspace: 'Workspace', tools: 'Tools', skills: 'Skills', tasks: 'Tasks', settings: 'Settings' },
   chat: {
-    placeholder: 'Ask anything — press Enter to send…', send: 'Send',
-    newSession: 'New session', demoHint: 'Skeleton demo · mock transport',
-    empty: 'Send a message to start', emptyStart: 'New session',
-    elapsed: 'took', waitingSeconds: 'waiting {n}s',
-    // MSG-3503 A10 / wave-3: in-flight line for the **fetch family** (page fetch / **web search**) + elapsed readout
-    fetchingWeb: 'Fetching the page… (each fetch is bounded; on timeout you get a plain-language reply)', searchingWeb: 'Searching the web… (each fetch is bounded; on timeout you get a plain-language reply)',
-  modelPro: 'DeepSeek V4 Pro', modelFlash: 'DeepSeek V4 Flash',
+    placeholder: 'Ask anything — press Enter to send…',
+    send: 'Send',
+    newSession: 'New session',
+    demoHint: 'Skeleton demo · mock transport',
+    empty: 'Send a message to start',
+    emptyStart: 'New session',
+    elapsed: 'took',
+  modelPro: 'DeepSeek V4 Pro',
+  modelFlash: 'DeepSeek V4 Flash',
   modelAuthTitle: 'Model API key invalid / unauthorized', modelAuthReason: 'Server said: {reason}', modelAuthModel: 'Current model: {model}',
-  modelAuthGuide: 'Re-enter this model key in Settings → Model / credentials (then retry the last turn).', modelAuthGoSettings: 'Open settings', modelAuthRetry: 'Retry last turn', modelAuthChip: 'Model key invalid', modelAuthChipHint: 'Last request failed: model key invalid — click to open settings', demoMode: 'Demo mode (offline)',
-    sceneCustomer: 'Customers', sceneRust: 'Rust',
-    sceneReport: 'Report', createSessionTitle: 'New session',
-    createTaskTitle: 'New task', createPlaceholderSession: 'Enter a session name, press Enter to create…', createPlaceholderTask: 'Enter a task name, press Enter to create…',
-    createTaglineSession: 'Start a new conversation — tell Baiz what you need', createTaglineTask: 'Capture a task so Baiz can keep it on track',
-    createConfirm: 'Confirm', sessionMenu: 'Session actions',
-    renameTitle: 'Rename', pin: 'Pin',
-    unpin: 'Unpin', voiceInput: 'Voice input',
-    voiceStop: 'Stop listening', voiceComing: 'Voice input coming soon (sherpa-onnx)',
-    attachFile: 'Attach file', attachUnsupported: 'Attachments unsupported in this shell version',
-    dropHint: 'Drop to upload images, text files, or any file', dropUnsupported: 'Drag-and-drop upload is unsupported in this shell version',
-    // T11/DEBT-872: size limit / current volume / sendable / progress / over-limit notice (kept dense — this file sits on the loc red line)
-    attProcessing: 'Reading attachments… {done}/{total}', attLimit: 'Current {total} / {limit} per file', attSendable: 'Ready to send', attNotSendable: 'Over the limit — cannot send. Remove it or pick a smaller file', attOverHint: 'Over limit · cannot send (max {limit})', stop: 'Stop',
-    programModeOn: 'Programming mode on (toolchain tasks)', programModeOff: 'Enable programming mode (toolchain tasks)',
-    resumeHint: 'Task needs manual handback to resume', resumePlaceholder: 'Type handback note and enter to resume…',
-    scrollToLatest: 'Back to latest', export: 'Export chat',
-    openPanel: 'Open files panel', toggleSidebar: 'Toggle sidebar',
-    linkProject: 'Link a project (choose / new / none)', projectChoose: 'Choose project',
-    projectNew: 'New project', projectNone: 'No project',
-    createProjectTitle: 'New project', projectFieldName: 'Project name',
-    projectFieldPath: 'Project path', projectPathPlaceholder: 'Select project path',
-    projectNeedPath: 'Please pick a project path first', projectNamePlaceholder: 'Enter a folder name',
-    projectCreate: 'Create', projectCreated: 'Project created',
+  modelAuthGuide: 'Re-enter this model key in Settings → Model / credentials (then retry the last turn).', modelAuthGoSettings: 'Open settings', modelAuthRetry: 'Retry last turn', modelAuthChip: 'Model key invalid', modelAuthChipHint: 'Last request failed: model key invalid — click to open settings',
+  demoMode: 'Demo mode (offline)',
+    sceneCustomer: 'Customers',
+    sceneRust: 'Rust',
+    sceneReport: 'Report',
+    createSessionTitle: 'New session',
+    createTaskTitle: 'New task',
+    createPlaceholderSession: 'Enter a session name, press Enter to create…',
+    createPlaceholderTask: 'Enter a task name, press Enter to create…',
+    createTaglineSession: 'Start a new conversation — tell Baiz what you need',
+    createTaglineTask: 'Capture a task so Baiz can keep it on track',
+    createConfirm: 'Confirm',
+    sessionMenu: 'Session actions',
+    renameTitle: 'Rename',
+    pin: 'Pin',
+    unpin: 'Unpin',
+    voiceInput: 'Voice input',
+    voiceStop: 'Stop listening',
+    voiceComing: 'Voice input coming soon (sherpa-onnx)',
+    attachFile: 'Attach file',
+    attachUnsupported: 'Attachments unsupported in this shell version',
+    dropHint: 'Drop to upload images, text files, or any file',
+    dropUnsupported: 'Drag-and-drop upload is unsupported in this shell version',
+    stop: 'Stop',
+    programModeOn: 'Programming mode on (toolchain tasks)',
+    programModeOff: 'Enable programming mode (toolchain tasks)',
+    resumeHint: 'Task needs manual handback to resume',
+    resumePlaceholder: 'Type handback note and enter to resume…',
+    scrollToLatest: 'Back to latest',
+    export: 'Export chat',
+    openPanel: 'Open files panel',
+    toggleSidebar: 'Toggle sidebar',
+    linkProject: 'Link a project (choose / new / none)',
+    projectChoose: 'Choose project',
+    projectNew: 'New project',
+    projectNone: 'No project',
+    createProjectTitle: 'New project',
+    projectFieldName: 'Project name',
+    projectFieldPath: 'Project path',
+    projectPathPlaceholder: 'Select project path',
+    projectNeedPath: 'Please pick a project path first',
+    projectNamePlaceholder: 'Enter a folder name',
+    projectCreate: 'Create',
+    projectCreated: 'Project created',
     pickEmpty: 'No projects yet, click "New project" to create',
     activityThinking: 'Thinking…',
     activityTool: 'Calling',
@@ -44,7 +68,6 @@ export default {
     thinking: 'Thinking',
     deepThink: 'Deep think',
     reasoningLabel: 'Thinking',
-    // MSG-3229: thinking block stays collapsed by default and streams live
     thinkingLive: 'Thinking…',
     thoughtDone: 'Done',
     thoughtChars: '{n} chars',
@@ -52,7 +75,6 @@ export default {
     toolResult: 'Result',
     // MSG-3233 ②: file card (ported from upstream) — click opens it in the side panel
     fileCard: { open: 'Opened in panel' },
-    // MSG-3236 ④: hint when the inbox overlay yields to a send (no silent drop)
     inboxClosedForSend: 'Inbox closed — your message was sent',
     // MSG-3263 ②: export feedback (success shows file + where; failure shows the reason)
     exportDone: 'Exported "{name}" (look in {dir})',
@@ -78,7 +100,8 @@ export default {
     collapse: 'Collapse files panel',
     empty: 'No files',
     // MSG-3263 ①: semantic empty state (what this pane lists, where to find disk files)
-    emptyWorkingTree: 'This pane lists files changed in the current session — none right now. To browse workspace files, set a workspace in Settings → General (or use "Authorize folder").',
+    emptyWorkingTree:
+      'This pane lists files changed in the current session — none right now. To browse workspace files, set a workspace in Settings → General (or use "Authorize folder").',
     webUnsupported: 'Local directory is unavailable in web mode',
     pathFiles: 'Project files',
     backToTree: 'Back to file tree',
@@ -97,10 +120,14 @@ export default {
     previewUnavailable: 'Preview is not available for this file yet',
     previewFailed: 'Failed to load preview',
     // MSG-3225 (1) DEBT-753: preview failure = plain words + action + server text
-    previewFailOutside: 'This file is outside the daemon authorized directories; nothing was read or written. Add its folder to authorized_roots in ~/.closer/config.toml, or use a file inside the workspace. Server said: {detail}',
-    previewFailMissing: 'The daemon cannot find this file (or the path cannot be resolved); nothing was read or written. Check that the file is still at that location. Server said: {detail}',
-    previewFailUnreadable: 'The daemon failed to read this file (permissions / lock / IO); nothing was written. Retry later, or make sure the current user can read it. Server said: {detail}',
-    previewFailTooBig: 'The file exceeds the preview read limit (rejected by the daemon); nothing was written. Open it with a system editor instead. Server said: {detail}',
+    previewFailOutside:
+      'This file is outside the daemon authorized directories; nothing was read or written. Add its folder to authorized_roots in ~/.closer/config.toml, or use a file inside the workspace. Server said: {detail}',
+    previewFailMissing:
+      'The daemon cannot find this file (or the path cannot be resolved); nothing was read or written. Check that the file is still at that location. Server said: {detail}',
+    previewFailUnreadable:
+      'The daemon failed to read this file (permissions / lock / IO); nothing was written. Retry later, or make sure the current user can read it. Server said: {detail}',
+    previewFailTooBig:
+      'The file exceeds the preview read limit (rejected by the daemon); nothing was written. Open it with a system editor instead. Server said: {detail}',
     previewFailGeneric: 'Failed to load preview (nothing was read or written). Server said: {detail}',
     previewTruncated: 'Truncated: showing first {shown} (of {total})',
     previewBinary: 'Binary file — no preview',
@@ -118,8 +145,10 @@ export default {
     htmlScriptsOn: 'Sandbox scripts: on',
     htmlScriptsOff: 'Sandbox scripts: off',
     htmlLoading: 'Loading and rendering…',
-    htmlPreviewFailed: 'Preview failed: the file is outside the authorized directories, or is not renderable HTML text (nothing was written).',
-    htmlOpenUnsupported: 'This shell provides no external-open capability and blocked the new window — showing the read-only preview in the panel instead.',
+    htmlPreviewFailed:
+      'Preview failed: the file is outside the authorized directories, or is not renderable HTML text (nothing was written).',
+    htmlOpenUnsupported:
+      'This shell provides no external-open capability and blocked the new window — showing the read-only preview in the panel instead.',
   },
   workspace: { empty: 'No authorized directories', active: 'Active', manage: 'Manage in settings' },
   sidebar: {
@@ -151,11 +180,14 @@ export default {
     feedbackSent: 'Received. Thank you!',
   },
   skills: {
-    // D2 (2026-09-29): the old 8 fake labelKeys (no such skills on disk) are removed; real UI copy below
-    title: 'Skills', hint: 'Real list from local skill directories (auto-updated); enable/disable is not supported in the UI yet',
-    loading: 'Loading…', empty: 'No skills', noDescription: '(no description)',
-    loadFailed: 'Failed to load skills', retry: 'Retry', notReady: 'Service not ready (skills.list not available)',
-    sourceAccount: 'Account', sourceGlobal: 'Global', sourceWorkspace: 'Workspace',
+    requirement: 'Requirement analysis',
+    plan: 'Solution design',
+    codingDiscipline: 'Coding discipline',
+    design: 'Design standards',
+    office: 'Office capabilities',
+    security: 'Security audit',
+    evolution: 'Evolution governance',
+    memory: 'Memory management',
   },
   tasks: {
     empty: 'No tasks',
@@ -231,8 +263,10 @@ export default {
     },
     // MSG-3231 ②: Runtime & updates page (version + check for updates)
     runtimeTitle: 'Runtime & updates',
-    updateHint: 'Check for a new version. You will be asked to confirm first; the app restarts after install.',
-    updateUnsupported: 'Automatic update checks are not available in this runtime (desktop only) — the current version is shown above.',
+    updateHint:
+      'Check for a new version. You will be asked to confirm first; the app restarts after install.',
+    updateUnsupported:
+      'Automatic update checks are not available in this runtime (desktop only) — the current version is shown above.',
     versionUnknown: 'Version unavailable · {runtime}',
     localPreview: 'Local preview',
     language: 'Language',
@@ -251,12 +285,6 @@ export default {
     demo: 'Demo data',
     resetDemo: 'Reset demo data',
     resetConfirm: 'This will clear local data and regenerate demo sessions. Continue?',
-    // **MSG-3577 · P9**：guarded reset copy (what is cleared / what is untouched / backup / typed confirm)
-    demoResetListTitle: 'Will be cleared (this device only):', demoResetDb: 'Local session store (this account’s conversations / messages / drafts)',
-    demoResetKeeps: 'Untouched: daemon / server data (conversations, scheduled tasks, memory and KB config on the local service stay).',
-    demoResetBackup: 'A backup baiz-backup-*.json (including the account alias table) is downloaded before clearing.',
-    demoResetPhrase: 'Type "{phrase}" to confirm',
-    demoResetDone: 'Local data cleared ({n} settings keys; {kept} alias key(s) kept). Reloading…',
     clearMemoryConfirm: 'This will clear all local message history. Continue?',
     // MSG-3203 DEBT-741: update check
     checkUpdate: 'Check for updates',
@@ -277,14 +305,12 @@ export default {
     themeLight: 'Light',
     themeDark: 'Dark',
     humanSubtitles: 'Plain-language captions',
-    humanSubtitlesHint: 'Translate tool calls into a plain sentence anyone can understand; hidden by default',
+    humanSubtitlesHint:
+      'Translate tool calls into a plain sentence anyone can understand; hidden by default',
     keyHint: 'Keys are stored by the daemon; never kept in plain text here',
     model: 'Model',
     modelHint: 'Routing is decided by the daemon; this is a preference',
     dirHint: 'Authorized directories are used for file access and workspace binding',
-    workspaceIsolation: 'Workspaces are isolated per account: signing in or switching accounts switches the workspace root — directories from the previous account are not carried over automatically (by design: accounts cannot see each other).',
-    workspaceLegacyHint: 'If a directory belonged to an account you used before (or to the signed-out state), pick it here to add it back to the authorized roots — no need to move any files.',
-    workspaceLegacyEntry: 'Recover an old workspace directory',
     mcp: {
       title: 'MCP servers',
       hint: 'Manage external MCP servers. Saved to config, loaded by the daemon on next run',
@@ -341,7 +367,6 @@ export default {
     version: 'Version',
     slogan: 'Baiz Agent · Knows all things',
     demoHint: 'Clear local data and regenerate demo sessions',
-    demoDevOnly: '"Reset demo data" is only available in dev / demo builds — the release build intentionally exposes no such entry (to avoid wiping local data by accident).',
     memory: 'Memory settings',
     memoryHint: 'Memory is managed by the daemon (distillation & retrieval); frontend preferences',
     memoryEnabled: 'Memory',
@@ -352,7 +377,7 @@ export default {
     autoDistill: 'Auto distillation',
     clearMemory: 'Clear local memory',
     memoryCleared: 'Local message history cleared',
-    memoryFacts: 'Memory', memoryFactSource: 'From: ', memoryFactTime: 'Remembered: ', memoryFactTimeUnknown: 'time not recorded', memoryFactSourceUnknown: 'not recorded',
+    memoryFacts: 'Memory',
     memoryFactsEmpty: 'No memory yet. Facts will accumulate as you talk with Baiz Agent',
     pickDir: 'Choose folder',
     // DEBT-743 (MSG-3168): knowledge-base connection — base URL + API key persisted locally
@@ -369,7 +394,6 @@ export default {
       notConfigured: 'Not configured',
       /** DEBT-875 (MSG-3502·A8): "cannot read" ≠ "never configured" — kept apart */
       stateReadFailed: 'Read failed (retryable)',
-      stateUnread: 'Not signed in — cannot read the config yet (check back after signing in)',
       stateNotReady: 'Service not ready (read failed · retryable)',
       keyFp: 'fingerprint {fp}',
       source: { env: 'source: env', file: 'source: local file', none: '' },
@@ -405,7 +429,8 @@ export default {
     emptyTasks: 'No tasks yet — create one above',
     addScheduled: 'Add scheduled task',
     scheduledHint: 'Tasks that run automatically on a schedule; edit anytime',
-    scheduledSubtitle: 'Daily digests, reminders, and data scrapes — tell your agent when to do what, and it gets it done on time',
+    scheduledSubtitle:
+      'Daily digests, reminders, and data scrapes — tell your agent when to do what, and it gets it done on time',
     createNewTask: 'New task',
     taskEnabled: 'Task enabled',
     // MSG-3528: scheduled tasks are editable / removable
@@ -416,19 +441,9 @@ export default {
     scheduledRefreshed: 'Refreshed',
     runsLabel: 'Runs',
     runsEmpty: 'No runs yet', openRunSession: 'Open this run session',
-    openRunResult: 'View this run result', hideRunResult: 'Hide this result',
-    runResultLoading: 'Loading this run result…',
-    runResultEmpty: 'This run produced no displayable result text (no summary, no error, no full text)',
     scheduledList: 'Scheduled tasks',
     emptyScheduledTitle: 'No scheduled tasks',
     emptyScheduled: 'Click "New task" to configure one — it will appear here',
-    /** **MSG-3575**：preset items are soft-hidden by default; cleanup needs explicit confirm */
-    presetHidden: '{n} preset item(s) hidden (fresh-install templates; can be cleared)',
-    clearPresets: 'Clear presets',
-    presetHint: 'Presets are still stored locally (just hidden from the list by default): recreate one with the same settings, or use "Clear presets" to delete them all.',
-    clearPresetsConfirm: 'This deletes {n} preset item(s). They are only fresh-install templates and can be re-created anytime; other tasks are untouched. Delete now?',
-    clearPresetsDone: 'Cleared {n} preset item(s)',
-    clearPresetsPartial: '{n} preset item(s) failed to delete (server did not apply) — please retry later',
     extensionsHint: 'Extension marketplace (demo data). Enable to activate',
   },
   status: {
@@ -443,9 +458,8 @@ export default {
     sendFailed: 'Send failed',
     taskError: 'Task error',
     // MSG-3266 ②: unparsed tool-protocol text was stripped from the body — say so and offer retry
-    protocolLeak: 'The model emitted tool-protocol text that could not be parsed; it was stripped from the reply. Click Retry to try again.',
-    /** **MSG-3575 · P5**：merged repeated failures suffix */
-    repeatMerged: ' (same failure ×{n}, merged)',
+    protocolLeak:
+      'The model emitted tool-protocol text that could not be parsed; it was stripped from the reply. Click Retry to try again.',
     demo: 'Demo mode (offline)',
     chars: 'chars',
   },
@@ -453,25 +467,18 @@ export default {
     network: 'Cannot reach daemon. Check gateway settings',
     unauthorized: 'Unauthorized. Check the API key',
     sessionExpired: 'Session expired. Please sign in again',
-    kbNotConfigured: 'Knowledge base not connected — set host and API key in Settings → Knowledge base connection',
-    /** **DEBT-873**: blocked by the security policy — distinct from network/service failure, states the next step; terminal (never promises a retry) */
-    policyDenied: 'The security policy blocked this action (not a network or service failure, and retrying will not change it) — grant clearance first: tap "Request clearance" on the approval card, or authorize the target folder in Settings → Workspace, then try again',
+    kbNotConfigured:
+      'Knowledge base not connected — set host and API key in Settings → Knowledge base connection',
     relogin: 'Sign in again',
     invalidParams: 'Invalid parameters',
     methodNotFound: 'Method not supported',
     taskNotFound: 'Task not found',
     internal: 'Internal server error',
     unknown: 'Request failed',
-    /** **MSG-3575 · P5**：one-line human text (no internal codes/terms) */
-    netFetchUnavailable: 'Network fetch unavailable — skipped (retry later)',
-    kbUnavailable: 'Knowledge base temporarily unavailable — skipped',
     goSettings: 'Open settings',
     /** MSG-3340 A3: reachable entry to "Knowledge base connection" while signed out */
     goKbSetup: 'Configure knowledge base',
   },
-  // Supplemental seat B (KIMI item ②-b): sign-in face copy — was hard-coded Chinese in
-  // stores/auth.ts + utils/authFailure.ts (en-US users saw Chinese); one line, loc红线吃紧.
-  login: { needAccount: 'Enter your account', badAccount: 'That account looks wrong — enter a full email, e.g. you@example.com', needPassword: 'Enter your password', failed: 'Sign-in failed. Check your account and password', unreachable: 'Cannot reach the service (network down or the service is temporarily unavailable) — check your network and try again' },
   palette: {
     placeholder: 'Search commands…',
     empty: 'No matching commands',
@@ -504,7 +511,6 @@ export default {
   },
   approval: {
     title: 'Approval',
-    pendingTitle: 'Pending approval',
     approve: 'Approve',
     deny: 'Deny',
     approved: '✓ Approved',
@@ -538,7 +544,7 @@ export default {
     rememberNeedsScope: 'Pick session / project / always first, then click remember',
     escalate: 'Request clearance',
     escalateSent: 'Clearance requested',
-    escalateHint: 'When the sandbox blocked it, request clearance — approval still runs the audit step', escalateFailed: 'Clearance request failed: {msg}', escalateUnsupported: 'Not available in this release: the service has no “request clearance” method yet (error -32601) — recorded; retrying will not help', // T5①（新键·只增·同行以守件行数闸）
+    escalateHint: 'When the sandbox blocked it, request clearance — approval still runs the audit step',
     inboxTitle: 'Approval inbox',
     inboxShort: 'Inbox',
     inboxBanner: '{n} pending approval(s) · open inbox',
@@ -549,8 +555,7 @@ export default {
     rulesTitle: 'Remembered rules',
     revoke: 'Revoke',
     revokeHint: 'After revoking, the same action asks again',
-    // 令·补24 片 A/E（新键·只增）：高危卡复用可见 ＋ 可逆性三径 ＋ 已执行动作撤销
-    irreversible: 'Cannot be undone', reversible: 'Undoable ({paths})', revRecycle: 'Recycle bin', revManifest: 'Change manifest', revBackup: 'Backup', reuseNotice: 'This action ran {n} time(s) without asking', undoHint: 'Ask the service to roll this executed action back (hidden when not undoable)', undoFailed: 'Undo failed: {msg}', undoUnsupported: 'This change cannot be rolled back automatically',
+    pendingTitle: 'Pending approval',
   },
   // MSG-3189 E1/E2: intervention mode selector (three tiers; current always visible)
   execMode: {
@@ -562,7 +567,8 @@ export default {
     confirmHint: 'Ask on every file write / command (default)',
     autoHint: 'Stop asking each time — sandbox, allowlist and authorized dirs still apply',
     title: 'Intervention: {mode} ({hint})',
-    orthogonal: 'Independent of "remember scope" (card options) and "authorized directories" — three different layers.',
+    orthogonal:
+      'Independent of "remember scope" (card options) and "authorized directories" — three different layers.',
   },
   // DEBT-738 (MSG-3148): no mock fallback in production — offline gate screen
   offline: {

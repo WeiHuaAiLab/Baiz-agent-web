@@ -1,26 +1,14 @@
 <script setup lang="ts">
 // 状态消息：状态文案（优先 i18n 键，回退原文）+ 重试 / 去设置操作。
-import { computed } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useRouter } from 'vue-router'
 import { useMessageStore } from '../../../stores/message'
-import { runtimeFailureI18nKey } from '../../../utils/failureText'
 import type { ChatMessage } from '../../../models'
 
-const props = withDefaults(defineProps<{ message: ChatMessage; repeat?: number }>(), {
-  repeat: 1,
-})
+const props = defineProps<{ message: ChatMessage }>()
 const { t } = useI18n()
 const router = useRouter()
 const messages = useMessageStore()
-
-/**
- * **MSG-3575 · P5 前端面**：外网取件／知识库不可用 ⇒ **只显一句人话**（降噪）。
- * 命中本件分型（`failureText.ts`——只认分型词，禁猜）时：
- *   · **不渲染原文**（`-32xxx`／方法名／URL／base_url 等内部号与术语一律不上屏）；
- *   · 同类**连续重复**已由 `ChatContent` 合并 ⇒ 此处只补「同类失败 ×N」尾标。
- */
-const failureKey = computed(() => runtimeFailureI18nKey(props.message.text))
 
 function retry() {
   void messages.retryFrom(props.message.conversationId, props.message.id)
@@ -66,20 +54,16 @@ function cancelQueued() {
     </template>
   </div>
   <div v-else class="status-text" :class="message.meta?.status">
-    <!-- **MSG-3575 · P5**：外网取件／知识库不可用 ⇒ **一句人话**（内部号/术语零上屏）；
-         同类连续失败已由 `ChatContent` 合并 ⇒ 此处补「同类失败 ×N」 -->
-    <template v-if="failureKey">
-      {{ t('errors.' + failureKey) }}
-      <span v-if="repeat > 1" class="status-repeat" data-repeat="1">
-        {{ t('status.repeatMerged', { n: repeat }) }}
-      </span>
-    </template>
-    <template v-else-if="message.meta?.statusKey">
-      {{ t('status.' + message.meta.statusKey) }}
-      <template v-if="message.meta?.errorKey">：{{ t('errors.' + message.meta.errorKey) }}</template>
-      <span v-if="message.text">（{{ message.text }}）</span>
-    </template>
-    <template v-else>{{ message.text }}</template>
+    <!-- 文本包 status-msg：error 态走 flex（文本 flex:1 + 按钮靠右），
+         非 error 态 span 为 inline 无副作用 -->
+    <span class="status-msg">
+      <template v-if="message.meta?.statusKey">
+        {{ t('status.' + message.meta.statusKey) }}
+        <template v-if="message.meta?.errorKey">：{{ t('errors.' + message.meta.errorKey) }}</template>
+        <span v-if="message.text">（{{ message.text }}）</span>
+      </template>
+      <template v-else>{{ message.text }}</template>
+    </span>
     <button
       v-if="
         message.meta?.statusKey === 'sendFailed' ||
@@ -119,17 +103,5 @@ function cancelQueued() {
     >
       {{ t('errors.relogin') }}
     </button>
-
-    <!-- **令·补24 P0-5**（`-32002` 带回登录出口）：错误帧带 `login_hint` ⇒ 本条错＝身份/会话面。
-         「只报不说去哪」已废——**就在该条消息处**给可点「去登录」。
-         三条口径：①复用既有 `identity.notEstablished`／`identity.goLogin`（不另造文案）；
-         ②daemon 的 `login_hint` **原文不上屏**（只当存在性判据，防内部号/URL 漏到界面）；
-         ③字段缺失（旧 daemon）⇒ 整块不渲染，既有文案零变。 -->
-    <div v-if="message.meta?.loginHint" class="identity-notice" role="status" data-login-hint="1">
-      <span class="identity-notice-text">{{ t('identity.notEstablished') }}</span>
-      <button type="button" class="identity-login" @click="goLogin">
-        {{ t('identity.goLogin') }}
-      </button>
-    </div>
   </div>
 </template>

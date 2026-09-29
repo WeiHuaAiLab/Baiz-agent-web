@@ -1,36 +1,61 @@
 export default {
-  app: { title: 'Baiz Agent' }, nav: { chat: '聊天', workspace: '工作区', tools: '工具', skills: '技能', tasks: '任务', settings: '设置' },
+  app: { title: 'Baiz Agent' },
+  nav: { chat: '聊天', workspace: '工作区', tools: '工具', skills: '技能', tasks: '任务', settings: '设置' },
   chat: {
-    placeholder: '输入问题，按 Enter 发送…', send: '发送',
-    newSession: '新建会话', demoHint: '骨架演示 · mock 传输',
-    empty: '发送第一条消息开始对话', emptyStart: '新建会话',
-    elapsed: '耗时', waitingSeconds: '已等 {n} 秒',
-    // MSG-3503 A10／R2 波三：**取件族**在途人话（抓网页／**联网搜索**）＋在途耗时读数
-    fetchingWeb: '正在抓取网页…（单次取件受上界约束，超时即回人话）', searchingWeb: '正在联网搜索…（单次取件受上界约束，超时即回人话）',
-  modelPro: 'DeepSeek V4 Pro', modelFlash: 'DeepSeek V4 Flash',
+    placeholder: '输入问题，按 Enter 发送…',
+    send: '发送',
+    newSession: '新建会话',
+    demoHint: '骨架演示 · mock 传输',
+    empty: '发送第一条消息开始对话',
+    emptyStart: '新建会话',
+    elapsed: '耗时',
+    fetchingWeb: '正在抓取网页…（单次取件受上界约束，超时即回人话）',
+  modelPro: 'DeepSeek V4 Pro',
+  modelFlash: 'DeepSeek V4 Flash',
   modelAuthTitle: '模型密钥无效／未授权', modelAuthReason: '服务端原因：{reason}', modelAuthModel: '当前模型：{model}',
-  modelAuthGuide: '请在「设置 → 模型／凭据」重新填写该模型密钥（改完可直接重试上一条）。', modelAuthGoSettings: '去设置填写密钥', modelAuthRetry: '重试上一条', modelAuthChip: '模型密钥无效', modelAuthChipHint: '最近一次请求因模型密钥无效失败——点此去设置', demoMode: '演示模式（未连接）',
-    sceneCustomer: '客户总结', sceneRust: 'Rust 编程',
-    sceneReport: '研究报告', createSessionTitle: '新建会话', createTaskTitle: '新建任务',
-    createPlaceholderSession: '输入会话名称，回车创建…', createPlaceholderTask: '输入任务名称，回车创建…',
-    createTaglineSession: '开启一段新对话，向 Baiz 描述你的目标', createTaglineTask: '记录一项任务，让 Baiz 帮你跟踪进度',
-    createConfirm: '确认', sessionMenu: '会话操作',
-    renameTitle: '编辑标题', pin: '置顶',
-    unpin: '取消置顶', voiceInput: '语音录入',
-    voiceStop: '停止录入', voiceComing: '语音录入即将接入（sherpa-onnx）',
-    attachFile: '上传附件', attachUnsupported: '当前版本不支持附件（请更新壳）',
-    dropHint: '放开即可上传图片、文本与任意文件', dropUnsupported: '当前版本不支持拖拽上传（请更新壳）',
-    // T11／DEBT-872：大附件——上限／当前体积／可否发送／进行态／超限人话（本文件紧贴 loc 红线，故照本文件惯例一行多键）
-    attProcessing: '正在读取附件… {done}/{total}', attLimit: '当前 {total} / 单件上限 {limit}', attSendable: '可发送', attNotSendable: '超限，暂不可发送——请移除该附件，或换更小的文件', attOverHint: '超限·不可发送（上限 {limit}）', stop: '停止',
-    programModeOn: '编程模式已开启（任务走工具链）', programModeOff: '开启编程模式（任务走工具链）',
-    resumeHint: '任务需人工回传续跑', resumePlaceholder: '输入回传内容后回车续跑…',
-    scrollToLatest: '回到最新', export: '导出会话',
-    openPanel: '打开文件面板', toggleSidebar: '展开/收起侧栏',
-    linkProject: '关联项目（选择项目 / 新建项目 / 不选择项目）', projectChoose: '选择项目',
-    projectNew: '新建项目', projectNone: '不选择项目',
-    createProjectTitle: '新建项目', projectFieldName: '项目名称',
-    projectFieldPath: '项目路径', projectPathPlaceholder: '选择项目路径',
-    projectNeedPath: '请先选择项目路径', projectNamePlaceholder: '请输入文件夹名称',
+  modelAuthGuide: '请在「设置 → 模型／凭据」重新填写该模型密钥（改完可直接重试上一条）。', modelAuthGoSettings: '去设置填写密钥', modelAuthRetry: '重试上一条',
+  modelAuthChip: '模型密钥无效', modelAuthChipHint: '最近一次请求因模型密钥无效失败——点此去设置',
+  demoMode: '演示模式（未连接）',
+    sceneCustomer: '客户总结',
+    sceneRust: 'Rust 编程',
+    sceneReport: '研究报告',
+    createSessionTitle: '新建会话',
+    createTaskTitle: '新建任务',
+    createPlaceholderSession: '输入会话名称，回车创建…',
+    createPlaceholderTask: '输入任务名称，回车创建…',
+    createTaglineSession: '开启一段新对话，向 Baiz 描述你的目标',
+    createTaglineTask: '记录一项任务，让 Baiz 帮你跟踪进度',
+    createConfirm: '确认',
+    sessionMenu: '会话操作',
+    renameTitle: '编辑标题',
+    pin: '置顶',
+    unpin: '取消置顶',
+    voiceInput: '语音录入',
+    voiceStop: '停止录入',
+    voiceComing: '语音录入即将接入（sherpa-onnx）',
+    attachFile: '上传附件',
+    attachUnsupported: '当前版本不支持附件（请更新壳）',
+    dropHint: '放开即可上传图片、文本与任意文件',
+    dropUnsupported: '当前版本不支持拖拽上传（请更新壳）',
+    stop: '停止',
+    programModeOn: '编程模式已开启（任务走工具链）',
+    programModeOff: '开启编程模式（任务走工具链）',
+    resumeHint: '任务需人工回传续跑',
+    resumePlaceholder: '输入回传内容后回车续跑…',
+    scrollToLatest: '回到最新',
+    export: '导出会话',
+    openPanel: '打开文件面板',
+    toggleSidebar: '展开/收起侧栏',
+    linkProject: '关联项目（选择项目 / 新建项目 / 不选择项目）',
+    projectChoose: '选择项目',
+    projectNew: '新建项目',
+    projectNone: '不选择项目',
+    createProjectTitle: '新建项目',
+    projectFieldName: '项目名称',
+    projectFieldPath: '项目路径',
+    projectPathPlaceholder: '选择项目路径',
+    projectNeedPath: '请先选择项目路径',
+    projectNamePlaceholder: '请输入文件夹名称',
     projectCreate: '创建',
     projectCreated: '项目已创建',
     pickEmpty: '暂无项目，点击「新建项目」创建',
@@ -45,7 +70,6 @@ export default {
     thinking: '思考',
     deepThink: '深度思考',
     reasoningLabel: '思考过程',
-    // MSG-3229（老板口径）：思考区＝默认折叠的实时流——标题随增量走，跑完即止
     thinkingLive: '思考中…',
     thoughtDone: '已完成',
     thoughtChars: '{n} 字',
@@ -79,7 +103,8 @@ export default {
     collapse: '收起文件区',
     empty: '暂无文件',
     // MSG-3263 ①：空态语义化（本面板列的是什么、去哪看盘面文件）——不再用「暂无文件」盖过事实
-    emptyWorkingTree: '本栏显示本次会话有改动的文件；当前无改动。要看工作区里的文件，请在设置 → 通用里配置工作区（或点上方「授权文件夹」）。',
+    emptyWorkingTree:
+      '本栏显示本次会话有改动的文件；当前无改动。要看工作区里的文件，请在设置 → 通用里配置工作区（或点上方「授权文件夹」）。',
     webUnsupported: 'Web 形态暂不支持本机目录',
     pathFiles: '项目文件',
     backToTree: '返回文件树',
@@ -98,10 +123,14 @@ export default {
     previewUnavailable: '该文件暂不支持预览',
     previewFailed: '预览读取失败',
     // MSG-3225 ①（DEBT-753）：预览败面**人话＋可行动指引＋服务端原文**
-    previewFailOutside: '该文件不在服务端授权目录内，未读取也未写入任何内容。请把该文件所在目录加入授权根（~/.closer/config.toml 的 authorized_roots），或改用工作区内的文件。服务端原文：{detail}',
-    previewFailMissing: '服务端找不到该文件（或路径不可解析），未读取也未写入任何内容。请确认文件仍在原位置。服务端原文：{detail}',
-    previewFailUnreadable: '服务端读取该文件失败（权限／占用／IO 面），未做任何写入。可稍后重试，或先在系统里确认该文件可被当前用户读取。服务端原文：{detail}',
-    previewFailTooBig: '该文件超出预览读取上限（服务端已拒），未做任何写入。可改用系统编辑器打开。服务端原文：{detail}',
+    previewFailOutside:
+      '该文件不在服务端授权目录内，未读取也未写入任何内容。请把该文件所在目录加入授权根（~/.closer/config.toml 的 authorized_roots），或改用工作区内的文件。服务端原文：{detail}',
+    previewFailMissing:
+      '服务端找不到该文件（或路径不可解析），未读取也未写入任何内容。请确认文件仍在原位置。服务端原文：{detail}',
+    previewFailUnreadable:
+      '服务端读取该文件失败（权限／占用／IO 面），未做任何写入。可稍后重试，或先在系统里确认该文件可被当前用户读取。服务端原文：{detail}',
+    previewFailTooBig:
+      '该文件超出预览读取上限（服务端已拒），未做任何写入。可改用系统编辑器打开。服务端原文：{detail}',
     previewFailGeneric: '预览读取失败（未做任何读取或写入）。服务端原文：{detail}',
     previewTruncated: '已截断：显示前 {shown}（共 {total}）',
     previewBinary: '二进制文件——不可预览',
@@ -119,7 +148,8 @@ export default {
     htmlScriptsOn: '沙箱内脚本：开',
     htmlScriptsOff: '沙箱内脚本：关',
     htmlLoading: '正在读取并渲染…',
-    htmlPreviewFailed: '预览失败：该文件不在授权目录内、或不是可渲染的 HTML 文本（未做任何写入）。',
+    htmlPreviewFailed:
+      '预览失败：该文件不在授权目录内、或不是可渲染的 HTML 文本（未做任何写入）。',
     htmlOpenUnsupported: '当前壳未提供"外部打开"能力，且新窗被拦——已在面板内只读预览。',
   },
   workspace: { empty: '暂无授权目录', active: '当前', manage: '在设置中管理' },
@@ -152,11 +182,14 @@ export default {
     logout: '退出登录',
   },
   skills: {
-    // 刀D2（2026-09-29）：旧 8 条假 labelKey（磁盘无此技能）逐条删除，改为真实 UI 文案
-    title: '技能', hint: '来自本机技能目录的真实清单（随目录自动更新）；暂不支持在界面启停',
-    loading: '读取中…', empty: '暂无技能', noDescription: '（无描述）',
-    loadFailed: '技能列表读取失败', retry: '重试', notReady: '服务端未就绪（skills.list 尚未提供）',
-    sourceAccount: '账号级', sourceGlobal: '全局', sourceWorkspace: '工作区',
+    requirement: '需求分析',
+    plan: '方案设计',
+    codingDiscipline: '编程纪律',
+    design: '设计规范',
+    office: '办公能力',
+    security: '安全审计',
+    evolution: '进化治理',
+    memory: '记忆管理',
   },
   tasks: {
     empty: '暂无任务',
@@ -252,12 +285,6 @@ export default {
     demo: '演示数据',
     resetDemo: '重置演示数据',
     resetConfirm: '此操作将清空本地数据并重新生成演示会话，确定继续？',
-    // **MSG-3577 · P9**：护栏四条的界面文案（清什么／不动什么／先备份／输入式确认）
-    demoResetListTitle: '将清除（仅本机）：', demoResetDb: '本地会话库（当前账号的会话／消息／草稿）',
-    demoResetKeeps: '不会动：daemon／服务器数据（本机服务里的会话、定时任务、记忆、知识库配置均保留）',
-    demoResetBackup: '清除前会先下载一份备份 baiz-backup-*.json（含账号别名表）',
-    demoResetPhrase: '请输入「{phrase}」以确认',
-    demoResetDone: '已清除本机数据（{n} 项设置键；账号别名表已保留 {kept} 项），正在刷新…',
     clearMemoryConfirm: '将清空全部本地消息历史，确定继续？',
     // MSG-3203 DEBT-741：更新检查面
     checkUpdate: '检查更新',
@@ -283,10 +310,6 @@ export default {
     model: '模型',
     modelHint: '模型路由由 daemon 决定，此处为偏好设置',
     dirHint: '授权目录用于文件访问与工作区绑定',
-    /** **DEBT-883**：工作区**按账号隔离**（daemon 侧按身份分段）——换账号会换根，此处明写 */
-    workspaceIsolation: '工作区按账号隔离：登录或切换账号会切换工作区根——旧账号下的目录不会被自动带过来（这是安全设计：各账号互不可见）。',
-    workspaceLegacyHint: '如果某个目录属于之前用过的账号（或未登录时用过的目录），选中它即可重新加入授权根，不必搬动文件。',
-    workspaceLegacyEntry: '找回旧工作区目录',
     mcp: {
       title: 'MCP 服务',
       hint: '管理外部 MCP 服务。保存后写入配置，由 daemon 在下一次运行时加载',
@@ -343,8 +366,6 @@ export default {
     version: '版本',
     slogan: 'Baiz Agent · 通万物之情',
     demoHint: '清空本地数据并重新生成演示会话',
-    /** **DEBT-886 · E3**：「重置演示数据」在正式版不渲染＝**按设计收口**（非缺陷）——出说明，免反复立案 */
-    demoDevOnly: '「重置演示数据」仅开发／演示构建可用——正式版按设计不提供此入口（避免误清本机数据）。',
     memory: '记忆设置',
     memoryHint: '记忆由 daemon 蒸馏与检索管理，此处为前端偏好',
     memoryEnabled: '记忆开关',
@@ -355,7 +376,7 @@ export default {
     autoDistill: '自动蒸馏',
     clearMemory: '清除本地记忆',
     memoryCleared: '已清除本地消息历史',
-    memoryFacts: '记忆内容', memoryFactSource: '来源：', memoryFactTime: '记住于：', memoryFactTimeUnknown: '时间未标注', memoryFactSourceUnknown: '未标注',
+    memoryFacts: '记忆内容',
     memoryFactsEmpty: '暂无记忆，与 Baiz Agent 对话后会自动沉淀',
     memoryLoading: '正在读取记忆…',
     memoryLoadFailed: '记忆读取失败',
@@ -376,7 +397,6 @@ export default {
       notConfigured: '未配置',
       /** DEBT-875（MSG-3502·A8）：读不到 ≠ 没配过——失败／未就绪**分开说** */
       stateReadFailed: '读取失败（可重试）',
-      stateUnread: '未登录，暂无法读取配置（登录后再看；不显示 ≠ 已清空）',
       stateNotReady: '服务端未就绪（读取失败·可重试）',
       keyFp: '指纹 {fp}',
       source: { env: '来源：环境变量', file: '来源：本机配置', none: '' },
@@ -412,7 +432,8 @@ export default {
     emptyTasks: '暂无普通任务，在上方创建',
     addScheduled: '新增定时任务',
     scheduledHint: '按周期自动执行的任务，可随时编辑调度',
-    scheduledSubtitle: '日报汇总、每日提醒、数据抓取，告诉搭子什么时候需要帮您做什么，它会准时完成',
+    scheduledSubtitle:
+      '日报汇总、每日提醒、数据抓取，告诉搭子什么时候需要帮您做什么，它会准时完成',
     createNewTask: '创建新任务',
     taskEnabled: '任务已开启',
     // MSG-3528：定时任务「可改可删」（编辑＝复用创建弹窗；删除＝确认对话框）
@@ -423,17 +444,9 @@ export default {
     scheduledRefreshed: '已刷新',
     runsLabel: '执行记录',
     runsEmpty: '暂无执行记录', openRunSession: '打开该次会话',
-    /** **DEBT-885**：单次执行「看结果」入口——原「打开该次会话」跳镜像会话（空）⇒ 改展示结果全文 */
-    openRunResult: '查看本次执行结果', hideRunResult: '收起本次结果',
-    runResultLoading: '正在读取本次结果…',
-    runResultEmpty: '本次执行未产出可展示的结果文本（无摘要、无错误、无全文）',
     scheduledList: '定时任务列表',
-    emptyScheduledTitle: '暂无定时任务', emptyScheduled: '点击「创建新任务」开始配置，定时任务会出现在此',
-    /** **MSG-3575 · 预设项 UI**：预置项软隐藏＋清理入口（清理须二次确认） */
-    presetHidden: '已隐藏 {n} 个预置项（首次安装自带的模板项，可清理）', clearPresets: '清理预置项',
-    /** **DEBT-886**：发现性引导（软隐藏 ≠ 人间蒸发——讲清"仍在本地／为何看不到／怎么办"） */
-    presetHint: '预置项仍在本地（仅默认不在列表上屏）：想用时可按同样配置新建，或点「清理预置项」一并删除。',
-    clearPresetsConfirm: '将删除 {n} 个预置项。它们只是首次安装自带的模板项，需要时可随时重新创建；其它任务不受影响。确定删除？', clearPresetsDone: '已清理 {n} 个预置项', clearPresetsPartial: '{n} 个预置项删除失败（服务端未生效）——请稍后重试', // MSG-3575
+    emptyScheduledTitle: '暂无定时任务',
+    emptyScheduled: '点击「创建新任务」开始配置，定时任务会出现在此',
     extensionsHint: '扩展插件市场（演示数据），启用后即生效',
   },
   status: {
@@ -449,8 +462,6 @@ export default {
     taskError: '任务错误',
     // MSG-3266 ②：模型输出了未能解析的工具协议文本（已从正文剥离）——给可见交代＋重试入口
     protocolLeak: '本轮模型输出了工具协议文本（未能解析），已从正文剥离；可点「重试」再试一次',
-    /** **MSG-3575 · P5**：同类重复失败合并（降噪）尾标 */
-    repeatMerged: '（同类失败 ×{n}，已合并）',
     demo: '演示模式（未连接）',
     chars: '字符',
   },
@@ -459,25 +470,16 @@ export default {
     unauthorized: '未授权，请检查 API Key',
     sessionExpired: '登录已过期，请重新登录',
     kbNotConfigured: '知识库未连接——请到「设置 → 连接知识库」填写域名与 API Key',
-    /** **DEBT-873**：**被安全策略拒绝**——与「网络／服务失败」分开说＋写明下一步（放行／授权）；**终态**，不承诺重试 */
-    policyDenied: '这个操作被安全策略拒绝了（不是网络或服务故障，重试也不会变）——需要先放行：在审批卡上点「申请放行」，或到「设置 → 工作区」授权对应目录后再试',
     relogin: '重新登录',
     invalidParams: '请求参数错误',
     methodNotFound: '方法暂不支持',
     taskNotFound: '任务不存在',
     internal: '服务内部错误',
     unknown: '请求失败',
-    /** **MSG-3575 · P5**：外网取件／知识库不可用 ⇒ 一句人话（内部号与术语零上屏） */
-    netFetchUnavailable: '网络取件不可用，已跳过（可稍后重试）', kbUnavailable: '知识库暂不可用，已跳过',
     goSettings: '去设置',
     /** MSG-3340 A3：未登录态也有一条到「连接知识库」的可点入口 */
     goKbSetup: '去配置知识库',
   },
-  // 补席 B（KIMI 点名②-b）：**登录面文案**——改前硬编码在 `stores/auth.ts`／`utils/authFailure.ts`，
-  // en-US 用户看中文。本文件紧贴 loc 红线，照本文件惯例一行多键。
-  // （`unreachable` 与 `errors.network` **分家**：后者是 RPC 面通用句且含"daemon／网关"内部术语，
-  //   登录页要的是"连不上服务＋下一步"，不是让用户去查网关。）
-  login: { needAccount: '请输入账号', badAccount: '账号格式不对——请填完整邮箱，例如 you@example.com', needPassword: '请输入密码', failed: '登录失败，请检查账号密码', unreachable: '连不上服务（网络不通或服务端暂时不可用）——请检查网络后重试' },
   palette: {
     placeholder: '搜索命令…',
     empty: '无匹配命令',
@@ -510,7 +512,6 @@ export default {
   },
   approval: {
     title: '审批',
-    pendingTitle: '待审批',
     approve: '同意',
     deny: '拒绝',
     approved: '✓ 已批准',
@@ -544,7 +545,7 @@ export default {
     rememberNeedsScope: '先选「本会话／本项目／永久」，再点这里记住',
     escalate: '申请放行',
     escalateSent: '已申请放行',
-    escalateHint: '操作被沙箱拒绝时可申请放行——批准后仍会走一次审批执行', escalateFailed: '申请放行未成功：{msg}', escalateUnsupported: '本期未开放：服务端尚未提供「申请放行」（错误码 -32601）——已记录，重试不会成功', // 令·1.0.30 T批 T5①（新键·只增·同行以守件行数闸）
+    escalateHint: '操作被沙箱拒绝时可申请放行——批准后仍会走一次审批执行',
     inboxTitle: '待办收件箱',
     inboxShort: '待办',
     inboxBanner: '待办 {n} 张卡 · 打开收件箱',
@@ -555,7 +556,7 @@ export default {
     rulesTitle: '已记住的规则',
     revoke: '撤销',
     revokeHint: '撤销后，同类操作会重新弹卡确认',
-    irreversible: '不可撤销', reversible: '可撤销（{paths}）', revRecycle: '回收站', revManifest: '清单', revBackup: '备份', reuseNotice: '本动作已免卡执行 {n} 次', undoHint: '让服务端把这次已执行的动作回滚（不可逆时此钮不出现）', undoFailed: '撤销失败：{msg}', undoUnsupported: '本次改动不可自动回滚', // 令·补24 片 A/E ＋令·补26 §一（新键·只增）
+    pendingTitle: '待审批',
   },
   // MSG-3189 E1／E2：介入方式选择器（三档·当前档常显·默认每次确认）
   execMode: {

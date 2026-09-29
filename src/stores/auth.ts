@@ -11,21 +11,9 @@
 //     （清后必须重登，**不得自动复登**）。
 import { defineStore } from "pinia";
 import { createDefaultClient } from "../client/factory";
-import { reconnectClient } from "../client/singleton";
-// 52f300a（老板第①条）：dev 信封容错 ⇒ 取双方
 import type { AuthLoginResult } from "../client/types";
 import { getBridge } from "../bridge";
-import {
-  clearStoredAccount,
-  currentDbAccount,
-  readStoredAccount,
-  rememberAccountLogin,
-  setDbAccount,
-  storeAccount,
-} from "../db";
-import { isIdentityMissing, isTransportFailure, maskedReason } from "../utils/authFailure";
-// 补席 B（KIMI 点名②-b）：败词走 i18n（改前硬编码中文 ⇒ en-US 用户看中文）
-import { t } from "../locales/runtime";
+import { clearStoredAccount, readStoredAccount, setDbAccount, storeAccount } from "../db";
 
 const TOKEN_KEY = "baiz_session_token";
 
@@ -56,18 +44,6 @@ export const useAuthStore = defineStore("auth", {
   getters: {
     loggedIn(state): boolean {
       return state.sessionToken.length > 0 || state.persisted;
-    },
-    /**
-     * **MSG-3558 ③ ＋ MSG-3573 P1甲**：是否"**已登录但身份未建立**"（空 uid）。
-     *   · 纯未登录（无令牌、无持久面）⇒ `false`（由登录闸／router 处理）；
-     *   · **持久面命中（壳已认身份）而 uid 暂空 ⇒ `false`**——这是"**uid 待补**"，由
-     *     `ensureIdentityUserId()` 再取一次；旧口径 `loggedIn && 空 uid` 在此恒真
-     *     ⇒ 待办／定时任务两页**恒显「身份未建立」假提示**（本刀病根）。
-     */
-    identityMissing(state): boolean {
-      if (!state.sessionToken && !state.persisted) return false;
-      if (state.persisted && isIdentityMissing(state.userId)) return false;
-      return isIdentityMissing(state.userId);
     },
   },
   actions: {
@@ -102,47 +78,6 @@ export const useAuthStore = defineStore("auth", {
       }
       return false;
     },
-    /**
-     * **MSG-3573 P1甲**：把 **uid 补齐**（持久面命中但 uid 暂空 ⇒ **再取一次**壳身份态）。
-     *
-     * 病根：壳 `identity_status` 若只回 `loggedIn`、不回 `userId`，旧口径下 `userId` 恒空
-     * ⇒ 两页恒显「身份未建立」＋列表按"账号未知"落 `baiz-anon`（＝"像全新的"）。
-     * 本函数：拿到 uid ⇒ 补 uid ＋ **切库面**（T12 分段库）＋ 按本账号**重载列表**；
-     * 拿不到 ⇒ 返空串（**不造假**；界面按"不显假提示"处理）。
-     * 桥未通（旧壳／纯 web）⇒ 诚实空。**重载失败上抛**（由调用方显式上屏，禁静默）。
-     */
-    async ensureIdentityUserId(): Promise<string> {
-      if ((this.userId ?? "").trim()) return this.userId;
-      if (!this.sessionToken && !this.persisted) return "";
-      let st: { loggedIn: boolean; userId: string } | null = null;
-      try {
-        st = await getBridge().identity.status();
-      } catch {
-        return "";
-      }
-      const uid = (st?.userId ?? "").trim();
-      if (!st?.loggedIn || !uid) return "";
-      this.persisted = true;
-      this.userId = uid;
-      setDbAccount(uid);
-      storeAccount(uid);
-      await this.reloadAccountScoped(uid);
-      return uid;
-    },
-    /**
-     * **MSG-3575 · A1 前端面**：换账号／登出 ⇒ **KB 面清场**（旧账号的 KB 值不得残留在屏上；
-     * 登出另清**按账号缓存**＝"登出即清"）。best-effort：KB store 未装载 ⇒ 无面可清
-     * （此处吞的只是"没有面"，**不是**数据错误——KB 数据面零写零删）。
-     */
-    async resetKbFace(clearCache: boolean): Promise<void> {
-      try {
-        const kb = await import("./kb");
-        if (clearCache) kb.clearKbAccountCache();
-        kb.useKbStore().resetAccountFace();
-      } catch {
-        /* KB store 未装载：无面可清 */
-      }
-    },
     /** 登录：账号/密码 → auth.login（经乙径 proxy→daemon 9876）。
      * 败面通用拒词（DEBT-398 例）——零泄词零 detail。 */
     async login(email: string, password: string): Promise<boolean> {
@@ -171,29 +106,13 @@ export const useAuthStore = defineStore("auth", {
           throw new Error('登录失败，请检查账号密码');
         }
         this.sessionToken = result.session_token;
-        // **MSG-3592 P0（兜底）**：响应缺 `user_id`（或层错未修期）不得把 `undefined` 传下去
-        // ——旧口径直接赋值 ⇒ 下游 `rememberAccountLogin(email, undefined)` 抛
-        // `…reading 'trim'` ＝ 老板真机「登录即崩」。空 ⇒ 空串（**不猜**；与 daemon 侧
-        // `user_id.unwrap_or(email)` 同向：此处留空，由别名写入点按**邮箱形**兜底）。
-        this.userId = String(result.user_id ?? "");
+        this.userId = result.user_id;
         this.persisted = false;
         // MSG-3485：库面切到本账号（分段库）＋账号键落地（重载续用），
         // 并清掉上一账号的内存残留后按本账号重载列表。
         setDbAccount(this.userId);
         storeAccount(this.userId);
-        // **MSG-3573 P2**：登录＝**别名唯一写入点**（邮箱形 ↔ 归一形并登记 ⇒ 同一库名段）
-        rememberAccountLogin(email, this.userId);
-        // **MSG-3573 P1丙**：换新 client／**新连接**（旧连接或仍绑旧令牌）＋**失败上抛**
-        // （旧口径＝`reloadAccountScoped` 仅 `console.warn` 吞掉 ⇒ 重登后"像全新的"）。
-        try {
-          await reconnectClient();
-          await this.reloadAccountScoped(this.userId);
-        } catch (reloadError) {
-          const detail =
-            reloadError instanceof Error ? reloadError.message : String(reloadError ?? "");
-          this.error = `已登录，但本账号数据装载失败：${maskedReason(detail)}`;
-          return false;
-        }
+        await this.reloadAccountScoped(this.userId);
         try {
           sessionStorage.setItem(TOKEN_KEY, result.session_token);
         } catch {
@@ -201,8 +120,6 @@ export const useAuthStore = defineStore("auth", {
         }
         this.sessionExpired = false;
         this.kbNotConfigured = false;
-        // **MSG-3575 A1**：换账号 ⇒ KB 面清场（旧账号 KB 值不上屏；下一读按新账号重取）
-        await this.resetKbFace(false);
         return true;
       } catch (e) {
         // DEBT-743：知识库未配置（-32010）⇒ 引导去「设置 → 连接知识库」，
@@ -216,19 +133,10 @@ export const useAuthStore = defineStore("auth", {
         // token/密钥类勿上屏回落通用词
         const raw = e instanceof Error ? e.message : String(e);
         const detail = raw.replace(/^RPC -?\d+: /, '');
-        // 补席 B（KIMI 点名②-a）：**网络错／5xx ⇒ 人话**——改前此处一律照透原文，
-        // `Failed to fetch`／`http stream failed: 500`／`transport not connected`／
-        // `未连接本地服务：…VITE_BAIZ_GATEWAY…` 全都糊在登录页上（机器语＋环境变量名），
-        // 用户看不出"是网络问题还是我密码错了"。判据见 `utils/authFailure.ts` 的
-        // `isTransportFailure`（逐字面型，不动"账号密码错"那族的分流）。
-        if (isTransportFailure(detail)) {
-          this.error = t("login.unreachable");
-          return false;
-        }
         this.error =
           detail && !/mock|password|token|secret|key/i.test(detail)
             ? detail
-            : t("login.failed");
+            : '登录失败，请检查账号密码';
         return false;
       } finally {
         this.loading = false;
@@ -252,9 +160,6 @@ export const useAuthStore = defineStore("auth", {
       } catch {
         /* storage 不可用零残留面已清 */
       }
-      // **MSG-3575 A1**：登出 ⇒ KB 面**清值＋清按账号缓存**（"登出即清"；桥未通也先清）。
-      // 位置在**本地清场（含 token 移除）之后**——登出径的同步清场不得被 KB 清面拖后。
-      await this.resetKbFace(true);
       try {
         await getBridge().identity.logout();
       } catch {
@@ -264,26 +169,20 @@ export const useAuthStore = defineStore("auth", {
     /**
      * MSG-3485（T12）：账号切换后的**内存面归位**——库已按账号分段，此处只负责把
      * 上一账号留在内存里的会话列表/活动会话清掉；`account` 非空则按本账号重载
-     * （空列表即建一条，与启动口径一致）。
-     *
-     * **MSG-3573 P1丙**：失败**上抛**——旧口径只 `console.warn` 吞掉（＝"重登即空"却被
-     * 判成登录成功），本刀改由调用方**显式处置**（登录径上屏人话；登出径传空账号即早返）。
+     * （空列表即建一条，与启动口径一致）。任何失败只记 warn——**不得**连带把登录判成败。
      */
     async reloadAccountScoped(account: string): Promise<void> {
-      const { useSessionStore } = await import("./session");
-      const session = useSessionStore();
-      session.conversations = [];
-      session.activeId = "";
-      // **令·1.0.30 T批 · T4**：**入参是权威来源**——库面（`db` 模块级全局）若落后于入参
-      // （登出后停在 `baiz-anon`／切换中停在上一段），`session.load()` 读的就是**别的段**：
-      // 真机 R4「退出登录→再登 ⇒ 会话历史消失（重开/重登又恢复）」正是此形；登出径不同步
-      // 还会让未登录期读到**上一账号的库**（串档）。故**先对齐、再 load**＝「等账号段就绪」。
-      // 空白归一：`dbNameFor` 内部 trim，但库面与入参须**同形**才能比对，故此处先 trim 再比。
-      const target = (account ?? "").trim();
-      if (currentDbAccount() !== target) setDbAccount(target);
-      if (target.length === 0) return;
-      await session.load();
-      if (!session.activeId) await session.create();
+      try {
+        const { useSessionStore } = await import("./session");
+        const session = useSessionStore();
+        session.conversations = [];
+        session.activeId = "";
+        if (account.length === 0) return;
+        await session.load();
+        if (!session.activeId) await session.create();
+      } catch (error) {
+        console.warn("[baiz] 账号切换后重载会话列表失败（库面已按账号分段，未串档）：", error);
+      }
     },
     /**
      * DEBT-742 自愈：daemon 判会话失效（-32002）⇒ **立即清失效 token**（含

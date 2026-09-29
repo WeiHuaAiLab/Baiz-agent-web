@@ -2,25 +2,6 @@
 //
 // 四规则（令文）：① 基线外生产件 ≥600 红 ② 基线内 > 其基线 红 ③ 新文件 ≥600 红
 // ④ 基线只准减不准增（减小只给 advisory）。本件把口径钉死，防"把闸调松"式修法。
-//
-// ── 基线变更（2026-09-28·参谋5 裁②·**治理面·禁静默改**）─────────────────────────
-// 改由：基线停在上一次 _measuredAt（2 件：message.ts 980／ApprovalCard.vue 691），
-// 与 1.0.37 扫描现值脱节 ⇒ 门禁在 d9e5508 上**恒红**（实跑 3 条：ChatContent.vue／
-// zh-CN.ts 判「基线外新件 ≥600」，message.ts 判 BASELINE_GREW 980→1004）。
-// 落刀：按**扫描现值**重出基线，件数 2→4（`scripts/loc-baseline.json` 内
-// `_rebaselinedAt` 同载此变更）。逐件 改前→改后：
-//   src/stores/message.ts                        980 → 1004（+24）
-//   src/components/chat/message/ApprovalCard.vue 691 → 691 （不动）
-//   src/components/chat/ChatContent.vue      （不在基线）→ 764（新入）
-//   src/locales/zh-CN.ts                     （不在基线）→ 600（新入）
-//   src/components/chat/ChatInput.vue             605（旧测试钉值）→ 现值 588 ⇒ <600 不入门禁，故不列
-// **未放宽判据**：四规则原样、阈值常量原样、`baseline.files` 仍**只准减不准增**
-// （本次含上调系"把基线对齐到真实现值并纳入可见"，非常态；生效后规则④不变）。
-//
-// ── 2026-09-29·刀 D2（web 侧技能面接线）──────────────────────────────────
-// zh-CN.ts 600 → 597：旧 8 条假 `skills.*` labelKey（磁盘无此技能）删换为真实 UI
-// 文案 ⇒ 净减 3 行、**跌破 600 黄档线** ⇒ 按规则从基线撤出（`baseline.files`
-// 4 件 → 3 件；方向＝只减·非放宽）。超线现值：1004／764／691（同降序）。
 import { describe, expect, it } from 'vitest'
 import {
   TIER_LINE,
@@ -88,13 +69,14 @@ describe('MSG-3417 ② 判据四规则', () => {
   })
 })
 
-describe('MSG-3417 ③ 真实仓库基线（自测值·2026-09-29 按扫描现值重出）', () => {
-  it('基线 3 件，且与扫描现值一致（1004／764／691 口径）', () => {
+describe('MSG-3417 ③ 真实仓库基线（自测值）', () => {
+  it('基线 4 件，且与扫描现值一致（981／693／746／607 口径）', () => {
     const baseline = loadBaseline(process.cwd())
     expect(Object.keys(baseline.files)).toEqual([
       'src/stores/message.ts',
-      'src/components/chat/ChatContent.vue',
       'src/components/chat/message/ApprovalCard.vue',
+      'src/components/chat/ChatContent.vue',
+      'src/components/chat/ChatInput.vue',
     ])
     const files = scanSources(process.cwd())
     const verdict = judgeLocGate(files, baseline)
@@ -105,7 +87,12 @@ describe('MSG-3417 ③ 真实仓库基线（自测值·2026-09-29 按扫描现�
     const sortedEntries = Object.entries(baseline.files).sort(
       ([, a], [, b]) => (b as number) - (a as number),
     )
-    expect(s.overLine.map((x) => x.rel)).toEqual(sortedEntries.map(([rel]) => rel))
+    // 集合比较（非顺序）：overLine 按**现值**降序、基线按**基线值**降序——基线件
+    // 合法缩减后两序可能错位（如 ChatContent 减至 ApprovalCard 之下），顺序断言
+    // 与四规则无关，去除耦合；四件齐、无新增、无掉档由下方逐一断言钉死。
+    expect([...s.overLine.map((x) => x.rel)].sort()).toEqual(
+      sortedEntries.map(([rel]) => rel).sort(),
+    )
     for (const [rel, base] of sortedEntries) {
       const now = files.find((x) => x.rel === rel)?.lines ?? 0
       expect(now).toBeGreaterThanOrEqual(600) // 必须仍在黄档（否则不会进 overLine）

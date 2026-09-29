@@ -480,7 +480,7 @@
 }
 
 .pending-approval-slot {
-  max-width: var(--chat-col-max);
+  max-width: var(--chat-content-width);
   width: 100%;
   margin: 0 auto;
 }
@@ -588,6 +588,161 @@
   word-break: break-word;
 }
 
+/* 思考对话过程中的审批卡容器：仿 .block-list 同源（padding + 上边框）——
+   **不**复制 max-height / overflow-y ——审批是活性决策点，每张卡都须可见，
+   不可滚动隐藏。commands/results 是历史总览，可滚动无碍。 */
+.run-block .approvals-body {
+  padding: 8px 12px;
+  border-top: 1px solid var(--border);
+}
+
+/* 「待审批」栏：挂在 ChatInput 顶部·chat-input 容器内（占文档流·撑开 chat-input
+   → flex:1 的 .chat-body 自动收缩，天然不被遮）。
+   与 .run-block .approvals-body 同源（审批卡家族）但**这里是全局待办视图**——
+   max-height: 160px 封顶避免压扁输入框；超出滚动：单条折叠 40px，展开 details
+   后单条约 100-200px，3-4 条不滚，再多则滚——不会埋没决策点。 */
+.approval-confirm {
+  width: 100%;
+  max-width: var(--chat-content-width);
+  border: 1px solid var(--border); 
+  background: var(--bg-soft);
+  margin:0 auto 10px auto;
+  border-radius: 8px;
+}
+
+.approval-confirm-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 12px;
+  font-size: 12px;
+  color: var(--muted);
+}
+
+.approval-confirm-title {
+  font-weight: 600;
+}
+
+.approval-confirm-count {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 18px;
+  height: 18px;
+  padding: 0 6px;
+  border-radius: 9px;
+  background: var(--hover);
+  color: var(--text);
+  font-size: 11px;
+  font-weight: 600;
+}
+
+.approval-confirm-list {
+  list-style: none;
+  margin: 0;
+  padding: 0 12px 8px;
+  max-height: 160px;
+  overflow-y: auto;
+}
+
+.needApprovalListItem {
+  margin: 4px 0;
+  border-radius: 6px;
+  background: var(--bg);
+  border: 1px solid var(--border);
+}
+
+.approval-confirm-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 40px;
+  padding: 6px 10px;
+  cursor: pointer;
+  user-select: none;
+}
+
+.approval-confirm-tool {
+  flex: 1;
+  font-family: var(--mono, ui-monospace, SFMono-Regular, Menlo, monospace);
+  font-size: 12px;
+  color: var(--text);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.approval-confirm-row .risk {
+  flex: 0 0 auto;
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-size: 11px;
+  font-weight: 600;
+}
+
+.approval-confirm-row .risk.high {
+  background: rgba(220, 38, 38, 0.12);
+  color: #b91c1c;
+}
+
+.approval-confirm-row .risk.medium {
+  background: rgba(234, 179, 8, 0.16);
+  color: #a16207;
+}
+
+.approval-confirm-row .risk.low {
+  background: rgba(34, 197, 94, 0.14);
+  color: #15803d;
+}
+
+.approval-confirm-toggle {
+  flex: 0 0 auto;
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.approval-confirm-actions {
+  flex: 0 0 auto;
+  display: flex;
+  gap: 6px;
+}
+
+.approval-confirm-actions .deny,
+.approval-confirm-actions .approve {
+  padding: 4px 10px;
+  border-radius: 4px;
+  border: 1px solid var(--border);
+  background: var(--bg);
+  color: var(--text);
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.approval-confirm-actions .deny:disabled,
+.approval-confirm-actions .approve:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.approval-confirm-actions .approve {
+  background: var(--accent, #2563eb);
+  color: #fff;
+  border-color: var(--accent, #2563eb);
+}
+
+.approval-confirm-details {
+  margin: 0 10px 8px;
+  padding: 8px 10px;
+  background: var(--bg-soft, var(--bg));
+  border-radius: 4px;
+  font-size: 12px;
+  line-height: 1.5;
+  white-space: pre-wrap;
+  word-break: break-word;
+  overflow: auto;
+  max-height: 200px;
+}
+
 /* MSG-2413 工具执行行（命令/URL） */
 .tool-cmd {
   display: block;
@@ -600,7 +755,7 @@
 }
 
 .streaming-block {
-  max-width: var(--chat-col-max);
+  max-width: var(--chat-content-width);
   margin: 0 auto;
   background: var(--panel);
 }
@@ -620,191 +775,18 @@
   padding: 0 0 10px;
 }
 
-/* 待审批消息栏（ApprovalConfirmBar，挂在 .chat-input 顶部）：
-   顶部呼吸 8px——与下方 .composer 的 padding-top 节奏一致；
-   多条 pending 时纵向堆叠，每条折叠态 40px；max-height 封顶 160px
-   （超出滚动）避免压扁输入框；max-width 沿用 --chat-content-width
-   与 .composer 同宽对齐。 */
-.approval-confirm {
-  width: 100%;
-  max-width: var(--chat-content-width);
-  margin: 0 auto 0;
-  padding: 8px 0 0;
-  border: 1px solid var(--border);
-  border-radius: 14px;
-  background: var(--code-bg);
-  overflow: hidden;
-  box-shadow:
-    0 -12px 24px rgba(0, 0, 0, 0.07),
-    inset 0 1px 2px rgba(0, 0, 0, 0.04);
-}
-
-.approval-confirm-head {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 6px 12px;
-  border-bottom: 1px solid var(--border);
-  font-size: 12px;
-  color: var(--muted);
-}
-
-.approval-confirm-title {
-  font-weight: 600;
-  color: var(--text);
-  font-size: 13px;
-}
-
-.approval-confirm-count {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  min-width: 18px;
-  height: 18px;
-  padding: 0 6px;
-  border-radius: 999px;
-  background: var(--accent);
-  color: var(--accent-contrast);
-  font-size: 11px;
-  font-weight: 600;
-  font-family: 'Cascadia Code', Consolas, monospace;
-}
-
-.approval-confirm-list {
-  list-style: none;
-  margin: 0;
-  padding: 0;
-  max-height: 160px;
-  overflow-y: auto;
-}
-
-.needApprovalListItem {
-  border-bottom: 1px solid var(--border);
-}
-
-.needApprovalListItem:last-child {
-  border-bottom: none;
-}
-
-.approval-confirm-row {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 0 12px;
-  min-height: 40px;
-  cursor: pointer;
-  font-size: 13px;
-}
-
-.approval-confirm-row:hover {
-  background: var(--hover);
-}
-
-.approval-confirm-tool {
-  flex: 1;
-  min-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  font-family: 'Cascadia Code', Consolas, monospace;
-  font-weight: 600;
-}
-
-/* 复用 ApprovalCard 的 .risk 三档色，与全局风险展示保持一致 */
-.approval-confirm-row .risk {
-  flex: none;
-  padding: 2px 8px;
-  border-radius: 999px;
-  font-size: 11px;
-  font-weight: 600;
-}
-
-.approval-confirm-row .risk.high {
-  background: rgba(192, 57, 43, 0.12);
-  color: #c0392b;
-}
-
-.approval-confirm-row .risk.medium {
-  background: rgba(245, 158, 11, 0.14);
-  color: #b45309;
-}
-
-.approval-confirm-row .risk.low {
-  background: rgba(34, 197, 94, 0.14);
-  color: #15803d;
-}
-
-.approval-confirm-toggle {
-  flex: none;
-  color: var(--muted);
-  font-family: monospace;
-  width: 14px;
-  text-align: center;
-}
-
-.approval-confirm-actions {
-  display: flex;
-  gap: 6px;
-  flex: none;
-}
-
-.approval-confirm-actions button {
-  border: none;
-  border-radius: 8px;
-  padding: 5px 12px;
-  font-size: 12px;
-  font-weight: 600;
-  cursor: pointer;
-}
-
-.approval-confirm-actions .approve {
-  background: var(--accent);
-  color: var(--accent-contrast);
-}
-
-.approval-confirm-actions .deny {
-  background: transparent;
-  color: var(--text);
-  border: 1px solid var(--border);
-}
-
-.approval-confirm-actions .deny:hover {
-  background: var(--hover);
-}
-
-.approval-confirm-actions button:disabled {
-  opacity: 0.5;
-  cursor: default;
-}
-
-.approval-confirm-details {
-  margin: 0;
-  padding: 8px 12px 12px;
-  border-top: 1px solid var(--border);
-  background: var(--panel);
-  color: var(--muted);
-  font-size: 12px;
-  font-family: 'Cascadia Code', Consolas, monospace;
-  white-space: pre-wrap;
-  word-break: break-word;
-  max-height: 160px;
-  overflow: auto;
-  scrollbar-width: thin;
-  scrollbar-color: var(--scrollbar-thumb) transparent;
-}
-
 .composer {
   display: flex;
   flex-direction: column;
   width: 100%;
-  max-width: var(--chat-col-max);
+  max-width: var(--chat-content-width);
   margin: 0 auto;
   /* 顶部 8px 呼吸；底部 0——下沿间距已由 .chat-input 的 padding-bottom: 10px 承担 */
   padding: 8px 0 0;
 }
 
 .composer.centered {
-  max-width: var(--chat-col-max);
+  max-width: var(--chat-content-width);
 }
 
 /* 居中创建（新建会话/任务）：整体 shell 增强外阴影，字号略大。
@@ -846,7 +828,7 @@
 /* 创建项目：项目名 + 位置选择 + 操作行 */
 .project-form {
   width: 100%;
-  max-width: var(--chat-col-max);
+  max-width: var(--chat-content-width);
   display: flex;
   flex-direction: column;
   gap: 12px;
@@ -897,7 +879,7 @@
 .create-toolbar {
   position: relative;
   width: 100%;
-  max-width: var(--chat-col-max);
+  max-width: var(--chat-content-width);
   margin-bottom: 16px;
 }
 
@@ -908,7 +890,7 @@
 /* MSG-2658：大 LOGO 幅移除后——文字品牌轻占位（居中、字号 24 雅致） */
 .create-brand {
   width: 100%;
-  max-width: var(--chat-col-max);
+  max-width: var(--chat-content-width);
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -1009,7 +991,7 @@
 /* 新建空白项目：位置（盘符/父目录）+ 新建文件夹 */
 .location-picker {
   width: 100%;
-  max-width: var(--chat-col-max);
+  max-width: var(--chat-content-width);
   display: flex;
   flex-direction: column;
   gap: 12px;
@@ -1060,7 +1042,7 @@
 
 .center-shadow {
   width: 100%;
-  max-width: var(--chat-col-max);
+  max-width: var(--chat-content-width);
   height: 30px;
   margin: -12px auto 0;
   background: radial-gradient(ellipse at 50% 0%, rgba(0, 0, 0, 0.09), transparent 70%);
@@ -1592,14 +1574,20 @@
 .retry-btn {
   margin-left: 12px;
   font-size: 13px;
+  /* 错误卡背景偏红：按钮用 --surface（白）做中性底，色相责不凌驾于警示卡；
+   文字保留 --accent 蓝——既作按钮的可点性暗示，又不与红卡争抢注意力 */
   color: var(--accent);
+  background: var(--surface);
   border: 1px solid var(--border);
   border-radius: 8px;
   padding: 4px 8px;
 }
 
 .retry-btn:hover {
-  background: var(--hover);
+  /* 勿用 --hover（rgba 半透明黑）——叠在错误卡的红色底上会透出粉红；
+   用不透明 --surface-2（浅灰）保持按钮自身色相稳定 */
+  background: var(--surface-2);
+  border-color: var(--border-strong);
 }
 
 /* 批0 体验层（2026-08-27）：人话字幕 / 语音监听态 / 成本小字 */
@@ -1698,7 +1686,7 @@
 /* 批0 工具调用行的人话说明 */
 .xp-tool-human {
   display: flex;
-  align-items:center;
+  align-items: center;
   justify-content: flex-start;
   gap: 8px;
   margin: 4px 0 0;

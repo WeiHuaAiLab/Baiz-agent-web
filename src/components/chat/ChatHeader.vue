@@ -1,6 +1,6 @@
 <script setup lang="ts">
 // 聊天页头部：会话标题与徽标（左）；导出菜单（右）。
-// 头部占满 100% 宽，内部内容体与消息列一致（720px 居中，见 .chat-header-inner）。
+// 头部占满 100% 宽，内部内容体与消息列一致（--chat-content-width 居中，见 .chat-header-inner）。
 // 「侧栏展开/收缩」按钮在 App.vue 悬浮于 main 左上角（见 .sidebar-toggle-fab）；
 // 「打开文件面板」按钮在 ChatView 与 ExtensionPanel 同层级、悬浮于 chatView 右上角（见 .panel-toggle-btn）。
 import { computed, ref } from 'vue'

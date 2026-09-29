@@ -75,6 +75,10 @@
   --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.1);
   --shadow-lg: 0 12px 32px rgba(0, 0, 0, 0.14);
   --shadow-focus: 0 0 0 3px var(--accent-soft);
+  /* 聊天主容器内容宽度（消息/头部/输入框/项目表单等共享同一居中列） */
+  --chat-content-width: 880px;
+  /* **1.0.41 件②甲组 ⑤ 回补**：本场原 token 名 --chat-col-max；dev 侧已自带等价 token（--chat-content-width: 880px）⇒ 此处仅留**别名**，**单一真源＝--chat-content-width**（禁双值·勿再写死像素） */
+  --chat-col-max: var(--chat-content-width);
 }
 
 /* 项目级 DESIGN.md v1.0 · 语义 token（暗）——冷调蓝灰，非简单反色 */
@@ -741,6 +745,19 @@ button {
   }
 }
 
+/* 活动行：内层文字+动态点容器（避免「.」→「...」切换引发行宽抖动）
+   跑马灯由 ActivityLine.vue 走 JS 步进（与流式光标 blink 同源——文字帧步进，
+   非装饰脉冲，不违 §7） */
+.activity-text {
+  display: inline-block;
+}
+.activity-dots {
+  display: inline-block;
+  width: 1.5em; /* 容纳 '...' 三点而不溢出、不抖 */
+  text-align: left;
+  vertical-align: baseline;
+}
+
 /* 命令面板 */
 .palette-mask {
   position: fixed;
@@ -1126,7 +1143,7 @@ button {
   position: relative;
 }
 
-/* 头部占满 100% 宽度，内部内容体与消息列一致（720px 居中）。
+/* 头部占满 100% 宽度，内部内容体与消息列一致（var(--chat-content-width) 居中）。
    padding-right 额外补滚动条宽度（--sb-w，ChatView 启动时测量）：消息滚动
    区的滚动条/gutter 常驻占宽，不补偿则头部居中列与消息列错位。 */
 .chat-header {
@@ -1140,7 +1157,7 @@ button {
 
 .chat-header-inner {
   width: 100%;
-  max-width: var(--chat-col-max);
+  max-width: var(--chat-content-width);
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -1205,7 +1222,7 @@ button {
 
 /* 消息滚动区：flex 占位（输入框上方）；内部虚拟滚动容器填满作为唯一滚动层，
    原生滚动条（scrollbar-gutter: stable 常驻预留，内容永不跳动）；
-   ChatHeader / .chat-input 以 --sb-w 补偿同宽，保持 720px 居中列对齐 */
+   ChatHeader / .chat-input 以 --sb-w 补偿同宽，保持 --chat-content-width 居中列对齐 */
 .message-scroll {
   flex: 1;
   min-height: 0;
@@ -1247,9 +1264,9 @@ button {
   opacity: 0;
 }
 
-/* 消息内容容器：滚动区占满整宽，内容限宽 720px 居中（滚动条贴边、阅读宽度友好） */
+/* 消息内容容器：滚动区占满整宽，内容限宽 var(--chat-content-width) 居中（滚动条贴边、阅读宽度友好） */
 .message-inner {
-  max-width: var(--chat-col-max);
+  max-width: var(--chat-content-width);
   margin: 0 auto;
   /* 消息间距改由 padding 承担：虚拟滚动（DynamicScroller）按 item 的 border-box
      测量高度，.msg 的 margin-bottom 不计入会导致间距被下一个消息覆盖（叠在一起）。
@@ -1283,7 +1300,7 @@ button {
 /* ── 对话骨架屏（MSG-2662）：会话切换/初次加载消息时占位  */
 .skeleton-chat {
   width: 100%;
-  max-width: var(--chat-col-max);
+  max-width: var(--chat-content-width);
   overflow: hidden;
   margin: 0 auto;
   padding: 16px 0 0;
@@ -1403,7 +1420,7 @@ button {
 .reconnect-banner {
   flex: none;
   width: 100%;
-  max-width: var(--chat-col-max);
+  max-width: var(--chat-content-width);
   margin: 8px auto 0;
   padding: 8px 16px;
   border-radius: 8px;
@@ -1505,7 +1522,40 @@ button {
 }
 
 .status-text.error {
+  /* 错误状态卡：仿 .markdown-body blockquote 视觉（左侧 4px 实心 + 浅底 + 圆角）——
+     但用 danger（红）代 warning（黄）—— 错误提示语义强于引用警示。padding/margin
+     收掉原本的 8px 0 上下留白，让红框边跟随卡片紧凑。 */
+  margin: 4px 0;
+  padding: 8px 12px 8px 16px;
+  border: 1px solid var(--danger-soft);
+  border-left: 4px solid var(--danger);
+  border-radius: 8px;
   color: var(--danger);
+  /* 背景比 --danger-soft（0.10/0.14）再深一档——警示卡要一眼可辨，勿与
+     普通弱化底混淆；亮/暗各配（token 是全局共用值，此处局部加深不外溢） */
+  background: rgba(220, 38, 38, 0.16);
+}
+
+:root[data-theme='dark'] .status-text.error {
+  background: rgba(248, 113, 113, 0.22);
+}
+
+/* 错误卡内部布局：文本 flex:1 占满，按钮组（重试/去设置/去登录…）贴最右，
+   与描述文字 align-items:center 垂直居中——长文案换行时按钮仍居中不漂移 */
+.status-text.error {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.status-text.error .status-msg {
+  flex: 1;
+  min-width: 0; /* 允许长 URL/原文在 flex 内正常换行（min-width:auto 撑破） */
+}
+
+.status-text.error .retry-btn {
+  margin-left: 0; /* 间距交给 gap（默认 .retry-btn margin-left:12px 会叠双份） */
+  flex-shrink: 0; /* 按钮不被长文案挤压 */
 }
 
 /* —— 待办收件箱（前端协作标准 v1.0 §C B5）：右侧抽屉

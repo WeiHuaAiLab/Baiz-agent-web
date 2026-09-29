@@ -97,6 +97,16 @@ export interface ChatMessage {
   meta?: MessageMeta
 }
 
+/** 连续工具调用折叠组（ChatContent displayItems 的虚拟 item）：
+ *  ≥3 条同 run 连续 tool_call 在收束后合并成一个可折叠组。 */
+export interface ToolGroup {
+  id: string
+  kind: 'tool-group'
+  /** 摘要文本（工具名去重）：与 ChatMessage.text 同形，让 size 依赖的取值表达式对两种 item 无需分支 */
+  text: string
+  messages: ChatMessage[]
+}
+
 export interface RunState {
   taskId: string
   conversationId: string

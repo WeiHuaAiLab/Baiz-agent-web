@@ -3,9 +3,7 @@ import { defineStore } from 'pinia'
 import { db } from '../db'
 import { getClient } from '../client/singleton'
 import type { AttachmentItem } from './files'
-import { isPolicyDenied, mapRpcError, POLICY_DENIED_HUMAN } from '../utils/errors'
-// 令·补24 P0-5：错误帧带 `login_hint` ⇒ 该条消息处给「去登录」出口（判据唯一＝本函数）
-import { hasLoginHint } from '../utils/authFailure'
+import { mapRpcError } from '../utils/errors'
 import { createDecisionStreamFilter } from '../utils/decisionStream'
 import type { DecisionStreamFilter } from '../utils/decisionStream'
 import { createProtocolLeakFilter } from '../utils/protocolLeak'
@@ -112,7 +110,7 @@ export function subtitleForTool(toolName: string, success: boolean, preview: str
           : `「${zh}」这一步顺利完成了。`
     }
   }
-  if (isPolicyDenied(brief)) return POLICY_DENIED_HUMAN // DEBT-873：策略拒绝≠网络失败，禁「换个方式继续」
+
   switch (toolName) {
     case 'cargo_test':
     case 'cargo_build':
@@ -122,7 +120,7 @@ export function subtitleForTool(toolName: string, success: boolean, preview: str
     case 'web_search':
       return `这轮没查到有用结果${brief ? `（${brief}）` : ''}，我换个角度再搜。`
     case 'web_fetch':
-      return `网页没抓下来（${brief || '没有给出原因'}），换个来源试试。`
+      return `网页没抓下来（${brief || '可能被拦了'}），换个来源试试。`
     case 'shell_exec':
       return `命令没跑通：${brief || '看输出'}。没事，我根据报错继续调整。`
     case 'apply_patch':
@@ -189,22 +187,6 @@ function makeMessage(
 
 export type MessageStore = ReturnType<typeof useMessageStore>
 
-/** run 终态集合：status 落到这三者即"已收束"。daemon 的 TaskStatus 是开放
- *  枚举（running / queued / pending / waiting_approval 等中间态），判定"是否
- *  还活着"一律用本集合做黑名单——凡不是终态都算活，未来 daemon 新增任何
- *  中间状态自动兼容，不会再出现「只认 running、把 waiting_approval 误判
- *  成已收束」导致流式尾条消失 / 停止键失效 / 折叠组提前折叠的一类 bug。 */
-export const TERMINAL_RUN_STATUSES: ReadonlySet<string> = new Set([
-  'completed',
-  'failed',
-  'cancelled',
-])
-
-/** run 是否已收束（终态）。无 run 记录视为已收束（历史/被 trim）。 */
-export function isRunTerminal(status: string | undefined): boolean {
-  return !status || TERMINAL_RUN_STATUSES.has(status)
-}
-
 export const useMessageStore = defineStore('message', {
   state: () => ({
     byConversation: {} as Record<string, ChatMessage[]>,
@@ -218,15 +200,11 @@ export const useMessageStore = defineStore('message', {
       return this.byConversation[conversationId] ?? []
     },
     async load(conversationId: string) {
-      // 已有缓存 ⇒ 直接返回（**原口径**）。先取到本地再判：下方竞态合并复用同一
-      // 读数，且避开「同一索引表达式经 `if (…) return` 后，在 `await` 之后的
-      // 再读处被 TS 真值收窄成 `never`」的路径（纯类型修·运行时逐点等价）。
-      const cached: ChatMessage[] | undefined = this.byConversation[conversationId]
-      if (cached) return
+      if (this.byConversation[conversationId]) return
       const rows = await db.messages.where('conversationId').equals(conversationId).sortBy('createdAt')
       // 竞态防护：await 期间可能有 push 落地（流式收口/审批卡等）——按 id 去重
       // 合并（createdAt 升序），禁整组覆盖丢消息（并行高负载下 db 查询变慢时必现）
-      const existing: ChatMessage[] | undefined = this.byConversation[conversationId]
+      const existing = this.byConversation[conversationId]
       if (existing) {
         const seen = new Set(existing.map((item) => item.id))
         for (const row of rows) {
@@ -252,10 +230,8 @@ export const useMessageStore = defineStore('message', {
       await db.messages.add(cloneForDb(message))
     },
     activeRuns(conversationId: string): RunState[] {
-      // 终态黑名单而非 === 'running'：waiting_approval（审批等待期）也是活 run
-      // ——流式尾条须继续渲染，否则审批一挂出尾条就消失、会话看起来像被收束
       return Object.values(this.runs).filter(
-        (run) => run.conversationId === conversationId && !isRunTerminal(run.status),
+        (run) => run.conversationId === conversationId && run.status === 'running',
       )
     },
     /** queued→running 翻转守卫：daemon 端 FIFO 启动时 task.updated 首帧可
@@ -456,9 +432,7 @@ export const useMessageStore = defineStore('message', {
       this.flushRun(taskId)
       this.settleDecisionStream(taskId)
       const run = this.runs[taskId]
-      // 终态黑名单而非 === 'running'：waiting_approval（审批等待期）也允许停止
-      // ——否则卡在审批上的 run 无法中止，停止键失效
-      if (!run || isRunTerminal(run.status)) return
+      if (!run || run.status !== 'running') return
       // MSG-2318 A-2：停止键接 task.cancel——复用 chatQueueCancel
       // （index.ts 2311 已映射 task.cancel 真径）；本地清面照留；
       // 请求失败留痕不扰本地（cancelled 守卫已挡后续帧，daemon 侧自然收束）
@@ -818,15 +792,6 @@ export const useMessageStore = defineStore('message', {
       }
     },
     onApprovalResolved(data: { request_id: string; approved: boolean }) {
-      // 审批回执观测日志：确认 daemon 推送时 approved 的原始值与时机——
-      // 若用户未点审批却收到 approved: false（daemon 超时自动拒绝 / 断连
-      // 兜底拒绝），在此一眼可见。排查完可移除。
-      console.info(
-        '[baiz] approval.resolved 帧到达',
-        JSON.stringify({ ...data, at: new Date().toISOString() }),
-        '→ 写入消息',
-        JSON.stringify({ messageId: this.requestToMessage[data.request_id] }),
-      )
       const messageId = this.requestToMessage[data.request_id]
       if (messageId) {
         // P3 顺手修：按 requestToConversation 直接定位，避免线性扫描全部会话
@@ -978,7 +943,10 @@ export const useMessageStore = defineStore('message', {
       const conversationId = this.conversationOf(data.task_id)
       if (conversationId) {
         // 批0 循环提示：消息本身已带提示（如 demo/上游）则不重复追加
-        const hint = data.message.includes('建议别再硬修') ? null : loopHintForError(conversationId, data.message)
+        const hint =
+          data.message.includes('建议别再硬修')
+            ? null
+            : loopHintForError(conversationId, data.message)
         const text = hint ? `${data.message}\n\n💡 ${hint}` : data.message
         void this.push(
           conversationId,
@@ -987,7 +955,6 @@ export const useMessageStore = defineStore('message', {
             statusKey: 'taskError',
             errorKey: 'unknown',
             taskId: data.task_id,
-            loginHint: hasLoginHint(data.login_hint) ? true : undefined, // 缺字段 ⇒ 不置位（旧 daemon 零变）
           }),
         )
       }
@@ -1002,3 +969,13 @@ export const useMessageStore = defineStore('message', {
     },
   },
 })
+
+/** run 是否已收束（终态）。无 run 记录视为已收束（历史/被 trim）。 */
+export const TERMINAL_RUN_STATUSES: ReadonlySet<string> = new Set([
+  'completed',
+  'failed',
+  'cancelled',
+])
+export function isRunTerminal(status: string | undefined): boolean {
+  return !status || TERMINAL_RUN_STATUSES.has(status)
+}
