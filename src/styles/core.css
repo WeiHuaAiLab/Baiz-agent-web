@@ -77,6 +77,8 @@
   --shadow-focus: 0 0 0 3px var(--accent-soft);
   /* 聊天主容器内容宽度（消息/头部/输入框/项目表单等共享同一居中列） */
   --chat-content-width: 880px;
+  /* **1.0.41 件②甲组 ⑤ 回补**：本场原 token 名 --chat-col-max；dev 侧已自带等价 token ⇒ 此处仅留**别名**（单一真源＝--chat-content-width·禁双值） */
+  --chat-col-max: var(--chat-content-width);
 }
 
 /* 项目级 DESIGN.md v1.0 · 语义 token（暗）——冷调蓝灰，非简单反色 */
