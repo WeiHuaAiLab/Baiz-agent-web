@@ -12,9 +12,19 @@ import { formatDuration } from '../../../utils/time'
 import MarkdownView from '../../markdown/MarkdownView.vue'
 import Icon from '../../common/Icon.vue'
 import RunBlocks from './RunBlocks.vue'
-import type { ChatMessage, RunState } from '../../../models'
+import ToolCallGroup from '../ToolCallGroup.vue'
+import type { ChatMessage, RunState, ToolGroup } from '../../../models'
 
-const props = defineProps<{ message: ChatMessage; run?: RunState }>()
+const props = defineProps<{
+  message: ChatMessage
+  run?: RunState
+  /** 附着的工具调用折叠组（本 run 的 ≥3 连续 tool_call 收束合并）：
+   *  位置口径——在过程区（RunBlocks：深度思考/执行命令/审批卡/执行结果）之后、
+   *  正文之前渲染，时间顺序复原（旧版原地渲染会跑到深度思考前面） */
+  toolGroup?: ToolGroup
+  toolGroupExpanded?: boolean
+}>()
+defineEmits<{ (e: 'toggle-tool-group'): void }>()
 const { t } = useI18n()
 const messages = useMessageStore()
 
@@ -81,6 +91,15 @@ function remove() {
        思考区＝MSG-3229/3248 口径：**默认折叠的实时流**（跑马灯吐字），点击标题展开全文；
        上游 RunReasoning 的"终态默认展开"口径**不取**。 -->
   <RunBlocks v-if="showRunBlocks" :run="run!" />
+
+  <!-- 附着的工具调用折叠组：本 run 的长工具链收束摘要，置于过程区（深度思考/
+       执行命令/审批卡/执行结果）之后、正文之前；展开体仍是原样的 MessageItem → ToolRow -->
+  <ToolCallGroup
+    v-if="toolGroup"
+    :messages="toolGroup.messages"
+    :expanded="toolGroupExpanded === true"
+    @toggle="$emit('toggle-tool-group')"
+  />
 
   <MarkdownView v-if="message.text || running" :text="message.text" />
   <!-- MSG-2661 目③：content 空而 reasoning 有——思考区即输出面——

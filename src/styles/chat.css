@@ -602,12 +602,12 @@
    max-height: 160px 封顶避免压扁输入框；超出滚动：单条折叠 40px，展开 details
    后单条约 100-200px，3-4 条不滚，再多则滚——不会埋没决策点。 */
 .approval-confirm {
-  border-top: 1px solid var(--border);
-  border-bottom: 1px solid var(--border);
-  background: var(--bg-soft);
-
   width: 100%;
   max-width: var(--chat-content-width);
+  border: 1px solid var(--border); 
+  background: var(--bg-soft);
+  margin:0 auto 10px auto;
+  border-radius: 8px;
 }
 
 .approval-confirm-head {

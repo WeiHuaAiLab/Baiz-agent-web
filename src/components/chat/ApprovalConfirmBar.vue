@@ -8,11 +8,12 @@
 //   · 本组件是"全局待办"视图——在任意位置都能直接处理审批，不必先滚到那张卡。
 //
 // 「默认隐藏已审核」的语义：
-//   · 数据源是当前会话的 approval 消息而非 approvals.pending——
-//     pending 数组虽然也会在 respond 成功后清空，但那是副作用；消息层
-//     meta.approved 是"已决策"的权威字段（approval.resolved 帧落定后
-//     会回写），filter meta?.approved === undefined 是显式语义、与 ApprovalCard
-//     判定 resolved 完全一致。一旦 daemon 推回执，行立即从本栏消失。
+//   · 数据源是当前会话的 approval 消息＋approvals.pending 双闸——
+//     meta.approved 是"已决策"的权威字段（approval.resolved 帧落定后会回写）；
+//     approvals.pending 是"IPC 已受理"的即时刻度（respond 成功即摘除）。
+//     只等 meta.approved 会在回执帧迟到/丢失时滞留已决卡（可重复提交），
+//     故 request 不在 pending 清单 ⇒ 视为已产生结果、立即隐藏（见
+//     pendingApprovals computed 注释）。一旦 daemon 推回执，行也从本栏消失。
 //   · 与 ApprovalCard 的 working/disabled 行为对齐：行内按钮点击后调用
 //     approvals.respond（IPC），不再额外做乐观本地写回——保持单一数据源
 //     原则，等 daemon 推 approval.resolved 时 meta.approved 落定、filter
@@ -66,14 +67,25 @@ function isLiveApproval(item: ChatMessage): boolean {
 /** 当前会话内未决策且 run 仍活跃的 approval 消息——这是 list 的唯一数据源。
  *  meta.approved === undefined 表示"还没决策"（包含：刚推送、IPC 已发送
  *  但 daemon 回执未到）；只要 daemon 推回 approval.resolved 帧，
- *  meta.approved 落定 → 该行从此计算结果里消失。 */
-const pendingApprovals = computed<ChatMessage[]>(() =>
-  messages.list(session.activeId).filter((item) => {
+ *  meta.approved 落定 → 该行从此计算结果里消失。
+ *
+ *  「已产生结果 ⇒ 隐藏」闸（request 级）：respond() 成功即从 approvals.pending
+ *  摘除该 request（IPC 已被服务端受理，结果只是早晚）。旧口径只等
+ *  approval.resolved 回执帧落 meta.approved——帧迟到/丢失时（断流、重连窗口、
+ *  daemon 只推给别的订阅端），卡滞留在本栏且按钮仍可点（重复提交一张已决卡）。
+ *  现以 pending 清单为准：request 已不在清单 ⇒ 审批已定、结果在路上 ⇒ 隐藏。
+ *  与 syncPending 对账口径同源（权威清单外的即已收口），双数据源一致收口。 */
+const pendingApprovals = computed<ChatMessage[]>(() => {
+  const liveRequests = new Set(approvals.pending.map((entry) => entry.request_id))
+  return messages.list(session.activeId).filter((item) => {
     if (item.kind !== 'approval') return false
     if (item.meta?.approved !== undefined) return false
+    // 已产生结果（IPC 已受理/服务端已销卡）⇒ 隐藏；无 requestId 的卡无法对账，
+    // 保守回落旧口径（approved + run 活性两道闸）
+    if (item.meta?.requestId && !liveRequests.has(item.meta.requestId)) return false
     return isLiveApproval(item)
-  }),
-)
+  })
+})
 
 /** 行内展开态：一次只看一条详情——多 pending 时只展开当前点的那条，
  * 展开其他条会收起上一条，避免 details 反复跳变让列表"呼吸"。 */

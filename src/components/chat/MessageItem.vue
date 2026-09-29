@@ -1,6 +1,6 @@
 <script setup lang="ts">
 // 单条聊天消息「壳」：只做两件事——按 message.kind 分发到对应渲染组件、
-// 拼装与 kind 无关的 run 派生块（人话字幕）与时间。
+// 拼装 run 派生块（人话字幕，仅 assistant 条渲染一次）与时间。
 // 各 kind 的渲染体在 ./message/ 下；本文件保持原路径不变（ChatContent / 测试零联动）。
 //
 // MSG-3335 G-4（与 origin/main 合流）：**结构取 main**（壳＋kind 分发），
@@ -22,9 +22,16 @@ import ToolRow from './message/ToolRow.vue'
 import ApprovalCard from './message/ApprovalCard.vue'
 import RunBlocks from './message/RunBlocks.vue'
 import RunSubtitles from './message/RunSubtitles.vue'
-import type { ChatMessage } from '../../models'
+import type { ChatMessage, ToolGroup } from '../../models'
 
-const props = defineProps<{ message: ChatMessage }>()
+const props = defineProps<{
+  message: ChatMessage
+  /** 附着的工具调用折叠组（ChatContent displayState.attached）：本条为其 run 落地的
+   *  assistant 消息时非空，由 AssistantMessage 在过程区之后渲染（透传，逻辑零沾） */
+  toolGroup?: ToolGroup
+  toolGroupExpanded?: boolean
+}>()
+defineEmits<{ (e: 'toggle-tool-group'): void }>()
 const messages = useMessageStore()
 
 const run = computed(() =>
@@ -57,6 +64,9 @@ const isAuthFailure = computed(
       v-if="message.kind === 'assistant'"
       :message="message"
       :run="run"
+      :tool-group="toolGroup"
+      :tool-group-expanded="toolGroupExpanded"
+      @toggle-tool-group="$emit('toggle-tool-group')"
     />
     <UserMessage v-else-if="message.kind === 'user'" :message="message" />
     <template v-else>
@@ -69,8 +79,8 @@ const isAuthFailure = computed(
       <ApprovalCard v-else-if="message.kind === 'approval'" :message="message" />
     </template>
 
-    <!-- 批0 人话字幕：工具调用全翻译成小白能看懂的一句话（默认隐藏，设置中开启） -->
-    <RunSubtitles :run="run" />
+    <!-- 批0 人话字幕：工具调用全翻译成小白能看懂的一句话（默认隐藏，设置中开启）。  -->
+    <RunSubtitles v-if="message.kind === 'assistant'" :run="run" />
 
     <div
       v-if="message.kind === 'user' || message.kind === 'assistant'"

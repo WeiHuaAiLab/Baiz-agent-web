@@ -87,7 +87,12 @@ describe('MSG-3417 ③ 真实仓库基线（自测值）', () => {
     const sortedEntries = Object.entries(baseline.files).sort(
       ([, a], [, b]) => (b as number) - (a as number),
     )
-    expect(s.overLine.map((x) => x.rel)).toEqual(sortedEntries.map(([rel]) => rel))
+    // 集合比较（非顺序）：overLine 按**现值**降序、基线按**基线值**降序——基线件
+    // 合法缩减后两序可能错位（如 ChatContent 减至 ApprovalCard 之下），顺序断言
+    // 与四规则无关，去除耦合；四件齐、无新增、无掉档由下方逐一断言钉死。
+    expect([...s.overLine.map((x) => x.rel)].sort()).toEqual(
+      sortedEntries.map(([rel]) => rel).sort(),
+    )
     for (const [rel, base] of sortedEntries) {
       const now = files.find((x) => x.rel === rel)?.lines ?? 0
       expect(now).toBeGreaterThanOrEqual(600) // 必须仍在黄档（否则不会进 overLine）
