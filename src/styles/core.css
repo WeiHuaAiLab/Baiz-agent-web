@@ -1140,7 +1140,7 @@ button {
 
 .chat-header-inner {
   width: 100%;
-  max-width: 720px;
+  max-width: var(--chat-col-max);
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -1249,7 +1249,7 @@ button {
 
 /* 消息内容容器：滚动区占满整宽，内容限宽 720px 居中（滚动条贴边、阅读宽度友好） */
 .message-inner {
-  max-width: 720px;
+  max-width: var(--chat-col-max);
   margin: 0 auto;
   /* 消息间距改由 padding 承担：虚拟滚动（DynamicScroller）按 item 的 border-box
      测量高度，.msg 的 margin-bottom 不计入会导致间距被下一个消息覆盖（叠在一起）。
@@ -1283,7 +1283,7 @@ button {
 /* ── 对话骨架屏（MSG-2662）：会话切换/初次加载消息时占位  */
 .skeleton-chat {
   width: 100%;
-  max-width: 720px;
+  max-width: var(--chat-col-max);
   overflow: hidden;
   margin: 0 auto;
   padding: 16px 0 0;
@@ -1403,7 +1403,7 @@ button {
 .reconnect-banner {
   flex: none;
   width: 100%;
-  max-width: 720px;
+  max-width: var(--chat-col-max);
   margin: 8px auto 0;
   padding: 8px 16px;
   border-radius: 8px;
