@@ -480,7 +480,7 @@
 }
 
 .pending-approval-slot {
-  max-width: 720px;
+  max-width: var(--chat-content-width);
   width: 100%;
   margin: 0 auto;
 }
@@ -607,7 +607,7 @@
   background: var(--bg-soft);
 
   width: 100%;
-  max-width: 720px;
+  max-width: var(--chat-content-width);
 }
 
 .approval-confirm-head {
@@ -755,7 +755,7 @@
 }
 
 .streaming-block {
-  max-width: 720px;
+  max-width: var(--chat-content-width);
   margin: 0 auto;
   background: var(--panel);
 }
@@ -779,14 +779,14 @@
   display: flex;
   flex-direction: column;
   width: 100%;
-  max-width: 720px;
+  max-width: var(--chat-content-width);
   margin: 0 auto;
   /* 顶部 8px 呼吸；底部 0——下沿间距已由 .chat-input 的 padding-bottom: 10px 承担 */
   padding: 8px 0 0;
 }
 
 .composer.centered {
-  max-width: 720px;
+  max-width: var(--chat-content-width);
 }
 
 /* 居中创建（新建会话/任务）：整体 shell 增强外阴影，字号略大。
@@ -828,7 +828,7 @@
 /* 创建项目：项目名 + 位置选择 + 操作行 */
 .project-form {
   width: 100%;
-  max-width: 720px;
+  max-width: var(--chat-content-width);
   display: flex;
   flex-direction: column;
   gap: 12px;
@@ -879,7 +879,7 @@
 .create-toolbar {
   position: relative;
   width: 100%;
-  max-width: 720px;
+  max-width: var(--chat-content-width);
   margin-bottom: 16px;
 }
 
@@ -890,7 +890,7 @@
 /* MSG-2658：大 LOGO 幅移除后——文字品牌轻占位（居中、字号 24 雅致） */
 .create-brand {
   width: 100%;
-  max-width: 720px;
+  max-width: var(--chat-content-width);
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -991,7 +991,7 @@
 /* 新建空白项目：位置（盘符/父目录）+ 新建文件夹 */
 .location-picker {
   width: 100%;
-  max-width: 720px;
+  max-width: var(--chat-content-width);
   display: flex;
   flex-direction: column;
   gap: 12px;
@@ -1042,7 +1042,7 @@
 
 .center-shadow {
   width: 100%;
-  max-width: 720px;
+  max-width: var(--chat-content-width);
   height: 30px;
   margin: -12px auto 0;
   background: radial-gradient(ellipse at 50% 0%, rgba(0, 0, 0, 0.09), transparent 70%);

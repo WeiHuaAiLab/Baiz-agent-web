@@ -75,6 +75,8 @@
   --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.1);
   --shadow-lg: 0 12px 32px rgba(0, 0, 0, 0.14);
   --shadow-focus: 0 0 0 3px var(--accent-soft);
+  /* 聊天主容器内容宽度（消息/头部/输入框/项目表单等共享同一居中列） */
+  --chat-content-width: 880px;
 }
 
 /* 项目级 DESIGN.md v1.0 · 语义 token（暗）——冷调蓝灰，非简单反色 */
@@ -1139,7 +1141,7 @@ button {
   position: relative;
 }
 
-/* 头部占满 100% 宽度，内部内容体与消息列一致（720px 居中）。
+/* 头部占满 100% 宽度，内部内容体与消息列一致（var(--chat-content-width) 居中）。
    padding-right 额外补滚动条宽度（--sb-w，ChatView 启动时测量）：消息滚动
    区的滚动条/gutter 常驻占宽，不补偿则头部居中列与消息列错位。 */
 .chat-header {
@@ -1153,7 +1155,7 @@ button {
 
 .chat-header-inner {
   width: 100%;
-  max-width: 720px;
+  max-width: var(--chat-content-width);
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -1218,7 +1220,7 @@ button {
 
 /* 消息滚动区：flex 占位（输入框上方）；内部虚拟滚动容器填满作为唯一滚动层，
    原生滚动条（scrollbar-gutter: stable 常驻预留，内容永不跳动）；
-   ChatHeader / .chat-input 以 --sb-w 补偿同宽，保持 720px 居中列对齐 */
+   ChatHeader / .chat-input 以 --sb-w 补偿同宽，保持 --chat-content-width 居中列对齐 */
 .message-scroll {
   flex: 1;
   min-height: 0;
@@ -1260,9 +1262,9 @@ button {
   opacity: 0;
 }
 
-/* 消息内容容器：滚动区占满整宽，内容限宽 720px 居中（滚动条贴边、阅读宽度友好） */
+/* 消息内容容器：滚动区占满整宽，内容限宽 var(--chat-content-width) 居中（滚动条贴边、阅读宽度友好） */
 .message-inner {
-  max-width: 720px;
+  max-width: var(--chat-content-width);
   margin: 0 auto;
   /* 消息间距改由 padding 承担：虚拟滚动（DynamicScroller）按 item 的 border-box
      测量高度，.msg 的 margin-bottom 不计入会导致间距被下一个消息覆盖（叠在一起）。
@@ -1296,7 +1298,7 @@ button {
 /* ── 对话骨架屏（MSG-2662）：会话切换/初次加载消息时占位  */
 .skeleton-chat {
   width: 100%;
-  max-width: 720px;
+  max-width: var(--chat-content-width);
   overflow: hidden;
   margin: 0 auto;
   padding: 16px 0 0;
@@ -1416,7 +1418,7 @@ button {
 .reconnect-banner {
   flex: none;
   width: 100%;
-  max-width: 720px;
+  max-width: var(--chat-content-width);
   margin: 8px auto 0;
   padding: 8px 16px;
   border-radius: 8px;
