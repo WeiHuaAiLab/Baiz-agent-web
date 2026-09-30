@@ -68,20 +68,27 @@ const isAuthFailure = computed(
       :tool-group-expanded="toolGroupExpanded"
       @toggle-tool-group="$emit('toggle-tool-group')"
     />
+    <!-- 用户提出的内容 -->
     <UserMessage v-else-if="message.kind === 'user'" :message="message" />
+    <!-- AI返回出来的内容 -->
     <template v-else>
       <!-- MSG-3001 ②：失败径 status 消息的过程区（assistant 径见 AssistantMessage） -->
       <RunBlocks v-if="showStatusRunBlocks" :run="run!" />
-      <!-- MSG-3558：模型鉴权失败 ⇒ **就地人话错误卡**（标题／掩码原因／模型名／设置入口／重试） -->
+
+      <!-- 模型鉴权失败 ⇒ **就地人话错误卡**（标题／掩码原因／模型名／设置入口／重试） -->
       <AuthErrorCard v-if="isAuthFailure" :message="message" />
+      <!-- 状态消息 -->
       <StatusMessage v-else-if="message.kind === 'status'" :message="message" />
+      <!-- 工具调用情况 -->
       <ToolRow v-else-if="message.kind === 'tool_call'" :message="message" />
+      <!-- 审批卡的情况 -->
       <ApprovalCard v-else-if="message.kind === 'approval'" :message="message" />
     </template>
 
     <!-- 批0 人话字幕：工具调用全翻译成小白能看懂的一句话（默认隐藏，设置中开启）。  -->
     <RunSubtitles v-if="message.kind === 'assistant'" :run="run" />
 
+    <!-- 消息的时间（用户提问的时间、AI回复的时间） -->
     <div
       v-if="message.kind === 'user' || message.kind === 'assistant'"
       class="msg-time"

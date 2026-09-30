@@ -102,8 +102,7 @@ function remove() {
   />
 
   <MarkdownView v-if="message.text || running" :text="message.text" />
-  <!-- MSG-2661 目③：content 空而 reasoning 有——思考区即输出面——
-       不再显「（无输出）」（真无输出：无正文无思考无 running——照显） -->
+  <!-- MSG-2661 目③：content 空而 reasoning 有——思考区即输出面—— 不再显「（无输出）」（真无输出：无正文无思考无 running——照显） -->
   <p v-else-if="!run?.reasoning && !run?.decision" class="no-output">
     {{ t('chat.noOutput') }}
   </p>

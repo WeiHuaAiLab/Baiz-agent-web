@@ -1,7 +1,4 @@
-<script setup lang="ts">
-// 聊天内容体：重连提示、空状态、虚拟滚动消息列表、流式渲染尾条与"回到最新"按钮。
-// 暴露 scrollToBottom()（发送消息后强制回到底部）；滚动容器就绪/内容变化时通过
-// scroller-ready / content-changed 事件通知外层 OverlayScrollArea 更新悬浮滚动条。
+<script setup lang="ts"> 
 import { computed, nextTick, onBeforeUnmount, ref, watch } from "vue";
 import { DynamicScroller, DynamicScrollerItem } from "vue-virtual-scroller";
 import { useI18n } from "vue-i18n";
@@ -12,15 +9,11 @@ import { useUiStore } from "../../stores/ui";
 import { useApprovalStore } from "../../stores/approval";
 import { getBridge } from "../../bridge";
 import type { ChatMessage, RunState } from "../../models";
-import MessageItem from "./MessageItem.vue";
-// 消息流展示分组（未决审批卡剥离＋工具链折叠附着渲染——逻辑外迁 utils，行数闸 MSG-3417）
+import MessageItem from "./MessageItem.vue"; 
 import { isPendingApproval, useDisplayItems } from "../../utils/displayItems";
-import type { DisplayItem } from "../../utils/displayItems";
-// MSG-3513 并上游 1712993：工具调用折叠组（`StreamingMarkdownView` 我方第 24 行已 import
-// 同径 ⇒ **不重复引入**，否则重复 import 报错）
+import type { DisplayItem } from "../../utils/displayItems"; 
 import ToolCallGroup from "./ToolCallGroup.vue";
-import SkeletonChatView from "./SkeletonChatView.vue";
-// MSG-3335 G-4：RunBlocks 随 kind 分发迁入 chat/message/（本件随迁改 import，行为零改）
+import EmptyAndSkeletonChatView from "./EmptyAndSkeletonChatView.vue"; 
 import RunBlocks from "./message/RunBlocks.vue";
 import ApprovalStack from "./message/ApprovalStack.vue";
 import ActivityLine from "./ActivityLine.vue";
@@ -320,11 +313,6 @@ const loadingMessages = ref(false);
 const isLoadingMessages = computed(() => {
     const id = activeId.value;
     if (!id) return false;
-    // 两口径同时成立才盖骨架：
-    //   ① 我方 MSG-3233 ④：load **在途**（loadingMessages，可被测试显式控制起止）；
-    //   ② main f793908：数据**尚未载入**（`byConversation[id] === undefined`）。
-    // 只留 ① 会在「键已存在但为空」的合法空会话上误盖骨架（main 新增用例 B 反证）；
-    // 只留 ② 会在 load 已收口但键仍缺（如 load 被替身/失败）时永远盖着（我方 MSG-3233 ③ 反证）。
     return loadingMessages.value && messages.byConversation[id] === undefined;
 });
 
@@ -555,6 +543,7 @@ async function onStreamingClick(event: MouseEvent) {
 
 <template>
     <div class="chat-content">
+        <!-- 大模型的连接状态 -->
         <div
             v-if="
                 !settings.demoMode &&
@@ -566,7 +555,7 @@ async function onStreamingClick(event: MouseEvent) {
             {{ t("status.disconnectedReconnect") }}
         </div>
 
-        <!-- 标准 v1.0 §C B5：`pending_total` 角标＋常驻入口——「另有 N 张卡」 -->
+        <!-- 待办悬浮角标入口。  标准 v1.0 §C B5：`pending_total` 角标＋常驻入口——「另有 N 张卡」 -->
         <button
             v-if="approvals.badgeCount > 0"
             type="button"
@@ -577,32 +566,16 @@ async function onStreamingClick(event: MouseEvent) {
             {{ t("approval.inboxBanner", { n: approvals.badgeCount }) }}
         </button>
 
-        <!-- MSG-3233 ④：加载中且空 ⇒ 骨架；否则走空态（两者互斥） -->
-        <SkeletonChatView
-            v-if="
-                isLoadingMessages &&
+        <!-- 加载中、空数据、骨架屏的占位控件 -->
+        <EmptyAndSkeletonChatView
+            :loading="isLoadingMessages"
+            :empty="
                 displayItems.length === 0 &&
                 pendingApprovals.length === 0 &&
                 streamingRuns.length === 0
             "
+            @create-session="ui.openCreate('session')"
         />
-        <div
-            v-else-if="
-                displayItems.length === 0 &&
-                pendingApprovals.length === 0 &&
-                streamingRuns.length === 0
-            "
-            class="empty-state"
-        >
-            <p class="empty">{{ t("chat.empty") }}</p>
-            <button
-                type="button"
-                class="empty-start"
-                @click="ui.openCreate('session')"
-            >
-                {{ t("chat.emptyStart") }}
-            </button>
-        </div>
 
         <!-- 未决审批卡**孤儿兜底区**：不属于任何在跑 run 的未决卡（后台任务/
              历史遗留）由常驻区以 ApprovalStack 容器呈现（与尾流径同口径——
@@ -613,16 +586,18 @@ async function onStreamingClick(event: MouseEvent) {
             :messages="orphanApprovals"
         /> -->
 
+        <!-- 会话消息的渲染（滚动区域） -->
         <div
             v-if="displayItems.length > 0 || streamingRuns.length > 0"
             class="message-scroll"
-        >
+        >   
             <DynamicScroller
                 ref="scroller"
                 class="message-list"
                 :items="displayItems"
                 :min-item-size="64"
             >
+                <!-- 渲染已经完成的对话内容 -->
                 <template #default="{ item, index, active }">
                     <DynamicScrollerItem
                         :item="item"
@@ -662,19 +637,21 @@ async function onStreamingClick(event: MouseEvent) {
                         class="streaming-tail"
                         @click="onStreamingClick"
                     >
+                        <!-- SSE推流过来的数据处理 -->
                         <div
                             v-for="run in streamingRuns"
                             :key="run.taskId"
                             class="msg assistant streaming-block"
                         >
-                            <ActivityLine :text="activityText(run)" />
-                            <!-- MSG-2998 修②（DEBT-544 目二）：三分离归组——思考/执行命令/  执行结果各自成区（流式态与终态同构，RunBlocks 两态一源）；
-                                 未决审批卡容器（本 run 的待审批权限卡）挂在执行命令/执行结果之间 -->
+                            <!-- 思考中... -->
+                            <ActivityLine :text="activityText(run)" />  
+                            <!-- 思考的过程渲染： -->
                             <RunBlocks
                                 :run="run"
                                 streaming
                                 :pending-approvals="approvalsOf(run.taskId)"
                             />
+                            <!-- 思考结束后或思考期间,产出的内容渲染 -->
                             <StreamingMarkdownView :text="run.text" />
                             <span class="caret" />
                         </div>
@@ -682,6 +659,7 @@ async function onStreamingClick(event: MouseEvent) {
                 </template>
             </DynamicScroller>
 
+            <!-- 滚动区域遮罩层 -->
             <div
                 v-if="startMeasurementOverlay"
                 class="measure-overlay"
@@ -690,6 +668,7 @@ async function onStreamingClick(event: MouseEvent) {
             />
         </div>
 
+        <!-- 快速到底的按钮 -->
         <button
             v-if="!pinned && displayItems.length > 0"
             type="button"
