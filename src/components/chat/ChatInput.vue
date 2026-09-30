@@ -21,6 +21,8 @@ import type { ExecMode } from "../../stores/execMode";
 import { getBridge } from "../../bridge";
 import { clearDraft, loadDraft, saveDraft } from "../../drafts";
 import { formatFileSize, shortMime } from "../../utils/format";
+import { formatRunCost } from "../../utils/costText";
+import { useResumeTarget } from "../../utils/resumeTarget";
 import {
     commandRiskFlag,
     translateCommand,
@@ -123,32 +125,8 @@ let dragCounter = 0;
 const activeId = computed(() => session.activeId);
 const streamingRuns = computed(() => messages.activeRuns(activeId.value));
 const runningRun = computed(() => streamingRuns.value[0] ?? null);
-// 批0 成本小字：当前会话最近一次完成的 run 的 usage 账
-const lastUsage = computed(() => {
-    const cid = activeId.value;
-    if (!cid) return null;
-    const completed = Object.values(messages.runs)
-        .filter(
-            (r) =>
-                r.conversationId === cid && r.status === "completed" && r.usage,
-        )
-        .sort((a, b) => (b.finishedAt ?? 0) - (a.finishedAt ?? 0));
-    return completed[0]?.usage ?? null;
-});
-const costText = computed(() => {
-    const u = lastUsage.value;
-    if (!u) return null;
-    // 标准 v1.0 §A3：计费展示改读后端值（usage.cost_usd／cost_per_mtok）——
-    // 前端自备单价表已删；后端未给成本即不显示金额，禁前端另算一份。
-    const parts: string[] = [];
-    if (u.costUsd !== undefined) {
-        parts.push(`本轮 $${u.costUsd.toFixed(4)}（¥${(u.costUsd * 7.1).toFixed(3)}）`);
-    }
-    parts.push(`${u.totalTokens.toLocaleString()} tokens`);
-    if (u.costPerMtok !== undefined) parts.push(`$${u.costPerMtok}/MTok`);
-    parts.push("验证 ✅");
-    return parts.join(" · ");
-});
+// 批0 成本小字：当前会话最近一次完成的 run 的 usage 账（done 帧回填）
+const costText = computed(() => formatRunCost(messages.runs, activeId.value));
 // 批0 命令翻译：输入框里打命令时实时给一句人话 + 危险预警
 const commandTranslation = computed(() => translateCommand(input.value));
 const commandRisk = computed(() => commandRiskFlag(input.value.trim()));
@@ -285,30 +263,12 @@ async function sendWith(text: string) {
 }
 
 // ── MSG-2722 L3 编程 UI：Blocked 人工回传续跑行 ──
-// 判据：编程模式会话＋最近任务终态失败/回执含 Blocked（tool_loop 折回
-// 面——1779 裁：Blocked 载 reason 可接续）——显续跑输入行
-const resumeNote = ref("");
-const resumeTarget = computed(() => {
-    if (!ui.programmingMode) return null;
-    const cid = activeId.value;
-    if (!cid) return null;
-    // 本会话最近终态 failed 的 run——续跑目标（Blocked 折回以失败态
-    // 收束于 UI——1779 裁：可人工回传续跑）
-    const failed = Object.values(messages.runs).filter(
-        (r) => r.conversationId === cid && r.status === "failed",
-    );
-    if (failed.length === 0) return null;
-    failed.sort((a, b) => (b.finishedAt ?? 0) - (a.finishedAt ?? 0));
-    return failed[0];
+const { resumeNote, resumeTarget, submitResume } = useResumeTarget({
+    enabled: () => ui.programmingMode,
+    runs: () => messages.runs,
+    conversationId: () => activeId.value,
+    resume: (taskId, note) => void messages.resumeRun(taskId, note),
 });
-function submitResume() {
-    const run = resumeTarget.value;
-    if (!run || !resumeNote.value.trim()) return;
-    const taskId = run.taskId;
-    const note = resumeNote.value.trim();
-    resumeNote.value = "";
-    void messages.resumeRun(taskId, note);
-}
 
 /** Enter：发送（IME 选词阶段不发送，避免中文输入误触） */
 function onEnter() {
@@ -320,13 +280,11 @@ function stopCurrent() {
     if (runningRun.value) messages.stopRun(runningRun.value.taskId);
 }
 
-// 拖拽上传——仅 ChatInput 区接收；非文件类型（纯文本/URL）直接忽略，
-// 不抢用户「拖文本进输入框」的体验。
-//
+// 拖拽上传——仅 ChatInput 区接收；非文件类型（纯文本/URL）直接忽略，不抢
+// 用户「拖文本进输入框」的体验。
 // 放弃拖拽场景遮罩兜底：dragCounter/drop 已覆盖「拖入即出、子元素进出」，
-// 但用户拖出窗口/桌面释放（浏览器不保证派发 dragleave）、按 ESC 取消、
-// 或遮罩意外残留时点击空白区域——都需要强制隐藏。
-// 拖拽期间挂全局 dragend + keydown(ESC) + click 兜底，遮罩熄灭即摘除。
+// 但拖出窗口/桌面释放（浏览器不保证派发 dragleave）、按 ESC 取消、遮罩意外
+// 残留时点击空白——都需强制隐藏。全局 dragend + keydown(ESC) + pointerdown 兜底。
 function onDragEnter(e: DragEvent) {
     // 仅识别文件拖入，避免文本/链接误触发遮罩
     if (!e.dataTransfer?.types.includes("Files")) return;
