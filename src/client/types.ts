@@ -151,6 +151,15 @@ export interface ApprovalRevokeParams {
   rule_id: string
 }
 
+/**
+ * **令·补24 P1-8**：撤销**已执行**的动作（与「撤销规则」是两件事——`approval.revoke` 撤规则，
+ * 本件撤动作）。**契约先行**：daemon 回滚面属另片，未实装 ⇒ 回 `-32601` ⇒ 调用方人话降级
+ * （照 `schedule.run_detail`／`audit.execModeChanged` 同法，**禁假装成功**）。
+ */
+export interface ApprovalUndoParams {
+  request_id: string
+}
+
 export interface ApprovalEscalateParams {
   request_id: string
   [key: string]: unknown
@@ -269,6 +278,13 @@ export interface DoneData {
 export interface ErrorData {
   task_id: string
   message: string
+  /**
+   * **令·补24 P0-5**（`-32002` 带回登录出口）：daemon 明示「这条错＝身份/会话面，去登录」。
+   * 前端**只当存在性判据**用（非空串／true ⇒ 置位），**不把原文上屏**——上屏文案一律走
+   * 既有 `identity.notEstablished`／`identity.goLogin`（禁内部号与 daemon 原文糊到用户脸上）。
+   * 字段缺失（旧 daemon）⇒ 前端零行为变化，走既有文案。
+   */
+  login_hint?: string
 }
 
 export interface DaemonNotifyData {
@@ -405,4 +421,20 @@ export interface MemoryListResult {
   items: MemoryListItem[]
   /** 零令牌面的人话说明（未登录 ⇒ 记忆不可见） */
   note?: string
+}
+
+// 刀 D2（2026-09-29）：**技能面接线**（daemon `skills.list`——磁盘真技能目录）。
+// 契约（D1 题包同字）：出参**裸数组** `[{ name, description, path, source }]`；
+// `description` 可空（界面显「（无描述）」，勿以 labelKey 假造）；
+// `source` ∈ account／global／workspace（来源层级，仅作展示标签）。
+// 取数失败由调用方（`stores/tools.ts`）显式降级——**不得回落写死假清单**。
+export interface SkillEntry {
+  /** 技能目录名（即磁盘上的技能 id，如 `ui-designer`） */
+  name: string
+  /** 技能描述（可空——空 ⇒ 界面显「（无描述）」） */
+  description?: string | null
+  /** 技能目录路径（展示用；可空） */
+  path?: string | null
+  /** 来源层级：account／global／workspace（可空——未知源照原文展示） */
+  source?: string | null
 }

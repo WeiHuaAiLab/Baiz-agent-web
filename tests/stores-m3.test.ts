@@ -45,14 +45,17 @@ describe('M3 stores', () => {
     expect(localStorage.getItem('baiz.memoryScope')).toBe('all')
   })
 
-  it('tools：工具与技能开关可切换', () => {
+  it('tools：工具开关可切换；技能为**拉取式**（初值空——旧写死假清单已删）', () => {
     const tools = useToolStore()
     expect(tools.enabled['shell.exec']).toBe(true)
     tools.toggleTool('shell.exec')
     expect(tools.enabled['shell.exec']).toBe(false)
-    expect(tools.skills.length).toBeGreaterThan(0)
-    tools.toggleSkill('coding-discipline')
-    expect(tools.enabledSkills['coding-discipline']).toBe(false)
+    // 刀 D2（2026-09-29）：旧 KNOWN_SKILLS 四条写死假技能（coding-discipline 等·磁盘
+    // 不存在）已删 ⇒ 拉取前为空（**禁回落假清单**）；启停语义未开 ⇒ 无 enabledSkills／
+    // toggleSkill（**禁假开关**——点击无实效＝比没有更坏）。真链取数见 d2-skills-wire.test.ts。
+    expect(tools.skills).toEqual([])
+    expect('enabledSkills' in tools.$state).toBe(false)
+    expect((tools as unknown as Record<string, unknown>).toggleSkill).toBeUndefined()
   })
 
   it('files：mock 桥接读目录、读文件、上传解析', async () => {

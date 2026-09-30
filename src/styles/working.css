@@ -78,6 +78,43 @@
   gap: 4px;
 }
 
+/* **MSG-3575 · 预设项 UI**：预置项软隐藏提示条＋「清理预置项」入口
+   （全 token／圆角 8／间距 4 倍数——DESIGN.md §10 四条机判） */
+.preset-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin: 0 0 12px;
+  padding: 8px 12px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--surface);
+}
+
+.preset-bar-text {
+  font-size: 13px;
+  line-height: 1.6;
+  color: var(--muted);
+}
+
+.preset-clear {
+  flex: 0 0 auto;
+  padding: 4px 8px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: transparent;
+  color: var(--text-secondary);
+  font-size: 13px;
+  cursor: pointer;
+  transition: background 150ms, color 150ms;
+}
+
+.preset-clear:hover {
+  background: var(--hover);
+  color: var(--text);
+}
+
 /* 任务列表区域标题行：左侧标题 + 右侧刷新按钮（两端对齐） */
 .task-section-head {
   display: flex;
@@ -113,9 +150,8 @@
   background: var(--panel);
   border: 1px solid var(--border);
   border-radius: 12px;
-  padding: 16px;
+  padding: 24px;
   transition: border-color 150ms, box-shadow 150ms;
-  min-height: 120px;
 }
 
 .task-item:hover {
@@ -231,7 +267,10 @@
   background: var(--hover);
 }
 
-/* MSG-3511 S1：执行记录入口 + 展开块 + 顶部错误行（读 daemon 后新增） */
+/* MSG-3511 S1：执行记录入口 + 展开块 + 顶部错误行（读 daemon 后新增）
+   **1.0.28 · UI 整改**（规格件 `outputs\UI整改-定时任务详情-v1.0-20260925.md` §一/§三）：
+   本块按 `DESIGN.md` §10 四条机判**重写**——字号取集内 11/13；间距全 4 倍数；圆角取 4/8/12；
+   底色改**语义 token**（`--hover` ⇒ `--surface-2`；`--muted` ⇒ `--text-secondary`）。 */
 .task-runs-btn {
   flex: none;
   display: inline-flex;
@@ -239,46 +278,181 @@
   gap: 4px;
   padding: 4px 8px;
   border-radius: 8px;
-  font-size: 12px;
-  color: var(--muted);
+  font-size: 13px;
+  color: var(--text-secondary);
 }
 
 .task-runs-btn:hover {
   color: var(--text);
-  background: var(--hover);
+  background: var(--surface-2);
 }
 
 .task-runs {
   display: flex;
   flex-direction: column;
-  gap: 4px;
-  margin-top: 6px;
-  padding: 8px 10px;
-  border-radius: 8px;
-  background: var(--hover);
-  font-size: 12px;
-  color: var(--muted);
+  gap: 8px;
+  margin-top: 12px;
+  padding: 12px 16px;
+  border-radius: 12px;
+  background: var(--surface-2);
+  font-size: 13px;
+  color: var(--text-secondary);
   list-style: none;
 }
 
+/* 一层 ＝ 一次执行：行内 12px 竖向留白 ＋ 行间分隔线（首条不画） */
 .task-run-line {
+  padding: 12px 0;
+}
+
+.task-run-line:not(:first-child) {
+  border-top: 1px solid var(--border);
+}
+
+/* 状态徽章（规格件 §三）：未知态走中性 token——**不得伪装成功** */
+.run-badge {
+  flex: none;
+  padding: 4px 8px;
+  border-radius: 4px;
+  font-size: 11px;
+  line-height: 1.4;
+  color: var(--text-secondary);
+  background: var(--surface-2);
+}
+
+.run-badge.tone-ok {
+  color: var(--success-text);
+  background: color-mix(in srgb, var(--success) 12%, transparent);
+}
+
+/* 对比度实测（WCAG 2.x·sRGB 合成·12% 底 over `--surface-2`）：
+   `--danger` 作文字 **亮色仅 3.61:1／`--warning` 仅 1.78:1** ⇒ 不达规格件 §四「≥4.5:1」
+   ⇒ 按 **DESIGN.md 附一.4「`--*-text` 补偿 token」既有先例**取同族补偿色：
+   `--risk-high-text` ＝ **亮 4.84:1／暗 6.58:1**；`--risk-medium-text` ＝ **亮 5.87:1／暗 7.97:1**。 */
+.run-badge.tone-fail {
+  color: var(--risk-high-text);
+  background: color-mix(in srgb, var(--danger) 12%, transparent);
+}
+
+.run-badge.tone-running {
+  color: var(--risk-medium-text);
+  background: color-mix(in srgb, var(--warning) 12%, transparent);
+}
+
+.run-badge.tone-unknown {
+  color: var(--text-secondary);
+  background: var(--surface-2);
+}
+
+/* 行首：徽章 ＋ 单行摘要（溢出省略） ＋ 右侧「查看结果」 */
+.task-run-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.task-run-summary {
+  flex: 1 1 auto;
+  min-width: 0;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
 }
 
+/* 结果全文块：等宽／可折行／限高可滚（模板另补 `tabindex`＋`aria-label`） */
+.task-run-full {
+  margin: 8px 0 0;
+  padding: 12px 16px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--code-bg);
+  font: 13px/1.5 'Cascadia Code', Consolas, monospace;
+  white-space: pre-wrap;
+  word-break: break-word;
+  max-height: 240px;
+  overflow: auto;
+}
+
+/* 展开面板：仅「已展开」时承载该次全文（同一段**只出现一次**） */
+.task-run-result {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.task-run-result > .task-run-full {
+  margin-top: 0;
+}
+
+/* 次按钮：视觉高 36，热区 ≥44×44——用伪元素扩，**不撑视觉高度**（DESIGN.md 附一.3） */
+.task-run-open {
+  position: relative;
+  flex: none;
+  min-height: 36px;
+  padding: 8px 16px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: transparent;
+  font-size: 13px;
+  color: var(--text);
+  cursor: pointer;
+  transition: background 150ms, box-shadow 150ms;
+}
+
+.task-run-open:hover {
+  background: var(--surface-2);
+}
+
+.task-run-open:active {
+  background: var(--hover);
+}
+
+.task-run-open:focus-visible {
+  box-shadow: var(--shadow-focus);
+}
+
+.task-run-open:disabled {
+  color: var(--text-secondary);
+  cursor: not-allowed;
+}
+
+.task-run-open::after {
+  content: '';
+  position: absolute;
+  inset: -4px -8px;
+}
+
+.task-run-loading {
+  font-size: 13px;
+  color: var(--text-secondary);
+}
+
+.task-run-empty {
+  padding: 16px;
+  border: 1px dashed var(--border);
+  border-radius: 8px;
+  font-size: 13px;
+  color: var(--text-secondary);
+}
+
 .task-runs-empty {
-  color: var(--muted);
+  color: var(--text-secondary);
 }
 
 .task-runs-error,
 .scheduled-error {
-  margin-top: 6px;
-  padding: 8px 10px;
+  margin-top: 12px;
+  padding: 12px 16px;
+  border-left: 3px solid var(--danger);
   border-radius: 8px;
-  font-size: 12px;
-  color: var(--danger);
-  background: var(--hover);
+  font-size: 13px;
+  /* 对比度实测：`--danger` 文字亮色 4.28:1（贴线不合格）⇒ 取 `--risk-high-text`
+     （亮 5.73:1／暗 7.92:1·同为 DESIGN.md 附一.4 补偿先例）；左边线仍用 `--danger` 本体。 */
+  color: var(--risk-high-text);
+  background: color-mix(in srgb, var(--danger) 8%, transparent);
 }
 
 /* 内联新建任务表单（Settings 风格：label + 全宽输入框 + 行尾操作按钮） */
@@ -521,4 +695,25 @@
   bottom: -1px;
   height: 2px;
   background: var(--accent);
+}
+
+/* 1.0.28 · 详情面响应式（规格件 §四）：窄屏收紧全文高并允许行首换行；宽屏回到 240 */
+@media (max-width: 639px) {
+  .task-item {
+    padding: 16px;
+  }
+
+  .task-run-full {
+    max-height: 160px;
+  }
+
+  .task-run-head {
+    flex-wrap: wrap;
+  }
+}
+
+@media (min-width: 1024px) {
+  .task-run-full {
+    max-height: 240px;
+  }
 }

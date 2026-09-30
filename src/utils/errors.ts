@@ -6,6 +6,8 @@ export type FriendlyErrorKey =
   | 'sessionExpired'
   /** DEBT-743：知识库（WeKnora）未配置——引导去设置页填 base_url＋api_key */
   | 'kbNotConfigured'
+  /** DEBT-873：**被安全策略拒绝**（沙箱／许可面）——与 `network` **分家**。 */
+  | 'policyDenied'
   | 'invalidParams'
   | 'methodNotFound'
   | 'taskNotFound'
@@ -27,6 +29,31 @@ export function isSessionExpiredMessage(message: string): boolean {
 }
 
 /**
+ * DEBT-873：**安全策略拒绝**分型（许可面口径）。
+ *
+ * 只认**策略专属词**（沙箱／安全策略／policy／sandbox）——照 `authFailure.ts`／
+ * `failureText.ts` 同法："看着像就归"一律禁。故：
+ *   · `Permission denied`／`Access is denied (os error 5)` 一类**系统权限·IO 面**
+ *     **不**归本件（那是文件不可读，走既有预览人话），本件只认**策略拒绝**；
+ *   · 裸 `denied`／`401`／`403` **不**归本件（鉴权族另有专径）。
+ */
+const POLICY_DENIED_RE =
+  /沙箱|安全策略|策略拒绝|策略拦截|policy\s*(?:deny|denied|denies|violation|blocked|refus)|denied\s*by\s*(?:the\s+)?(?:policy|sandbox)|blocked\s*by\s*(?:the\s+)?(?:policy|sandbox)|sandbox\s*(?:deny|denied|denies|block|reject|violation)/i
+
+/** 该文案是否＝**被安全策略拒绝**（非网络／服务失败；**终态**——不会自己好转） */
+export function isPolicyDenied(text: string | undefined | null): boolean {
+  return POLICY_DENIED_RE.test(String(text ?? ''))
+}
+
+/**
+ * 策略拒绝的**人话**——**单一句源**：字幕（`stores/message.ts`）与工具行
+ * （`utils/commandTranslator.ts`）这两个**非 i18n 面**同用此句；i18n 面
+ * （toast／页头）用 `errors.policyDenied`（zh-CN／en-US）同义文案。
+ * 三处口径一致：①说是**策略拒绝**不是网络；②说明**下一步**；③**不承诺重试**。
+ */
+export const POLICY_DENIED_HUMAN = '被安全策略拒绝（不是网络或服务失败）——这条不会自动重试，需要先放行（审批卡「申请放行」或「设置 → 工作区」授权目录）'
+
+/**
  * MSG-3218 ①：列目录失败文案归一（**禁静默兜空**）。
  * 壳侧原文形＝`目录读取失败: {os error}`（`src-tauri/src/host.rs:67`）——原文一律透传，
  * 仅在缺前导时补 `目录读取失败：`，并在缺"怎么修"时补一句可行动指引。
@@ -41,6 +68,13 @@ export function dirReadFailedText(key: string, error: unknown): string {
 
 export function mapRpcError(error: unknown): { key: FriendlyErrorKey; detail: string } {
   const raw = error instanceof Error ? error.message : String(error)
+  // DEBT-873：**策略拒绝先于码面分流**——沙箱拒可随任意 JSON-RPC 码到达
+  // （daemon 侧拒执行多为 `-32603`＝internal），只按码走会把"被策略拒"显成
+  // 「服务内部错误」。会话失效族**除外**（照 `failureText.ts` 同法——该族另有
+  // 「重新登录」专径，不得被本件吞）。
+  if (isPolicyDenied(raw) && !isSessionExpiredMessage(raw)) {
+    return { key: 'policyDenied', detail: raw }
+  }
   if (error && typeof error === 'object' && 'code' in error) {
     const code = (error as { code: number }).code
     if (code === -32002) {
@@ -52,7 +86,10 @@ export function mapRpcError(error: unknown): { key: FriendlyErrorKey; detail: st
     if (code === -32001) return { key: 'taskNotFound', detail: raw }
     if (code === -32700 || code === -32600 || code === -32603) return { key: 'internal', detail: raw }
   }
-  if (/failed to fetch|network|load failed|connect|denied/i.test(raw)) {
+  // DEBT-873：旧式此处含 `denied` ⇒ **把"被拒"一律显成「无法连接 daemon，请检查网关设置」**
+  // （凭据面真因被网络话术盖掉，用户去查网关——本债之根）。`denied` 已摘除：
+  // 策略拒绝走上分流；其余 `denied` 落 `unknown`（原文照透，不谎称网络）。
+  if (/failed to fetch|network|load failed|connect/i.test(raw)) {
     return { key: 'network', detail: raw }
   }
   return { key: 'unknown', detail: raw }

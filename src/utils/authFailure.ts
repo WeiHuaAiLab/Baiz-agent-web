@@ -6,6 +6,9 @@
 //   · **禁用**「回复为空」「超时」冒充鉴权失败（本件对二者恒返回 false）；
 //   · **禁把密钥原文上屏**：原因片段一律经 `maskedReason()` 过一遍（服务端已掩码形态照旧保留）。
 
+// 补席 B（KIMI 点名②-b）：登录面文案走 i18n（改前硬编码中文 ⇒ en-US 用户看中文）
+import { t } from '../locales/runtime'
+
 /** 鉴权/授权类字面（401/403/Unauthorized/invalid）——须与 engine 分型词**同时**命中 */
 const AUTH_TOKEN = /(?:^|[^0-9])(401|403)(?:[^0-9]|$)|unauthorized|invalid/i
 /** engine 一类分型词（防"空回复/超时"冒充） */
@@ -49,4 +52,119 @@ export function modelDisplayName(model: string | undefined | null): string {
 /** 身份未建立（未登录面）：**空 uid** ⇒ true（已持有令牌但身份未建立也算） */
 export function isIdentityMissing(userId: string | undefined | null): boolean {
   return String(userId ?? '').trim().length === 0
+}
+
+// ── 令·补24 P0-5：`-32002` 带回登录出口 ──
+//
+// 病灶：`-32002` 若经 **SSE `error` 帧**（而非 RPC 抛错）到达，改前一律落 `errors.unknown`
+// ＋ daemon 原文——**只报不说去哪**，用户无从下手（RPC 抛错径早有「重新登录」钮，帧径没有）。
+//
+// 口径：daemon 在错误帧 `data` 上带 `login_hint` ⇒ 本条错属**身份/会话面**，
+// 该条消息处须给**可点「去登录」**。本函数是**唯一判据点**（纯函数·可机判）。
+//
+// 三条自我约束（照本文件 `isModelAuthFailure` 同法：禁"看着像就归"）：
+//   ① **只认字段本身**——不去猜 `message` 里像不像登录错（那是 `errors.ts` 的语义分流面，另一径）；
+//   ② 只认 **非空字符串** 或 **`true`**（daemon 给文案或给旗标皆可）；其余（空串／空白／数字／
+//      对象／`false`／`null`）一律**不算**——空值当"有"会把出口撒得到处都是；
+//   ③ 字段**原文不上屏**（只当存在性判据）——上屏走 i18n，防 daemon 内部号／URL 漏到界面。
+export function hasLoginHint(hint: unknown): boolean {
+  if (hint === true) return true
+  return typeof hint === 'string' && hint.trim().length > 0
+}
+
+// ── T3／DEBT-875(a)：「乱输入也能登录」的**前端面**闸 ──
+//
+// 病灶（DEBT-875 原文 · 测试员 T3a）：`LoginView.vue` 改前对账号密码**只判非空、不判形态**——
+// `:disabled="auth.loading || !email || !password"` 连「纯空白串」都挡不住（`'   '` 是 JS 真值），
+// 更遑论 `asdf` 这类明显不是账号的输入：一律原样发给后端。
+//
+// **本闸只拦"明显非法"**：空／纯空白／无 @／多 @／@ 两侧缺／域名无点／含空白字符。
+// 三条自我约束（勿越界）：
+//   ① **不做**口令复杂度、长度、字符集策略——那是口径决策，不是前端该自拟的东西；
+//   ② **不替代**后端校验——前端闸从来不是安全边界，后端**仍须独立校验**（本条不改后端）；
+//   ③ 判据是**纯函数**，故可机判、可单测，不依赖组件挂载。
+
+/**
+ * 账号形态判据：**只认明显非法** ⇒ true。
+ *
+ * 邮箱形有据：`LoginView.vue:5` 的登录提示（"请使用 https://kb.ruiac.net/ 的账号登录"）
+ * 与 `:20` 的 `placeholder="邮箱"`，且 `stores/auth.ts:167` 的别名写入点即按「邮箱形／归一形」
+ * 登记 ⇒ 本产品的账号**就是邮箱形**。
+ * 若日后放开非邮箱用户名，**只需放宽本函数**（唯一判据点），组件与测试无须动。
+ */
+export function isObviouslyInvalidAccount(raw: string): boolean {
+  const value = String(raw ?? '').trim()
+  if (!value) return true
+  if (/\s/.test(value)) return true
+  const parts = value.split('@')
+  if (parts.length !== 2) return true
+  const [local, domain] = parts
+  if (!local) return true
+  // 域名须至少一段点分层级（`a@b` 属明显非法；`a@b.c` 放行）
+  return !/^[^@.\s]+(\.[^@.\s]+)+$/.test(domain)
+}
+
+/**
+ * 登录表单校验（纯函数·可机判）：**空串＝通过**；否则返回**人话**（组件直接上屏）。
+ * 顺序固定：先账号后口令——一次只说一条，免得两句同时挂着让人不知道先改哪个。
+ *
+ * 补席 B（KIMI 点名②-b）：三句**走 i18n**（`login.*`）——改前是硬编码中文，
+ * en-US 用户切了语言、登录页仍出中文（＝文案没走 i18n）。判据面**零行为变化**：
+ * 未登记 i18n 面（单测）按 `locales/runtime.ts` 口径回落 zh-CN 源文案，字面与改前逐字一致。
+ */
+export function validateLoginInput(account: string, password: string): string {
+  if (!String(account ?? '').trim()) return t('login.needAccount')
+  if (isObviouslyInvalidAccount(account)) return t('login.badAccount')
+  if (!String(password ?? '').trim()) return t('login.needPassword')
+  return ''
+}
+
+// ── 补席 B（KIMI 点名②-a）：登录失败的**传输面／5xx** 分型 ──
+//
+// 病灶：`stores/auth.ts:199-204` 把 `e.message`（剥 RPC 前缀后）**原样透传上屏**，
+// 只在命中 `mock|password|token|secret|key` 时才回落通用词 ⇒ 下列机器语**照上屏**：
+//   · web 径 fetch 失败 ⇒ `Failed to fetch`（浏览器英文原话，用户看不懂）；
+//   · `/stream` 非 2xx ⇒ `http stream failed: 500`（`client/transports/http.ts:57`）；
+//   · 壳未连通 ⇒ `transport not connected`（`client/transports/tauri.ts:174`）；
+//   · 未配网关且未开演示 ⇒ `未连接本地服务：…VITE_BAIZ_GATEWAY…`（`client/factory.ts:43,67`
+//     ——把环境变量名糊到用户脸上）；
+//   · 5xx 正文非 JSON ⇒ `response.json()` 解包即败（`http.ts:72`）：`Unexpected token '<' …`。
+// 这些**都不是**"账号密码错"，也不该让用户去猜 —— 一律转人话（`login.unreachable`）。
+//
+// 判据纪律：**逐字面型**（上列各条＋同族通用名）——照本仓 `utils/errors.ts` 的
+// `POLICY_DENIED_RE`／`authFailure.ts` 的 `ENGINE_HINT` 同法："看着像就归"一律禁。
+// **不**按裸数字判 5xx（`\b5\d\d\b` 会把"500 字节"这类计数误归 ⇒ 反而盖掉真因）。
+const TRANSPORT_FAILURE_RE = new RegExp(
+  [
+    'failed to fetch', // 浏览器 fetch 失败（网络不通／被拦／DNS）
+    'network\\s*error', // Firefox 实形 `NetworkError when attempting to fetch resource`／RN 同族
+    'network request failed',
+    'load failed', // Safari 同族
+    'http stream failed', // 本仓 http.ts:57（5xx 的 status 原文挂在此句尾）
+    'transport not connected', // 本仓 tauri.ts:174（壳未连通）
+    '未连接本地服务', // 本仓 factory.ts:43,67（未配网关、未开演示）
+    'econnrefused',
+    'etimedout',
+    'network is unreachable',
+    'connection refused',
+    'connection reset',
+    'connection closed',
+    'timed out',
+    'timeout',
+    '超时',
+    'unexpected token', // 5xx 非 JSON 正文 ⇒ json() 解包失败
+    'is not valid json',
+    'malformed rpc response', // 本仓 http.ts:77（应答不成形）
+  ].join('|'),
+  'i',
+)
+
+/**
+ * 是否「连不上服务／服务端没给出可用应答」一族（**非**账号密码错）。
+ * 纯函数·可机判；命中的调用方应上屏**人话**（`login.unreachable`），不得透传原文。
+ */
+export function isTransportFailure(text: string | undefined | null): boolean {
+  const raw = String(text ?? '')
+  if (!raw.trim()) return false
+  return TRANSPORT_FAILURE_RE.test(raw)
 }

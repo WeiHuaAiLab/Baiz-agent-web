@@ -39,6 +39,37 @@ export async function sha256Hex(text: string): Promise<string> {
     .toUpperCase()
 }
 
+// ── T11／DEBT-872：**大附件**的单件限值契约（**8 MiB**） ──
+//
+// 限值**有据·非自拟**：`src/bridge/web.ts:95-99` 的 web 形态护栏原文即
+// 「MSG-2893 DEBT-597 目④：8MB 护栏 web 形态对齐（壳 `MAX_ATTACH_BYTES` 8MiB——
+// web 无——超限拒（错误告知——勿静默截）」。
+// 本件把该上限**上提到共享面**：picker 与拖拽两条入径、web 与 tauri 两种形态**同一判据**。
+// 改前只有 web-picker 一处设闸，**拖拽径完全无闸**（8M 拖入 ⇒ 无提示、无进行态、静默卡住）。
+//
+// **不发明总量上限**：本场无任何「多条并列总量」上限的契约依据 ⇒ 只**照实显示**当前体积
+// 供人判断，不自行发明第二道闸（越权的限值 = 另一种静默）。
+/** 单件附件上限（8 MiB）——与壳 `MAX_ATTACH_BYTES`／web 护栏同源 */
+export const MAX_ATTACHMENT_BYTES = 8 * 1024 * 1024
+
+/** 超限判据（纯函数·可机判）：**严格大于**才算超（等于上限放行——与 web.ts 的 `>` 同口径） */
+export function isAttachmentOverLimit(size: number): boolean {
+  return Number.isFinite(size) && size > MAX_ATTACHMENT_BYTES
+}
+
+/** 上限的人话形态（界面复用；避免各处硬编 "8MB" 字样漂移） */
+export function attachmentLimitText(): string {
+  return formatFileSize(MAX_ATTACHMENT_BYTES)
+}
+
+/**
+ * 超限人话（T11 目③：**说明限值与该怎么做**）——点名文件、给实测体积、给限值、给下一步。
+ * 措辞口径照 `utils/errors.ts:dirReadFailedText` 例（人话在 utils 里成形、store 直接上屏）。
+ */
+export function overLimitNotice(name: string, size: number): string {
+  return `附件「${name}」${formatFileSize(size)} 超过单件上限 ${attachmentLimitText()}，未读入内容；请换更小的文件，或先压缩后重传`
+}
+
 /** 首行预览（去空白、截断）——上传后回显用（让用户当场确认，杜绝"错配无感知"） */
 export function firstLineOf(text?: string, max = 80): string {
   if (!text) return ''

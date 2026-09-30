@@ -24,6 +24,15 @@ const state = computed(() => kb.status)
  * 只有**读回成功且服务端判未配置**才落「未配置」；首帧也不谎称（显「读取中…」）。
  */
 const stateLabel = computed(() => {
+  // **T3／DEBT-875(b)**：`load()` 因**无令牌无身份**而未读（A1①）⇒ 此刻的 `unconfigured`
+  // 含义是"**读不到**"而非"**没配过**"——不得混为一谈。
+  // 原因**由 store 自报**（`kb.unreadReason`），**不在此重抄判据**——首跑即栽在重抄上：
+  // 当时抄的是 `!auth.loggedIn`，而"有 uid 无令牌"的夹具 `loggedIn` 为假 ⇒ 真读回也被说成读不到，
+  // `a8-kbconfig-tri-state.test.ts:79` 当场转红。**判据只此一处的权威在 store**。
+  // 只改**文案**、不动 store 的 `status`（A1 的钉桩断言因此逐字不变），也不泄任何值。
+  if (kb.unreadReason === 'unauthenticated' && kb.status === 'unconfigured') {
+    return t('settings.kb.stateUnread')
+  }
   switch (kb.status) {
     case 'ready':
     case 'saved':

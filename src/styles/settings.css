@@ -142,6 +142,68 @@
   border-color: var(--danger);
 }
 
+/* **MSG-3577 · P9**：「重置演示数据」护栏面板（全 token／圆角 8／间距 4 倍数） */
+.demo-reset-panel {
+  margin: 8px 0 0;
+  padding: 12px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--surface);
+}
+
+.demo-reset-title {
+  margin: 0 0 8px;
+  font-size: 13px;
+  line-height: 1.6;
+  color: var(--text);
+}
+
+.demo-reset-list {
+  margin: 0 0 8px;
+  padding-left: 20px;
+  font-size: 12px;
+  line-height: 1.7;
+  color: var(--muted);
+}
+
+.demo-reset-key {
+  font-family: var(--mono, monospace);
+}
+
+.demo-reset-keeps {
+  color: var(--text-secondary);
+}
+
+.demo-reset-backup {
+  margin: 0 0 8px;
+  font-size: 12px;
+  line-height: 1.6;
+  color: var(--muted);
+}
+
+.demo-reset-field {
+  display: block;
+  margin: 0 0 8px;
+}
+
+.demo-reset-field input {
+  width: 100%;
+  margin-top: 4px;
+  padding: 4px 8px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--bg);
+  color: var(--text);
+  font-size: 13px;
+}
+
+.demo-reset-notice {
+  margin: 8px 0 0;
+  font-size: 12px;
+  line-height: 1.6;
+  color: var(--danger);
+}
+
 .memory-msg {
   margin-left: 12px;
   font-size: 13px;
@@ -199,7 +261,9 @@
   font-size: 13px;
 }
 
-.fact-source {
+/* R2 波三（DEBT-876）：来源与时间同族——次级信息，同字号同色 */
+.fact-source,
+.fact-time {
   display: block;
   font-size: 11px;
   color: var(--muted);
@@ -712,4 +776,3 @@
   opacity: 0.55;
   cursor: default;
 }
-

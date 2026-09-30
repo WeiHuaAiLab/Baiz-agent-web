@@ -7,7 +7,6 @@ import { useI18n } from 'vue-i18n'
 import { type TaskItem } from '../../stores/workspace'
 import { useUiStore } from '../../stores/ui'
 import { useAuthStore } from '../../stores/auth'
-import { isIdentityMissing } from '../../utils/authFailure'
 import { useRouter } from 'vue-router'
 import { getClient } from '../../client/singleton'
 import {
@@ -20,8 +19,8 @@ import {
   runStatusLabel,
 } from '../../utils/scheduleWire'
 import type { ScheduleRun } from '../../client/types'
-import { useSessionStore } from '../../stores/session'
 import { scheduleText } from '../../utils/tasks'
+import { splitPresetItems } from '../../utils/presetItems'
 import Icon from '../common/Icon.vue'
 import EmptyCompents from '../common/EmptyCompents.vue'
 
@@ -29,14 +28,14 @@ const { t } = useI18n()
 const ui = useUiStore()
 const auth = useAuthStore()
 const router = useRouter()
-const session = useSessionStore()
 
 /** MSG-3558 ③（老板 2026-09-24）：**未登录面（空 uid）**不得伪装成"你没建过"——
  *  daemon 侧对空账号 `schedule.list` 返**空表**（fail-closed），若照旧渲染空态，
  *  用户只会看到「暂无定时任务」而永远不知道该去登录。 */
-// 口径：**已持令牌但身份未建立**（daemon 空 uid 面）——纯未登录态由登录闸/reouter 处理，
-// 故这里以 `loggedIn && 空 uid` 为判（既有"scheduledView 空表 ⇒ 空态"用例不受扰）。
-const identityMissing = computed(() => auth.loggedIn && isIdentityMissing(auth.userId))
+// 口径：**已持令牌但身份未建立**（daemon 空 uid 面）——纯未登录态由登录闸/route 处理。
+// **MSG-3573 P1甲**：判据收口到 `auth.identityMissing`——**持久面命中（壳已认身份）而 uid
+// 暂空不再判「身份未建立」**（旧口径在此恒真＝假提示），改由 `ensureIdentityUserId()` 补 uid。
+const identityMissing = computed(() => auth.identityMissing)
 
 function goLogin() {
   void router.push('/login')
@@ -52,7 +51,12 @@ const runsError = ref<Record<string, string>>({})
 /** MSG-3561 C3：单次执行的**结果全文**（懒加载；缺省＝后端结果面未落地，回退 summary/error） */
 const runsFull = ref<Record<number, string>>({})
 
-const scheduledTasks = computed(() => remoteTasks.value)
+/** **MSG-3575 · 预设项 UI（甲/丙）**：预置项（id `preset-*`，首启自带的模板项）
+ *  **默认软隐藏**（不上屏、**不自动删**）；有则在列表上方给一行「已隐藏 N 个预置项」＋
+ *  「清理预置项」入口（清理须**用户点＋二次确认**，走 daemon **既有** `schedule.delete`）。 */
+const presetSplit = computed(() => splitPresetItems(remoteTasks.value))
+const scheduledTasks = computed(() => presetSplit.value.visible)
+const presetTasks = computed(() => presetSplit.value.presets)
 
 async function load() {
   loading.value = true
@@ -95,11 +99,38 @@ async function toggleRuns(task: TaskItem) {
   }
 }
 
-/** **MSG-3561 C3**：「打开该次会话」——落到定时任务的**镜像会话** `scheduled-<task_id>` */
-async function openRunSession(task: TaskItem) {
-  const id = `scheduled-${task.id}`
-  await session.createWithId(id, task.title || t('working.runsLabel'))
-  await router.push('/')
+/** **DEBT-885**：单次执行**结果面板**的展开态（点开才置——无结果时也给**明确空态**，不留白） */
+const runOpened = ref<Record<number, boolean>>({})
+/** 结果读取中的 run（懒加载：超出最近 3 条自动预取窗口的，点开时才拉 `schedule.run_detail`） */
+const runLoading = ref<Record<number, boolean>>({})
+
+/**
+ * **DEBT-885 甲案**：原「打开该次会话」跳**镜像会话** `scheduled-<task_id>`——而定时径
+ * `chat.send` 的消息**不进前端所读会话库** ⇒ **点进去是空会话**（"有执行记录却打不开"）。
+ * 现口径：本入口改为**展示该次执行的结果全文**（数据源＝既有 `schedule.run_detail`，
+ * 即 `loadRunDetail`——**不新增后端接口**）；无全文回退 `summary`／`error`；
+ * 三者皆无 ⇒ **明确空态**（`runResultEmpty`，**不得留白**）。
+ */
+async function toggleRunResult(task: TaskItem, run: ScheduleRun) {
+  const opened = { ...runOpened.value }
+  if (opened[run.id]) {
+    delete opened[run.id]
+    runOpened.value = opened
+    return
+  }
+  opened[run.id] = true
+  runOpened.value = opened
+  // 已预取（`toggleRuns` 的最近 3 条）或已拉过 ⇒ 不重复请求
+  if (runsFull.value[run.id] !== undefined) return
+  runLoading.value = { ...runLoading.value, [run.id]: true }
+  try {
+    const full = await loadRunDetail(getClient(), task.id, run.id)
+    runsFull.value = { ...runsFull.value, [run.id]: full }
+  } finally {
+    const busy = { ...runLoading.value }
+    delete busy[run.id]
+    runLoading.value = busy
+  }
 }
 
 /** 同一行人话：`状态 · 时间 [· 摘要/错误]` */
@@ -107,6 +138,16 @@ function runLine(r: ScheduleRun): string {
   const at = r.triggered_at > 0 ? new Date(r.triggered_at * 1000).toLocaleString() : '—'
   const extra = (r.error || r.summary || '').trim()
   return `${runStatusLabel(r.status)} · ${at}${extra ? `· ${extra}` : ''}`
+}
+
+/** **1.0.28 · UI 整改**（规格件 §三）：状态徽章四态——`ok`／`fail`／`running`／`unknown`。
+ *  **未知态走中性色**（`--text-secondary`＋`--surface-2`）——**不得伪装成功**。 */
+function runBadgeTone(r: ScheduleRun): 'ok' | 'fail' | 'running' | 'unknown' {
+  const s = (r.status || '').toLowerCase()
+  if (s === 'success' || s === 'once_done' || s === 'ok') return 'ok'
+  if (s === 'error' || s === 'failed' || s === 'fail') return 'fail'
+  if (s === 'running' || s === 'pending' || s === 'in_progress' || s === 'queued') return 'running'
+  return 'unknown'
 }
 
 /** 启停：接 daemon（失败人话·不改界面状态） */
@@ -140,6 +181,31 @@ async function removeTask(id: string) {
   }
 }
 
+/**
+ * **MSG-3575 · 预设项 UI（乙）**：**清理预置项**——**二次确认**后逐条走 daemon **既有**
+ * `schedule.delete`（不新增删除通道）；确认框写明「只删预置模板项、需要时可重建」。
+ * 部分失败**照实上屏**（不假装全清）。
+ */
+async function clearPresets() {
+  const presets = presetTasks.value
+  if (!presets.length) return
+  if (!window.confirm(t('working.clearPresetsConfirm', { n: presets.length }))) return
+  let failed = 0
+  for (const task of presets) {
+    try {
+      await getClient().scheduleDelete(task.id)
+    } catch {
+      failed += 1
+    }
+  }
+  await load()
+  if (failed > 0) {
+    ui.toast(t('working.clearPresetsPartial', { n: failed }), 'error')
+    return
+  }
+  ui.toast(t('working.clearPresetsDone', { n: presets.length }), 'success')
+}
+
 /** 任务是否开启（enabled 缺省视为开启） */
 function isEnabled(task: TaskItem): boolean {
   return task.enabled !== false
@@ -151,7 +217,14 @@ function createNew() {
 }
 
 let offSchedule: (() => void) | null = null
-onMounted(() => {
+onMounted(async () => {
+  // **MSG-3573 P1甲**：先补 uid（持久面 uid 暂空 ⇒ 再取一次壳身份态＋切库面＋重载本账号
+  // 列表），再拉 daemon 任务表——否则列表按"账号未知"落 `baiz-anon` 空表＝"像全新的"。
+  try {
+    await auth.ensureIdentityUserId()
+  } catch (e) {
+    loadError.value = humanizeRpcError(e)
+  }
   void load()
   offSchedule = onScheduleChanged(() => void load())
 })
@@ -183,6 +256,18 @@ onBeforeUnmount(() => {
         </button>
       </div>
     </header>
+
+    <!-- **MSG-3575 · 预设项 UI**：预置项默认软隐藏 ⇒ 一行说明＋「清理预置项」入口
+         （清理**须用户点**并二次确认；不点不删——零自动删除） -->
+    <div v-if="presetTasks.length" class="preset-bar" data-preset-bar="1">
+      <span class="preset-bar-text">{{ t('working.presetHidden', { n: presetTasks.length }) }}</span>
+      <button type="button" class="preset-clear" @click="clearPresets">
+        {{ t('working.clearPresets') }}
+      </button>
+      <!-- **DEBT-886**：发现性引导——软隐藏**≠ 人间蒸发**：讲清"仍在本地／为何看不到／怎么办"
+           （**零行为改动**：不自动显示、不自动删除） -->
+      <span class="preset-bar-hint">{{ t('working.presetHint') }}</span>
+    </div>
 
     <div v-if="scheduledTasks.length" class="task-list-wrap">
       <div class="task-section-head">
@@ -255,17 +340,51 @@ onBeforeUnmount(() => {
               {{ t('working.runsEmpty') }}
             </li>
             <li v-for="run in runsOf[task.id]" :key="run.id" class="task-run-line">
-              <div class="task-run-head">{{ runLine(run) }}</div>
+              <!-- **1.0.28 · UI 整改**（规格件 §二/§三）：行首 ＝ 状态徽章 ＋ **单行摘要** ＋
+                   右侧「查看结果」（次按钮·热区 ≥44×44 由 `::after` 扩）。 -->
+              <div class="task-run-head">
+                <span class="run-badge" :class="`tone-${runBadgeTone(run)}`" :data-run-badge="run.id">
+                  {{ runStatusLabel(run.status) }}
+                </span>
+                <span class="task-run-summary" :title="runLine(run)">{{ runLine(run) }}</span>
+                <!-- **DEBT-885 甲案**：原「打开该次会话」跳**镜像会话** `scheduled-<task_id>`——
+                     定时径消息不进前端所读会话库，**点进去是空会话**。现改为**展开该次结果全文**
+                     （面板见下）；无结果给**明确空态**（不留白）。 -->
+                <button
+                  type="button"
+                  class="task-run-open"
+                  :data-run-open="run.id"
+                  @click="toggleRunResult(task as TaskItem, run)"
+                >
+                  {{ runOpened[run.id] ? t('working.hideRunResult') : t('working.openRunResult') }}
+                </button>
+              </div>
               <!-- MSG-3561 C3：结果面**全文**（优先 `full_text`；后端未落地时回退 summary/error）
-                   ——**不再只显示 200 字截断**（渲染层零截断） -->
+                   ——**不再只显示 200 字截断**（渲染层零截断）。
+                   **1.0.28 整改**：展开面板已承载该次全文时，本块**不再渲染**（同一段只出现一次）；
+                   面板**未**展开时保持 C3「自动全文」面（既有已验断言面不动）。 -->
               <pre
-                v-if="runResultText(run, runsFull[run.id])"
+                v-if="runResultText(run, runsFull[run.id]) && !runOpened[run.id]"
                 class="task-run-full"
                 data-run-full="1"
+                tabindex="0"
+                aria-label="执行结果全文"
               >{{ runResultText(run, runsFull[run.id]) }}</pre>
-              <button type="button" class="task-run-open" @click="openRunSession(task as TaskItem)">
-                {{ t('working.openRunSession') }}
-              </button>
+              <div v-if="runOpened[run.id]" class="task-run-result" :data-run-result="run.id">
+                <p v-if="runLoading[run.id]" class="task-run-loading" role="status" aria-busy="true">
+                  {{ t('working.runResultLoading') }}
+                </p>
+                <pre
+                  v-else-if="runResultText(run, runsFull[run.id])"
+                  class="task-run-full"
+                  data-run-full="1"
+                  tabindex="0"
+                  aria-label="执行结果全文"
+                >{{ runResultText(run, runsFull[run.id]) }}</pre>
+                <p v-else class="task-run-empty" :data-run-empty="run.id">
+                  {{ t('working.runResultEmpty') }}
+                </p>
+              </div>
             </li>
           </ul>
         </li>

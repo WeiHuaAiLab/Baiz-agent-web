@@ -24,6 +24,9 @@ import { useFilesStore } from './stores/files'
 import { createRpcPreviewLoader } from './utils/filePreview'
 import zhCN from './locales/zh-CN'
 import enUS from './locales/en-US'
+// 补席 B（点名②-b）：把全局取词口登记给**非组件面**（store／纯函数）——否则登录败词、
+// 校验人话这类"非组件产生的文案"只能硬编码中文（en-US 用户看中文）
+import { setI18nRuntime } from './locales/runtime'
 import 'vue-virtual-scroller/dist/vue-virtual-scroller.css'
 import './styles/main.css'
 
@@ -45,6 +48,9 @@ const i18n = createI18n({
   fallbackLocale: 'zh-CN',
   messages: { 'zh-CN': zhCN, 'en-US': enUS },
 })
+// 补席 B（点名②-b）：登记全局取词口（**唯一接线点**）——此后 store／纯函数里的
+// 文案随 locale 走；未登记面（单测）按 `locales/runtime.ts` 的源文案口径回落 zh-CN。
+setI18nRuntime(i18n.global)
 
 // 错误信息监听
 window.addEventListener('error', (event) => {

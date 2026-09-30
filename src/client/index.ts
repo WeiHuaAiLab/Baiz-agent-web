@@ -8,6 +8,7 @@ import type {
   ApprovalPolicyResult,
   ApprovalRevokeParams,
   ApprovalRule,
+  ApprovalUndoParams,
   AuditExecModeChangedParams,
   AuthHandshakeParams,
   AuthLoginParams,
@@ -32,6 +33,7 @@ import type {
   ScheduleRunDetailParams,
   ScheduleRunDetailResult,
   ScheduleTask,
+  SkillEntry,
   WeknoraConfigResult,
   WeknoraSetConfigParams,
   WeknoraSetConfigResult,
@@ -61,6 +63,11 @@ export interface BaizClient {
   approvalRules(): Promise<ApprovalRule[]>
   /** 标准 §B：撤销规则——撤销后必重弹 */
   approvalRevoke(params: ApprovalRevokeParams): Promise<unknown>
+  /**
+   * **令·补24 P1-8**：撤销**已执行**的动作（契约先行）。
+   * daemon 回滚面未实装 ⇒ `-32601` ⇒ 调用方**人话降级**（禁假装成功）。
+   */
+  approvalUndo(params: ApprovalUndoParams): Promise<unknown>
   /** 标准 §B：可机判优先级表（设置页展示） */
   approvalPolicy(): Promise<ApprovalPolicyResult>
   /** 标准 §B：申请放行（升级≠免审——批准后仍走审批执行） */
@@ -89,6 +96,13 @@ export interface BaizClient {
   weknoraSetConfig(params: WeknoraSetConfigParams): Promise<WeknoraSetConfigResult>
   /** MSG-3503 A9：读记忆条目（`memory.list`——**只回本人**；零令牌 ⇒ 空表＋note） */
   memoryList(params?: MemoryListParams): Promise<MemoryListResult>
+  /**
+   * 刀 D2（2026-09-29）：读**技能清单**（daemon `skills.list`——磁盘真技能目录）。
+   * 契约（D1 题包同字）：出参**裸数组** `[{ name, description, path, source }]`。
+   * 服务端未就绪（-32601）⇒ 调用方（`stores/tools.ts`）显「未就绪」；
+   * **禁回落写死假清单**（旧 KNOWN_SKILLS 四条假技能已删——假数据比没有更坏）。
+   */
+  skillsList(): Promise<SkillEntry[]>
   /**
    * MSG-3189 `E2②`：切档审计（**契约先行**）——口径 `audit.execModeChanged`，
    * 字段 `mode／previous／at／account`。daemon 面未落地前调用会失败（-32601），
@@ -179,6 +193,8 @@ export function createClient(transport: RpcTransport): BaizClient {
       return Array.isArray(result?.rules) ? result.rules : []
     },
     approvalRevoke: (params) => rpc.call('approval.revoke', params),
+    // 令·补24 P1-8：撤销已执行动作（daemon 回滚面·契约先行；未实装时 -32601 ⇒ 界面人话）
+    approvalUndo: (params) => rpc.call('approval.undo', params),
     approvalPolicy: () => rpc.call('approval.policy'),
     approvalEscalate: (params) => rpc.call('approval.escalate', params),
     a2aStatus: () => rpc.call('a2a.status'),
@@ -218,6 +234,9 @@ export function createClient(transport: RpcTransport): BaizClient {
     // MSG-3503 A9：daemon 侧 1.0.22 起实装 `memory.list`（只读·只回本人）；
     // 未实装时回 -32601 ⇒ 界面显「服务端未就绪」（禁静默假成功）
     memoryList: (params) => rpc.call<MemoryListResult>('memory.list', params ?? {}),
+    // 刀 D2（2026-09-29）：daemon `skills.list`（磁盘真技能目录·契约与 D1 同字）；
+    // 未实装时回 -32601 ⇒ store 显「服务端未就绪」（禁静默假成功／禁回落假清单）
+    skillsList: () => rpc.call<SkillEntry[]>('skills.list'),
     auditExecModeChanged: (params) => rpc.call('audit.execModeChanged', params),
     onEvent: (handler) => transport.onEvent(handler),
     close: () => transport.close(),

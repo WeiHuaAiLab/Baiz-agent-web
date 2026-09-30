@@ -1,6 +1,12 @@
 // 会话 store：会话 CRUD、置顶排序、草稿清理，IndexedDB 持久化。
 import { defineStore } from "pinia";
-import { db, legacyDbSummary } from "../db";
+import {
+    countAccountConversationsRaw,
+    currentDbAccount,
+    db,
+    legacyDbSummary,
+    readConversationsUnion,
+} from "../db";
 import { importLegacyIntoCurrent, isImported } from "../db/migrate";
 import type { Conversation } from "../models";
 
@@ -30,6 +36,14 @@ async function legacyNoticeText(): Promise<string> {
     return text;
 }
 
+/**
+ * **令·1.0.30 T批 · T4**：读面异常人话——`load()` 读回**空**、独立通道证**库非空**、
+ * **重试一次后仍空** ⇒ 上屏此句（**不静默空态**）。与 `legacyNotice` 同族（硬编码中文，
+ * 照本文件既有口径；上屏面＝`ChatPanel.vue` 的 `[data-load-notice="1"]`）。
+ */
+export const LOAD_RETRY_FAILED_TEXT =
+    "会话列表本次未读到（已自动重试一次）——数据未删；请重开应用或重新登录后再看";
+
 function cloneForDb<T>(value: T): T {
     return JSON.parse(JSON.stringify(value)) as T;
 }
@@ -54,6 +68,11 @@ export const useSessionStore = defineStore("session", {
         activeId: "",
         /** MSG-3485：旧版（无账号段）会话的显式提示（空串＝无） */
         legacyNotice: "",
+        /**
+         * **令·1.0.30 T批 · T4**：读面异常人话（空串＝无）——读空而库非空、重试后仍空 ⇒ 置此。
+         * 与 `legacyNotice` 同族上屏（`ChatPanel.vue`·`data-load-notice="1"`），**不静默空态**。
+         */
+        loadNotice: "",
     }),
     getters: {
         active(state): Conversation | null {
@@ -72,7 +91,23 @@ export const useSessionStore = defineStore("session", {
             } catch (error) {
                 console.warn("[baiz] 旧库只增导入失败（不影响本次加载）", error);
             }
-            const rows = await db.conversations.toArray();
+            // **MSG-3573 P2**：读径＝同账号**两字面形并读**（当前稳定段库优先＋各字面旧口径段库
+            // 只读并入·同 id 去重）；写径仍落当前形（`db` 懒门面）——零删除、零改写、零新建。
+            const account = currentDbAccount();
+            let rows = await readConversationsUnion(account);
+            this.loadNotice = "";
+            // **令·1.0.30 T批 · T4**（真机 R4「退出登录→再登 ⇒ 会话历史消失」，重开/重登又恢复）：
+            // **读面空 ≠ 数据不在**——账号段切换／库打开时序未就绪时读径会读回空，旧口径直接
+            // 采信（无重试、无提示）＝静默空态。判据取**独立 raw 通道**（`countAccountConversationsRaw`，
+            // 绕开 Dexie 懒门面）：库确非空 ⇒ **重试一次**；重试后仍空 ⇒ **上屏人话**（不静默空态）。
+            // 库真空／不可判（`-1`）⇒ 不重试不提示（防误报；不可判即不猜）。
+            if (rows.length === 0) {
+                const onDisk = await countAccountConversationsRaw(account);
+                if (onDisk > 0) {
+                    rows = await readConversationsUnion(account);
+                    if (rows.length === 0) this.loadNotice = LOAD_RETRY_FAILED_TEXT;
+                }
+            }
             rows.sort((a, b) => {
                 const pinnedA = a.pinnedAt ?? 0;
                 const pinnedB = b.pinnedAt ?? 0;

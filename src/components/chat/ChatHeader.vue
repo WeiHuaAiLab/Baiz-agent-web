@@ -12,6 +12,7 @@ import { useSettingsStore } from '../../stores/settings'
 import { useUiStore } from '../../stores/ui'
 import { downloadText, exportConversation } from '../../utils/export'
 import { isModelAuthFailure } from '../../utils/authFailure'
+import { isPolicyDenied } from '../../utils/errors'
 import Icon from '../common/Icon.vue'
 
 const { t } = useI18n()
@@ -58,10 +59,10 @@ function doExport(format: 'md' | 'json') {
     const done = downloadText(filename, content)
     ui.toast(t('chat.exportDone', { name: done.filename, dir: done.hint }), 'success')
   } catch (error) {
-    ui.toast(
-      t('chat.exportFailed', { msg: error instanceof Error ? error.message : String(error) }),
-      'error',
-    )
+    const msg = error instanceof Error ? error.message : String(error)
+    // DEBT-873（许可面口径）：下载被**安全策略**拦 ⇒ **不得**显成「导出失败」（那是把策略
+    // 拒绝说成下载故障）；如实说是哪一类＋下一步（放行／授权）。
+    ui.toast(isPolicyDenied(msg) ? t('errors.policyDenied') : t('chat.exportFailed', { msg }), 'error')
   }
   exportOpen.value = false
 }
