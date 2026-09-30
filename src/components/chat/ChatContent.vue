@@ -59,8 +59,9 @@ let contentRo: ResizeObserver | null = null;
 // 三个设计取舍：
 //   - 折叠头点击只抑制循环、不进 user_lock——用户对当前阅读位置做高度调整，
 //     不应因此锁死滚动；靠 PIN_SUPPRESS_MS 时间窗吸收 RO 重排即可。
-//   - 非流式期 requestUserLock 被内部吸收为 requestAutoPin——非流式期无新
-//     内容可追，强拉底无意义且破坏阅读位置。
+//   - 非流式期滚动离开底部同样进 user_lock——若吸收为 auto，虚拟列表在新
+//     视口渲染 item、RO 异步测高会触发贴底回调把视口拽回底部（触顶即跳回
+//     底部的实测 bug）；滚回底部/发消息/点按钮才恢复 auto。
 //   - scrubber 跳转不主动调 requestUserLock——onScroll 会自然判定 atBottom：
 //     跳到底 ⇒ auto；跳非底 ⇒ user_lock。主动调会产生 1 帧窗口期不一致。
 
@@ -97,11 +98,10 @@ function requestAutoPin(reason: PinReason) {
 }
 
 function requestUserLock(reason: PinReason) {
-    if (streamingRuns.value.length === 0) {
-        // 非流式期：无真锁定需求——内容已稳，强拉底无意义
-        requestAutoPin(reason);
-        return;
-    }
+    // 非流式期同样真锁定：滚到顶部/中部时若吸收为 auto 贴底，虚拟列表
+    // 在新视口渲染 item、RO 异步测高会触发高度变化回调 ⇒ scrollToBottom
+    // 把视口拽回底部（实测"触顶选 0 段后猛跳到底"）。锁定即保持阅读位置；
+    // 用户滚回底部/发消息/点滚到底按钮才恢复 auto。
     pinMode.value = "user_locked";
     stopPinLoop();
 }

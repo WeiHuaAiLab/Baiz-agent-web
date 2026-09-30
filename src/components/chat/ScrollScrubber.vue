@@ -14,7 +14,10 @@
 //   6) 显示门槛：滚动内容高度 > 视口 × 3 才显示，避免短消息干扰；
 //      **窄屏门**：滚动容器 clientWidth < 900px 时也不显示——窄屏左右已经很挤，
 //      多挂一个 100px 浮栏会侵占消息列宽、与悬浮滚动条叠位更糟；
-//   7) 用户点击/拖滚动条的非贴底位置后，自动 unpin（onScroll 走贴底判定）。
+//   7) 用户点击/拖滚动条的非贴底位置后，自动 unpin（onScroll 走贴底判定）；
+//   8) **延迟渲染（懒加载）**：容器数据加载完毕、程序贴底置底后不渲染；
+//      从贴底静止起，用户**第 2 次触发滚动**（第二次独立的滚动脉冲）才激活
+//      渲染——避免加载/贴底 settle 期间的程序滚动把速览条带出来。
 import { computed, onBeforeUnmount, onMounted, ref, watch } from "vue";
 import { useI18n } from "vue-i18n";
 
@@ -40,6 +43,19 @@ const scrollHeight = ref(0);
 const clientWidth = ref(0);
 const scrollTop = ref(0);
 
+// ==== §延迟渲染（懒加载） ====
+// 「一次滚动触发」＝一段连续滚动脉冲（BURST_END_MS 内无新 scroll 事件视为
+// 结束）——同一次手势会派发多个 scroll 事件，按事件计数会在第一下滚动就
+// 激活，与"第二次触发"语义不符，故按脉冲计数。
+// 贴底事件（含程序贴底 settle/rAF 循环）重置计数——回到底部即重新等待
+// 第 2 次触发；非贴底方向的滚动第 2 个脉冲到达时激活渲染。
+const ACTIVATION_BURSTS = 2;        // 第 2 次滚动触发才渲染
+const AT_BOTTOM_TOLERANCE_PX = 120; // 贴底判定容差
+const BURST_END_MS = 400;           // 脉冲结束静默窗
+const activated = ref(false);
+let scrollBursts = 0;
+let burstEndTimer = 0;
+
 let ro: ResizeObserver | null = null;
 let onScrollEvt: (() => void) | null = null;
 let attachedEl: HTMLElement | null = null;
@@ -55,6 +71,9 @@ function attach(el: HTMLElement | null) {
   detach();
   if (!el) return;
   attachedEl = el;
+  // 新容器（重挂接）：重置懒激活态，重新等待"加载贴底后第 2 次滚动触发"
+  activated.value = false;
+  scrollBursts = 0;
   refreshMetrics(el);
   if (typeof ResizeObserver !== "undefined") {
     ro = new ResizeObserver(() => refreshMetrics(el));
@@ -65,6 +84,7 @@ function attach(el: HTMLElement | null) {
   }
   onScrollEvt = () => {
     scrollTop.value = el.scrollTop;
+    trackLazyActivation(el);
   };
   el.addEventListener("scroll", onScrollEvt, { passive: true });
 }
@@ -74,11 +94,41 @@ function detach() {
     ro.disconnect();
     ro = null;
   }
+  if (burstEndTimer) {
+    clearTimeout(burstEndTimer);
+    burstEndTimer = 0;
+  }
   if (onScrollEvt && attachedEl) {
     attachedEl.removeEventListener("scroll", onScrollEvt);
   }
   onScrollEvt = null;
   attachedEl = null;
+}
+
+/** 懒激活判定：贴底 ⇒ 重置脉冲计数；非贴底滚动第 2 个脉冲 ⇒ 激活渲染 */
+function trackLazyActivation(el: HTMLElement) {
+  if (activated.value) return;
+  const atBottom =
+    el.scrollTop + el.clientHeight >= el.scrollHeight - AT_BOTTOM_TOLERANCE_PX;
+  if (atBottom) {
+    // 贴底（含程序贴底 settle / 流式期 rAF 循环）：重置触发计数
+    scrollBursts = 0;
+    if (burstEndTimer) {
+      clearTimeout(burstEndTimer);
+      burstEndTimer = 0;
+    }
+    return;
+  }
+  if (burstEndTimer) {
+    // 同一脉冲内的后续事件：只续期结束计时，不重复计数
+    clearTimeout(burstEndTimer);
+  } else {
+    scrollBursts += 1; // 新的滚动触发开始
+  }
+  burstEndTimer = setTimeout(() => {
+    burstEndTimer = 0;
+  }, BURST_END_MS);
+  if (scrollBursts >= ACTIVATION_BURSTS) activated.value = true;
 }
 
 watch(
@@ -95,6 +145,7 @@ onBeforeUnmount(() => detach());
 const MIN_WIDTH_PX = 900;
 const visible = computed(
   () =>
+    activated.value &&
     clientHeight.value > 0 &&
     clientWidth.value >= MIN_WIDTH_PX &&
     scrollHeight.value > clientHeight.value * 3,
