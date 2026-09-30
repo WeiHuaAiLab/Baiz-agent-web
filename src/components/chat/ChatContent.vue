@@ -606,9 +606,7 @@ async function onStreamingClick(event: MouseEvent) {
                         :size-dependencies="sizeDeps(item)"
                     >
                         <div class="message-inner">
-                            <!-- 位置口径：工具组优先**附着**到 assistant 消息（AssistantMessage
-                                 在过程区：深度思考/执行命令/审批卡/执行结果之后渲染组）；
-                                 此处仅渲染无落点兜底的独立组（展开体仍是逐条 MessageItem） -->
+                            <!-- 用isToolGroup判断item是否属于同源，如果同源就渲染ToolCallGroup包裹起来 -->
                             <ToolCallGroup
                                 v-if="isToolGroup(item)"
                                 :messages="item.messages"

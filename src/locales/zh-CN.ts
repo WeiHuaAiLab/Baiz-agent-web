@@ -90,11 +90,12 @@ export default {
     queuePosition: '排队中 · 第 {n} 位',
     queueCancel: '取消排队',
     queueCancelled: '已取消排队',
-    // MSG-3513 并上游 1712993：连续工具调用折叠组文案（**新键·只增**）
-    toolGroupSummary: '{count} 个工具调用',
+    // MSG-3513 并上游 1712993：连续过程消息折叠组文案（**新键·只增**；
+    // 组内为 tool_call＋已决 approval 混排，文案用「执行记录」统称）
+    toolGroupSummary: '{count} 条执行记录',
     toolGroupFailed: '{count} 个失败',
-    toolGroupExpand: '展开工具调用',
-    toolGroupCollapse: '收起工具调用',
+    toolGroupExpand: '展开执行记录',
+    toolGroupCollapse: '收起执行记录',
   },
   identity: { notEstablished: '当前未登录／身份未建立：会话与定时任务都归属账号，请先登录后再试', goLogin: '去登录', headerHint: '最近一次请求因模型密钥无效失败' },
   files: {

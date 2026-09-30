@@ -87,11 +87,12 @@ export default {
     queuePosition: 'Queued · position {n}',
     queueCancel: 'Cancel',
     queueCancelled: 'Removed from queue',
-    // MSG-3513 merge of upstream 1712993: tool-call group labels (**new keys only**)
-    toolGroupSummary: '{count} tool calls',
+    // MSG-3513 merge of upstream 1712993: process-message group labels
+    // (**new keys only**; group mixes tool_call + settled approval messages)
+    toolGroupSummary: '{count} execution records',
     toolGroupFailed: '{count} failed',
-    toolGroupExpand: 'Expand tool calls',
-    toolGroupCollapse: 'Collapse tool calls',
+    toolGroupExpand: 'Expand execution records',
+    toolGroupCollapse: 'Collapse execution records',
   },
   identity: { notEstablished: 'Not signed in / identity not established: conversations and scheduled tasks belong to an account — please sign in first', goLogin: 'Sign in', headerHint: 'Last request failed: model key invalid' },
   files: {

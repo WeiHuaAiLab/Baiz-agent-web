@@ -87,8 +87,8 @@ export interface ChatMessage {
   meta?: MessageMeta
 }
 
-/** 连续工具调用折叠组（ChatContent displayItems 的虚拟 item）：
- *  ≥3 条同 run 连续 tool_call 在收束后合并成一个可折叠组。 */
+/** 连续过程消息折叠组（ChatContent displayItems 的虚拟 item）：
+ *  ≥3 条同 run 连续「tool_call／已决 approval」在收束后合并成一个可折叠组。 */
 export interface ToolGroup {
   id: string
   kind: 'tool-group'

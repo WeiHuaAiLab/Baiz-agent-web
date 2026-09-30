@@ -1,5 +1,5 @@
 // 消息流展示分组（自 ChatContent 抽出——行数闸 MSG-3417：基线件只准减不准增，
-// 逻辑外迁新件）：① 未决审批卡判定；② 连续工具调用折叠组（displayState）。
+// 逻辑外迁新件）：① 未决审批卡判定；② 连续过程消息折叠组（tool_call＋已决 approval）。
 import { computed, ref } from "vue";
 import type { ChatMessage, RunState, ToolGroup } from "../models";
 import { useMessageStore } from "../stores/message";
@@ -18,8 +18,16 @@ export function isToolGroup(item: DisplayItem): item is ToolGroup {
     return item.kind === "tool-group";
 }
 
-// 折叠门槛：连续 tool_call ≥ 3 条才收起（不足则逐条散开，行为与既有会话完全一致）
+// 折叠门槛：连续「tool_call／已决 approval」≥ 3 条才收起（不足则逐条散开，
+// 行为与既有会话完全一致）。
+// 注意：只有**已决**（approved/denied/expired 落定）的 approval 会走到这里——
+// 未决卡在源头就被 isPendingApproval 剥离、走常驻审批区，不参与分组。
 const TOOL_GROUP_MIN = 3;
+
+/** 可归组消息：tool_call 或已决 approval（未决卡已在源头剥离，见上） */
+function isGroupable(message: ChatMessage): boolean {
+    return message.kind === "tool_call" || message.kind === "approval";
+}
 
 /** 「思考完毕」判定：该 tool_call 所属 run 是否已收束（不再 running/queued）。
  *  未收束 = 流式进行中 —— 此时保持逐条散开（尾流期不折叠，让用户看到实时操作）；
@@ -31,7 +39,8 @@ function isRunSettled(runs: Record<string, RunState>, taskId?: string): boolean 
     return run.status !== "running" && run.status !== "queued";
 }
 
-/** 折叠组摘要：工具名去重保序（同一工具反复调用时不重复堆字） */
+/** 折叠组摘要：工具名去重保序（同一工具反复调用时不重复堆字；
+ *  approval 卡同样带 meta.toolName，两类消息共用此摘要） */
 function summarizeTools(items: ChatMessage[]): string {
     const names = items
         .map((message) => message.meta?.toolName)
@@ -42,7 +51,8 @@ function summarizeTools(items: ChatMessage[]): string {
 /**
  * **MSG-3513 合流**（我方 `MSG-3236` ① ＋ 上游 `1712993`「连续工具调用折叠」）：
  * 源＝消息流**去掉未决审批卡**（未决卡走常驻区，见 ChatContent `pendingApprovals`）
- * ⇒ 再对剩余流做「同 run 连续 `tool_call` ≥ `TOOL_GROUP_MIN` ⇒ 折成一个 `ToolGroup`」。
+ * ⇒ 再对剩余流做「同 run 连续 `tool_call`/已决 `approval` ≥ `TOOL_GROUP_MIN`
+ * ⇒ 折成一个 `ToolGroup`」。
  * **两侧合取并集**：我方"审批卡常驻区"与上游"工具链折叠"语义各自保留，**零丢弃**。
  *
  * **位置口径（工具组附着渲染）**：组不再原地渲染在消息流里（原地＝assistant 消息
@@ -97,10 +107,10 @@ export function useDisplayItems() {
         };
 
         for (const message of source) {
-            if (message.kind === "tool_call") {
-                // 同一 run 的连续 tool_call 才归一组：换 run 即断组——否则「上一个 run
-                // 已完成、下一个 run 还在跑」两段相邻时会被并成一段，导致已收束的那半
-                // 也一直不折叠（违背「已完成的默认折叠」）
+            if (isGroupable(message)) {
+                // 同一 run 的连续可归组消息（tool_call/已决 approval 混排）才归一组：
+                // 换 run 即断组——否则「上一个 run 已完成、下一个 run 还在跑」两段相邻
+                // 时会被并成一段，导致已收束的那半也一直不折叠（违背「已完成的默认折叠」）
                 if (
                     buffer.length > 0 &&
                     buffer[0]?.meta?.taskId !== message.meta?.taskId

@@ -1,6 +1,7 @@
 <script setup lang="ts">
-// 连续工具调用折叠组：≥3 条「连续 tool_call」在思考完毕后自动收起为一行摘要，
-// 点击可展开逐条查看（组内仍是原样的 MessageItem → ToolRow，样式零改动）。
+// 连续过程消息折叠组：≥3 条「连续 tool_call／已决 approval」在思考完毕后自动收起
+// 为一行摘要，点击可展开逐条查看（组内仍是原样的 MessageItem → ToolRow/审批卡，
+// 样式零改动）。
 //
 // 展开态由父层（ChatContent）持有并下传，不在本组件内自持：
 // DynamicScroller 会回收 item 组件，状态存组件内部会在滚出视口后被重置。
