@@ -1073,7 +1073,7 @@
 .composer-block {
   padding-top: 0;
   padding-bottom: 0;
-  background: var(--code-bg);
+  background: var(--sidebar-bg);
   border: 1px solid var(--border);
   border-radius: 12px;
   overflow: hidden;
