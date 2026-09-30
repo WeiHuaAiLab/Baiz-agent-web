@@ -113,6 +113,17 @@
   margin-top: 8px;
 }
 
+/* 在飞项容器（尾流槽 InflightItems）：ToolRow／ApprovalCard **直渲无 .msg 壳**，
+   `.tool-group-body .msg+.msg` 命中不到 ⇒ 行间距在此自补（相邻兄弟，同口径 8px） */
+.inflight-body>*+* {
+  margin-top: 8px;
+}
+
+/* 有折叠头时才补与头的间距；无头（<3 条逐条直渲）勿凭空多出 8px */
+.inflight-body.grouped {
+  padding-top: 8px;
+}
+
 .tool-args {
   margin: 0;
   padding: 8px 12px;
@@ -1640,7 +1651,8 @@
 
 .xp-subtitle {
   display: flex;
-  align-items: flex-start;
+  align-items: center;
+  justify-content: flex-start;
   gap: 8px;
   padding: 8px 12px;
   border-radius: 8px;

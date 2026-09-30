@@ -10,6 +10,7 @@ import { useApprovalStore } from "../../stores/approval";
 import { getBridge } from "../../bridge";
 import type { ChatMessage, RunState } from "../../models";
 import MessageItem from "./MessageItem.vue";
+import InflightItems from "./InflightItems.vue";
 import { isPendingApproval, useDisplayItems } from "../../utils/displayItems";
 import type { DisplayItem } from "../../utils/displayItems";
 import ToolCallGroup from "./ToolCallGroup.vue";
@@ -332,6 +333,7 @@ const orphanApprovals = computed<ChatMessage[]>(() => {
 // 消息上，由 AssistantMessage 在过程区之后、正文之前渲染；无落点 ⇒ 组原位兜底。
 const {
     displayItems,
+    streamingTailByTaskId,
     isToolGroup,
     groupExpanded,
     isGroupExpanded,
@@ -339,6 +341,13 @@ const {
     attachedGroupExpanded,
     sizeDeps,
 } = useDisplayItems();
+
+/** 流式期在飞项：按 taskId 取——避免模板里用 `[run.taskId] ?? []` 触发
+ *  vue-tsc 对 ComputedRef 索引的类型推断死角（顶层模板直接渲染 #after
+ *  scoped slot 内的嵌套 v-for 会被推断为 setup 对象） */
+function inflightFor(taskId: string): ChatMessage[] {
+    return streamingTailByTaskId.value[taskId] ?? [];
+}
 
 /** 切换折叠组：用户主动展开/收起——**不贴底**（抑制窗口吸收多跳高度重排） */
 function toggleGroup(id: string) {
@@ -404,12 +413,23 @@ watch(
     },
 );
 
-/** 内容变化（含流式增长） */
+/** 内容变化（含流式增长）
+ *  注意：贴底触发源要把**所有**流式字段算进去——`text` / `reasoning` /
+ *  `trace` 任一变化都可能撑高 #after 槽位的 RunBlocks（思考块/工具块）。
+ *  仅靠 `text.length` 在纯思考/工具阶段不更新 ⇒ rAF 不重启，思考块
+ *  增高会顶起视口却不见回贴底；RO 兜底（见 §8）补 #after 槽位观察。 */
 watch(
     () =>
         displayItems.value.length +
         (displayItems.value.at(-1)?.text ?? "").length +
-        streamingRuns.value.reduce((sum, run) => sum + run.text.length, 0),
+        streamingRuns.value.reduce(
+            (sum, run) =>
+                sum +
+                run.text.length +
+                (run.reasoning?.length ?? 0) +
+                (run.trace?.length ?? 0),
+            0,
+        ),
     async () => {
         // 内容变化（含流式增长）：通知外层刷新悬浮滑块（上滚脱离贴底时 scrollTop 不变，需手动 sync）
         emit("content-changed");
@@ -466,7 +486,10 @@ watch(
                 true,
             );
             // 高度观测挂接：① 滚动容器自身（流式尾条增高压缩视口、窗口缩放）；
-            // ② 内容 wrapper（item 高度因异步渲染增长）。高度变化时贴底态补贴底。
+            // ② 内容 wrapper（item 高度因异步渲染增长）；
+            // ③ **#after 槽位**（`vue-recycle-scroller__slot`）——思考阶段
+            // RunBlocks 增高发生在尾流槽内，wrapper 不变槽位变，槽位不观察
+            // ⇒ 思考块顶起视口却不见回贴底（实测 bug）。高度变化时贴底态补贴底。
             if (typeof ResizeObserver !== "undefined") {
                 contentRo = new ResizeObserver(() => {
                     // 抑制窗口内（用户刚点了折叠头）的高度重排不贴底——
@@ -484,6 +507,10 @@ watch(
                     ".vue-recycle-scroller__item-wrapper",
                 );
                 if (wrapper) contentRo.observe(wrapper);
+                const afterSlot = scrollEl.value.querySelector(
+                    ".vue-recycle-scroller__slot",
+                );
+                if (afterSlot) contentRo.observe(afterSlot);
             }
         }
         emit("scroller-ready", scrollEl.value ?? undefined);
@@ -662,19 +689,25 @@ async function onStreamingClick(event: MouseEvent) {
                         <div
                             v-for="run in streamingRuns"
                             :key="run.taskId"
-                            class="msg assistant streaming-block"
+                            class="streaming-block"
                         >
-                            <!-- 思考中... -->
-                            <ActivityLine :text="activityText(run)" />  
-                            <!-- 思考的过程渲染： -->
-                            <RunBlocks
-                                :run="run"
-                                streaming
-                                :pending-approvals="approvalsOf(run.taskId)"
-                            />
-                            <!-- 思考结束后或思考期间,产出的内容渲染 -->
-                            <StreamingMarkdownView :text="run.text" />
-                            <span class="caret" />
+                            <div class="msg assistant streaming-block-inner">
+                                <!-- 思考中... -->
+                                <ActivityLine :text="activityText(run)" />  
+                                <!-- 思考的过程渲染：RunBlocks 内含 reasoning /
+                                     tool.call（来自 run.trace）/ 未决 approval（来自
+                                     pendingApprovals）/ tool.result（来自 run.trace）
+                                     ——覆盖"未决过程"路径。 -->
+                                <RunBlocks
+                                    :run="run"
+                                    streaming
+                                    :pending-approvals="approvalsOf(run.taskId)"
+                                /> 
+                                <InflightItems :items="inflightFor(run.taskId)" />
+                                <!-- 思考结束后或思考期间,产出的内容渲染 -->
+                                <StreamingMarkdownView :text="run.text" />
+                                <span class="caret" />
+                            </div>
                         </div>
                     </div>
                 </template>

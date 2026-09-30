@@ -45,7 +45,15 @@ const showStatusRunBlocks = computed(() => {
   const current = run.value
   if (!current) return false
   if (current.reasoning === '' && current.trace.length === 0 && !current.decision) return false
-  return props.message.kind === 'status' && props.message.meta?.status === 'error'
+  if (props.message.kind !== 'status' || props.message.meta?.status !== 'error') return false
+  // MSG-3266 双渲修：本 run 已落地 assistant 消息 ⇒ 过程区由 AssistantMessage
+  // 独占渲染。收口瞬间（onDone 先 push status.protocolLeak 再落 assistant）同一
+  // run 的 RunBlocks 会在两条消息各渲一份（实测正文区上方出现双份「深度思考／
+  // 执行命令／执行结果」）。assistant 缺失（纯失败径）时才由 status 条兜底。
+  const taskId = props.message.meta?.taskId
+  return !messages
+    .list(props.message.conversationId)
+    .some((m) => m.kind === 'assistant' && m.meta?.taskId === taskId)
 })
 
 /** MSG-3558：模型鉴权失败（`engine_error` 一类 ＋ 401/403/Unauthorized/invalid）⇒ 人话错误卡。

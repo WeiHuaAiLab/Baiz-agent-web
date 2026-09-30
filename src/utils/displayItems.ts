@@ -60,6 +60,12 @@ function summarizeTools(items: ChatMessage[]): string {
  * 落地的 assistant 消息上，由 AssistantMessage 在过程区（RunBlocks：深度思考/
  * 执行命令/审批卡/执行结果）之后、正文之前渲染——时间顺序复原。无落点（消息被删/
  * 失败径未落 assistant）⇒ 组按原位兜底渲染为独立 item，行为与旧版一致。
+ *
+ * **流式期在飞项迁出 #default**：用户授权通过 / AI 调工具时，SSE 推送的
+ * `tool_call` / 已决 `approval` ChatMessage 在该 run 仍为 active（`running`）
+ * 阶段被剥离源流，由 ChatContent 的 `#after` 尾流槽内渲染——避免与 RunBlocks
+ * 过程区同内容两处呈现。run 收束后 run 不再 active ⇒ 同一批消息自动复回消息
+ * 流、走工具组折叠归位到 assistant 消息上。
  */
 export function useDisplayItems() {
     const messages = useMessageStore();
@@ -71,9 +77,24 @@ export function useDisplayItems() {
         /** assistant 消息 id → 附着其上的工具组（AssistantMessage 过程区之后渲染） */
         attached: Record<string, ToolGroup>;
     }>(() => {
+        // 流式期在飞项（属于 active run 的 `tool_call` / 已决 `approval`）剥离源流，
+        // 由 ChatContent `#after` 尾流槽内渲染；run 收束后这些消息自动复回。
+        const activeTaskIds = new Set(
+            Object.values(messages.runs)
+                .filter((run) => run.status === "running")
+                .map((run) => run.taskId),
+        );
         const source = messages
             .list(activeId.value)
-            .filter((m) => !isPendingApproval(m));
+            .filter((m) => !isPendingApproval(m))
+            .filter((m) => {
+                const taskId = m.meta?.taskId;
+                if (!taskId || !activeTaskIds.has(taskId)) return true;
+                if (m.kind === "tool_call") return false;
+                if (m.kind === "approval" && m.meta?.approved !== undefined)
+                    return false;
+                return true;
+            });
         const out: DisplayItem[] = [];
         const attached: Record<string, ToolGroup> = {};
         let buffer: ChatMessage[] = [];
@@ -147,6 +168,33 @@ export function useDisplayItems() {
         return displayState.value.attached[item.id];
     }
 
+    /**
+     * 流式期在飞项（按 taskId 分组）：属于 active run 的 `tool_call` /
+     * 已决 `approval` ChatMessage，按 createdAt 升序。供 ChatContent `#after`
+     * 渲染，避免 #default 重复呈现。run 收束后自动空集（activeTaskIds 移除）。
+     */
+    const streamingTailByTaskId = computed<Record<string, ChatMessage[]>>(() => {
+        const activeTaskIds = new Set(
+            Object.values(messages.runs)
+                .filter((run) => run.status === "running")
+                .map((run) => run.taskId),
+        );
+        const out: Record<string, ChatMessage[]> = {};
+        for (const m of messages.list(activeId.value)) {
+            const taskId = m.meta?.taskId;
+            if (!taskId || !activeTaskIds.has(taskId)) continue;
+            const isToolCall = m.kind === "tool_call";
+            const isResolvedApproval =
+                m.kind === "approval" && m.meta?.approved !== undefined;
+            if (!isToolCall && !isResolvedApproval) continue;
+            (out[taskId] ??= []).push(m);
+        }
+        for (const taskId of Object.keys(out)) {
+            out[taskId].sort((a, b) => a.createdAt - b.createdAt);
+        }
+        return out;
+    });
+
     // 折叠组展开态：默认收起（「思考完毕后」自动折叠，用户点击可展开）。
     // 存本组合式函数（父层作用域）而非组组件内部——DynamicScroller 会回收 item
     // 组件，状态若存组件内，滚出视口再滚回来就丢了。
@@ -178,6 +226,7 @@ export function useDisplayItems() {
 
     return {
         displayItems,
+        streamingTailByTaskId,
         isToolGroup,
         groupExpanded,
         isGroupExpanded,
