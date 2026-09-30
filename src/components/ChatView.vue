@@ -21,8 +21,13 @@ const session = useSessionStore();
 const ui = useUiStore();
 const approvals = useApprovalStore();
 
-// 扩展面板（抽屉）配置：默认打开，内容为 FilesPanel；类型可在 ExtensionPanelType 中扩展
-const extensionOpen = ref(true);
+// 扩展面板（抽屉）配置：内容为 FilesPanel；类型可在 ExtensionPanelType 中扩展。
+// 初始开关＝**按窗口宽度定默认**（≥1600px 宽屏默认打开、否则默认折叠省空间）；
+// 之后完全归用户/Ctrl+B 控制，不再随窗口尺寸联动（避免中途打字时面板突然
+// 开合打断操作）。
+const extensionOpen = ref(
+    typeof window !== "undefined" && window.innerWidth >= 1600,
+);
 const extensionType = ref<ExtensionPanelType>("files");
 const contentRef = ref<InstanceType<typeof ChatContent>>();
 
