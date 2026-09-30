@@ -190,6 +190,10 @@ watch(input, () => {
 onBeforeUnmount(() => {
     if (draftTimer) clearTimeout(draftTimer);
     if (activeId.value) void saveDraft(activeId.value, input.value);
+    // 拖拽期间组件被卸载：dragOver watcher 不会触发清理分支，这里兜底摘除
+    document.removeEventListener("dragend", onWindowDragEnd);
+    document.removeEventListener("keydown", onWindowKeyDown);
+    document.removeEventListener("pointerdown", onWindowPointerDown);
 });
 
 /** 语音按钮：暂时展示"即将上线"提示 */
@@ -318,6 +322,11 @@ function stopCurrent() {
 
 // 拖拽上传——仅 ChatInput 区接收；非文件类型（纯文本/URL）直接忽略，
 // 不抢用户「拖文本进输入框」的体验。
+//
+// 放弃拖拽场景遮罩兜底：dragCounter/drop 已覆盖「拖入即出、子元素进出」，
+// 但用户拖出窗口/桌面释放（浏览器不保证派发 dragleave）、按 ESC 取消、
+// 或遮罩意外残留时点击空白区域——都需要强制隐藏。
+// 拖拽期间挂全局 dragend + keydown(ESC) + click 兜底，遮罩熄灭即摘除。
 function onDragEnter(e: DragEvent) {
     // 仅识别文件拖入，避免文本/链接误触发遮罩
     if (!e.dataTransfer?.types.includes("Files")) return;
@@ -342,8 +351,7 @@ function onDragLeave(e: DragEvent) {
 
 async function onDrop(e: DragEvent) {
     e.preventDefault();
-    dragCounter = 0;
-    dragOver.value = false;
+    hideDragOverlay();
     const list = e.dataTransfer?.files;
     if (!list || list.length === 0) return;
     if (!attachSupported.value) {
@@ -353,6 +361,39 @@ async function onDrop(e: DragEvent) {
     }
     await files.attachFromFiles(Array.from(list));
 }
+
+// 集中收口 dragOver=false，便于「drop 成功 / dragend / ESC / 点空白」复用
+function hideDragOverlay() {
+    dragCounter = 0;
+    dragOver.value = false;
+}
+
+// 遮罩活跃期间的全局兜底：
+//   - dragend：用户在任何位置（窗口外、桌面、其他应用）释放鼠标均触发
+//   - keydown(ESC)：拖拽过程中按 ESC 取消
+//   - pointerdown：遮罩意外残留时点击/按下空白区域即隐藏（兜底）
+function onWindowDragEnd() {
+    hideDragOverlay();
+}
+function onWindowKeyDown(e: KeyboardEvent) {
+    if (e.key === "Escape") hideDragOverlay();
+}
+function onWindowPointerDown() {
+    // 拖拽期间 click/mousedown 多被吞，pointerdown 在拖拽结束后的兜底更可靠
+    hideDragOverlay();
+}
+
+watch(dragOver, (over) => {
+    if (over) {
+        document.addEventListener("dragend", onWindowDragEnd);
+        document.addEventListener("keydown", onWindowKeyDown);
+        document.addEventListener("pointerdown", onWindowPointerDown);
+    } else {
+        document.removeEventListener("dragend", onWindowDragEnd);
+        document.removeEventListener("keydown", onWindowKeyDown);
+        document.removeEventListener("pointerdown", onWindowPointerDown);
+    }
+});
 
 async function submitCreate() {
     if (!taskDraft.value.title.trim()) return;
