@@ -16,6 +16,9 @@ import { getBridge } from "../bridge";
 import { clearStoredAccount, readStoredAccount, setDbAccount, storeAccount } from "../db";
 
 const TOKEN_KEY = "baiz_session_token";
+/** 登录邮箱（账号键的**展示面**——daemon 的 user_id 是随机 id，不当用户名用）。
+ *  userId 仍是 DB 分段/审计键（换字面 ⇒ 落另一库，既有数据"消失"），两者职责分离。 */
+const EMAIL_KEY = "baiz.account_email";
 
 function readStoredToken(): string {
   try {
@@ -28,10 +31,35 @@ function readStoredToken(): string {
   return "";
 }
 
+function readStoredEmail(): string {
+  try {
+    if (typeof localStorage !== "undefined") {
+      return localStorage.getItem(EMAIL_KEY) ?? "";
+    }
+  } catch {
+    /* storage 不可用回落空 */
+  }
+  return "";
+}
+
+function storeEmail(email: string): void {
+  try {
+    if (typeof localStorage !== "undefined") {
+      if (email) localStorage.setItem(EMAIL_KEY, email);
+      else localStorage.removeItem(EMAIL_KEY);
+    }
+  } catch {
+    /* storage 不可用仅失展示名，不阻断登录态 */
+  }
+}
+
 export const useAuthStore = defineStore("auth", {
   state: () => ({
     sessionToken: "" as string,
     userId: "" as string,
+    /** 登录邮箱（展示用用户名）：登录时落、localStorage 持久（重载续用）；
+     *  壳侧 identity_status 只回随机 user_id，拿不到邮箱 ⇒ 须本地存。 */
+    email: "" as string,
     loading: false as boolean,
     error: "" as string,
     /** DEBT-742：会话被 daemon 判失效（-32002）后置真——UI 据此提示"请重新登录" */
@@ -53,6 +81,7 @@ export const useAuthStore = defineStore("auth", {
     hydrate() {
       this.sessionToken = readStoredToken();
       this.userId = this.sessionToken.length > 0 ? readStoredAccount() : "";
+      this.email = this.sessionToken.length > 0 ? readStoredEmail() : "";
       setDbAccount(this.sessionToken.length > 0 ? this.userId : "");
       return this.sessionToken.length > 0;
     },
@@ -67,6 +96,8 @@ export const useAuthStore = defineStore("auth", {
         if (st && st.loggedIn) {
           this.persisted = true;
           this.userId = st.userId ?? "";
+          // 展示邮箱本地恢复（壳侧只回 user_id，见 EMAIL_KEY 注释）
+          this.email = this.email || readStoredEmail();
           // MSG-3517③：持久径**亦须切库面**（T12 分段库）——否则自动更新/重启恢复
           // 后落 `baiz-anon`，该账号既有会话/消息读不到（＝"东西没了"同类）。
           setDbAccount(this.userId);
@@ -107,6 +138,9 @@ export const useAuthStore = defineStore("auth", {
         }
         this.sessionToken = result.session_token;
         this.userId = result.user_id;
+        // 展示用户名＝登录邮箱（user_id 是随机数，不做用户名）；本地持久供重载/壳侧恢复用
+        this.email = email;
+        storeEmail(email);
         this.persisted = false;
         // MSG-3485：库面切到本账号（分段库）＋账号键落地（重载续用），
         // 并清掉上一账号的内存残留后按本账号重载列表。
@@ -147,6 +181,8 @@ export const useAuthStore = defineStore("auth", {
     async logout() {
       this.sessionToken = "";
       this.userId = "";
+      this.email = "";
+      storeEmail("");
       // MSG-3485：库面回落 anon ＋ 账号键清；内存面同步清（不留上一账号列表）
       setDbAccount("");
       clearStoredAccount();

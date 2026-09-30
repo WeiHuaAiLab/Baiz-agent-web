@@ -253,6 +253,17 @@
   flex: none;
 }
 
+/* 登录态字母头像：底色由邮箱哈希派生（组件内联注入），文字恒白保证可读 */
+.avatar.avatar-letter {
+  background: var(--code-bg); /* 兜底：内联色未注入时仍是原灰底 */
+  color: #fff;
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 1;
+  letter-spacing: 0.02em;
+  user-select: none;
+}
+
 .username {
   flex: 1;
   min-width: 0;
