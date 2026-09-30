@@ -962,6 +962,13 @@ export const useMessageStore = defineStore('message', {
     },
     onNotify(data: DaemonNotifyData) {
       console.info('[baiz] daemon.notify', data.level, data.message)
+      // **1.0.42 补刀A-web**：**按归属过滤**（消费 `DaemonNotify.conversation_id`）——
+      // 有该字段且 ≠ 当前会话（判据单源 `session.activeId`）⇒ **不弹**（该通知属他会话，
+      // 例：批测／其它客户端）；**字段缺失 ⇒ 照旧弹**（向后兼容·不得因缺字段丢通知）。
+      const owner = data.conversation_id
+      if (typeof owner === 'string' && owner !== '' && owner !== useSessionStore().activeId) {
+        return
+      }
       useUiStore().toast(data.message, data.level === 'error' ? 'error' : 'info')
     },
     onRawMessage(data: { kind: string; payload: unknown; timestamp: string }) {

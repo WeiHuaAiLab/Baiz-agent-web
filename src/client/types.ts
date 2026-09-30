@@ -290,6 +290,14 @@ export interface ErrorData {
 export interface DaemonNotifyData {
   level: string
   message: string
+  /**
+   * **1.0.42 补刀A-web**：**归属会话 id**（daemon 侧可选下发）。
+   *
+   * 口径：**有该字段且 ≠ 当前会话** ⇒ 前端**不弹**（按归属过滤）；
+   * **字段缺失**（旧 daemon）⇒ **照旧弹**（**向后兼容·不得因缺字段丢通知**）。
+   * 判据单源＝`session.activeId`（与 `src/client/eventRouter.ts` 同源）。
+   */
+  conversation_id?: string
 }
 
 export interface BriefReadyData {
