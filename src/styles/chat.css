@@ -1530,6 +1530,9 @@
   background: rgba(255, 255, 255, 0.2);
 }
 
+.user-block{
+  max-width: 90%;
+}
 /* 消息区附件（用户消息）：复用输入框 chip 视觉——图片缩略图 / 文件概要。
    容器 flex wrap，与上方文本（user-block）垂直留 8px 呼吸。 */
 .user-attachments {
