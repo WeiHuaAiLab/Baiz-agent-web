@@ -200,7 +200,7 @@ export const useMessageStore = defineStore('message', {
       return this.byConversation[conversationId] ?? []
     },
     async load(conversationId: string) {
-      if (this.byConversation[conversationId]) return
+      const cached: ChatMessage[] | undefined = this.byConversation[conversationId]; if (cached) return // 纯类型修：先取本地再判，避开索引真值收窄成 never（运行时等价）
       const rows = await db.messages.where('conversationId').equals(conversationId).sortBy('createdAt')
       // 竞态防护：await 期间可能有 push 落地（流式收口/审批卡等）——按 id 去重
       // 合并（createdAt 升序），禁整组覆盖丢消息（并行高负载下 db 查询变慢时必现）
