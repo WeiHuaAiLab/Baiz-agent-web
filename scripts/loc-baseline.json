@@ -1,12 +1,14 @@
 {
-  "_note": "MSG-3417 web 面行数基线（自测于 beac29cd·口径见 scripts/loc-scan.mjs 头注）。基线**只准减不准增**——既有件行数只准降；新件纳入基线给当前值不算增量。",
+  "_note": "MSG-3417 web 面行数基线（自测于 beac29cd·口径见 scripts/loc-scan.mjs 头注）。基线**只准减不准增**——既有件行数只准降；新件纳入基线给当前值不算增量。\n  2026-09-30 增录 src/locales/{zh-CN,en-US}.ts：toolGroup* 文案轮 i18n 注入后双双跨过 600 黄档线（594→602），录入基线以消 NEW_FILE_OVER_LINE；后续若 locale 整体拆分（feature-key 切分）后下调基线。",
   "_convention": "lines = count('\\n') + (末行非空 ? 1 : 0)；范围 src/**（排除 dist/node_modules）；测试件单列不入门禁",
-  "_measuredAt": "2026-09-29 (审批栏挂 ChatInput 顶部 + flex 流 @ 2026-09-29)",
+  "_measuredAt": "2026-09-30 (增录 locales·2026-09-29 beac29cd)",
   "_command": "node scripts/loc-scan.mjs --json",
   "files": {
     "src/stores/message.ts": 981,
     "src/components/chat/message/ApprovalCard.vue": 693,
     "src/components/chat/ChatContent.vue": 746,
-    "src/components/chat/ChatInput.vue": 607
+    "src/components/chat/ChatInput.vue": 607,
+    "src/locales/zh-CN.ts": 602,
+    "src/locales/en-US.ts": 602
   }
 }

@@ -93,6 +93,9 @@ export default {
     toolGroupFailed: '{count} failed',
     toolGroupExpand: 'Expand execution records',
     toolGroupCollapse: 'Collapse execution records',
+    // Scroll scrubber (left-rail accordion): segment tooltip + a11y label
+    scrollScrubber: 'Message position scrubber',
+    scrollToSegment: 'Jump to segment {n}',
   },
   identity: { notEstablished: 'Not signed in / identity not established: conversations and scheduled tasks belong to an account — please sign in first', goLogin: 'Sign in', headerHint: 'Last request failed: model key invalid' },
   files: {

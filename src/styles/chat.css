@@ -1547,24 +1547,61 @@
   padding: 8px 12px;
 }
 
-.scroll-bottom {
+/* 滚动速览条（右侧缩略横杠浮栏）：
+   参照样式——细横杠、长短不一、当前段深色加粗的"文本缩略"观感。
+   · 定位：贴滚动轴**左侧**（right:15px 已把滚动条自身约 8~15px 让开）；
+     容器固定 100px 高、垂直居中、宽度上限 50px；不撑满整条滚动高度。
+   · 无底色无边框（纯横杠浮在内容之上），仅 hover 时整体提亮。
+   段位点击 ⇒ 跳到对应段并恢复贴底态（父层 scrollToScrubberSegment）。 */
+.scroll-scrubber {
   position: absolute;
-  right: 28px;
-  bottom: 16px;
-  width: 34px;
-  height: 34px;
-  border-radius: 9999px;
-  background: var(--panel);
-  border: 1px solid var(--border);
-  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.1);
-  color: var(--muted);
-  font-size: 15px;
-  z-index: 20;
+  right: 15px;
+  top: 50%;
+  transform: translateY(-50%);
+  height: 100px;
+  width: 50px;
+  max-width: 50px;
+  z-index: 18;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  /* 横杠左对齐 ⇒ 右缘自然长短参差，即参考图的"缩略行"观感 */
+  align-items: flex-start;
+  padding: 4px 6px;
+  box-sizing: border-box;
+  opacity: 0.9;
+  transition: opacity 150ms ease;
 }
 
-.scroll-bottom:hover {
-  color: var(--text);
-  border-color: var(--muted);
+.scroll-scrubber:hover {
+  opacity: 1;
+}
+
+.scroll-scrubber-bar {
+  /* 细横杠：高 4px、两端圆角、浅灰；宽度由组件按段位确定性注入（45%~100%） */
+  height: 4px;
+  min-height: 4px;
+  border-radius: 9999px;
+  background: var(--border);
+  border: none;
+  padding: 0;
+  cursor: pointer;
+  transition:
+    background 150ms ease,
+    height 150ms ease,
+    transform 150ms ease;
+}
+
+.scroll-scrubber-bar:hover {
+  background: var(--muted);
+  /* 悬停轻微右探，给出"可点"的即时反馈 */
+  transform: translateX(2px);
+}
+
+/* 活动段：深色加粗（参考图里那根黑色粗横杠） */
+.scroll-scrubber-bar.active {
+  background: var(--text);
+  height: 6px;
 }
 
 .msg-time {

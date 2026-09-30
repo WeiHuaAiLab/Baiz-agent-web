@@ -96,6 +96,9 @@ export default {
     toolGroupFailed: '{count} 个失败',
     toolGroupExpand: '展开执行记录',
     toolGroupCollapse: '收起执行记录',
+    // 滚动速览条（左侧浮栏）：段位提示与无障碍标签
+    scrollScrubber: '消息位置速览',
+    scrollToSegment: '跳到第 {n} 段',
   },
   identity: { notEstablished: '当前未登录／身份未建立：会话与定时任务都归属账号，请先登录后再试', goLogin: '去登录', headerHint: '最近一次请求因模型密钥无效失败' },
   files: {

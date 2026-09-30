@@ -13,7 +13,8 @@ import MessageItem from "./MessageItem.vue";
 import { isPendingApproval, useDisplayItems } from "../../utils/displayItems";
 import type { DisplayItem } from "../../utils/displayItems"; 
 import ToolCallGroup from "./ToolCallGroup.vue";
-import EmptyAndSkeletonChatView from "./EmptyAndSkeletonChatView.vue"; 
+import EmptyAndSkeletonChatView from "./EmptyAndSkeletonChatView.vue";
+import ScrollScrubber from "./ScrollScrubber.vue"; 
 import RunBlocks from "./message/RunBlocks.vue";
 import ApprovalStack from "./message/ApprovalStack.vue";
 import ActivityLine from "./ActivityLine.vue";
@@ -43,7 +44,8 @@ const scroller = ref<{
 }>();
 const pinned = ref(true);
 
-let scrollEl: HTMLElement | null = null;
+/** 滚动容器（DynamicScroller.$el）— ref 化便于 ScrollScrubber 挂接 + 父层使用 */
+const scrollEl = ref<HTMLElement | null>(null);
 // 内容高度观测：MessageItem 的 markdown/代码块等**异步渲染**会在加载完成后
 // 继续改变内容总高度（watch 签名只看 text 长度，看不到纯高度变化）——
 // ResizeObserver 监听滚动容器与内容 wrapper 的高度变化，贴底态下补一轮
@@ -375,17 +377,17 @@ function onScroll(event: Event) {
 watch(
     scroller,
     (s) => {
-        if (scrollEl) {
-            scrollEl.removeEventListener("scroll", onScroll);
-            scrollEl.removeEventListener("click", onCollapsibleHeadClick, true);
+        if (scrollEl.value) {
+            scrollEl.value.removeEventListener("scroll", onScroll);
+            scrollEl.value.removeEventListener("click", onCollapsibleHeadClick, true);
             contentRo?.disconnect();
             contentRo = null;
         }
-        scrollEl = (s?.$el as HTMLElement | undefined) ?? null;
-        if (scrollEl) {
-            scrollEl.addEventListener("scroll", onScroll, { passive: true });
+        scrollEl.value = (s?.$el as HTMLElement | undefined) ?? null;
+        if (scrollEl.value) {
+            scrollEl.value.addEventListener("scroll", onScroll, { passive: true });
             // 折叠头点击委托（捕获阶段）：命中即抑制贴底，见 onCollapsibleHeadClick
-            scrollEl.addEventListener("click", onCollapsibleHeadClick, true);
+            scrollEl.value.addEventListener("click", onCollapsibleHeadClick, true);
             // 高度观测挂接：① 滚动容器自身（流式尾条增高压缩视口、窗口缩放）；
             // ② 内容 wrapper（item 高度因异步渲染增长）。高度变化时贴底态补贴底。
             if (typeof ResizeObserver !== "undefined") {
@@ -400,14 +402,14 @@ watch(
                     }
                     scrollToBottomWithSettle(600);
                 });
-                contentRo.observe(scrollEl);
-                const wrapper = scrollEl.querySelector(
+                contentRo.observe(scrollEl.value);
+                const wrapper = scrollEl.value.querySelector(
                     ".vue-recycle-scroller__item-wrapper",
                 );
                 if (wrapper) contentRo.observe(wrapper);
             }
         }
-        emit("scroller-ready", scrollEl ?? undefined);
+        emit("scroller-ready", scrollEl.value ?? undefined);
     },
     { flush: "post" },
 );
@@ -422,11 +424,11 @@ onBeforeUnmount(() => {
     clearUnpinRestore();
     contentRo?.disconnect();
     contentRo = null;
-    if (scrollEl) {
-        scrollEl.removeEventListener("scroll", onScroll);
-        scrollEl.removeEventListener("click", onCollapsibleHeadClick, true);
+    if (scrollEl.value) {
+        scrollEl.value.removeEventListener("scroll", onScroll);
+        scrollEl.value.removeEventListener("click", onCollapsibleHeadClick, true);
     }
-    scrollEl = null;
+    scrollEl.value = null;
 });
 
 // 用户消息入列即强制贴底：sendUserMessage 先 push user 消息（立即渲染）再
@@ -492,6 +494,29 @@ function scrollToBottom() {
     void nextTick(() => {
         scrollToLatest();
     });
+}
+
+/** ScrollScrubber 段位（0..segments-1）⇒ 直写 scrollTop 定位：
+ *  默认 N=7：每段 ≈ 滚动总高 16.67%（≈ 16%），最后一段映射到底部 100%。
+ *
+ *  **scrollToItem 范式 ≠ scrubber 直觉**：scrollToItem 是按 item 索引定位的，
+ *  但 scrubber 是"滚到 X%"的相对位置选择器——本用例下**直写 scrollTop 更贴合语义**
+ *  （浏览器原生滚动条就是这么做的）。DynamicScroller 不禁直写 scrollTop，
+ *  会按 scroll 事件自动重渲染可见 item、与 scrollToItem 走同一最终像素位置。
+ *
+ *  MSG-3236 ② 的"禁直写"是定位件设计约定（针对"跳到具体某条 item"的强诉求），
+ *  scrubber 用例（跳到百分比）不受该约定约束；与 ScrollScrubber 高亮同用
+ *  `scrollTop / total` 比 ⇒ 零错位自洽。 */
+const SCRUBBER_SEGMENTS = 7;
+function scrollToScrubberSegment(index: number) {
+    const el = scrollEl.value;
+    if (!el) return;
+    const ratio = index / Math.max(1, SCRUBBER_SEGMENTS - 1);
+    const total = el.scrollHeight - el.clientHeight;
+    if (total <= 0) return;
+    // 直写 scrollTop ⇒ 浏览器派发原生 scroll 事件 ⇒ ScrollScrubber 高亮位更新
+    // （rAF 下一帧）；并由 onScroll 走贴底态判定（滚到非底部 ⇒ 自动 unpin）。
+    el.scrollTop = ratio * total;
 }
 // 暴露 scroller：外层 OverlayScrollArea 通过 target 绑定滚动容器，绘制悬浮滚动条
 defineExpose({ scrollToBottom, scroller });
@@ -664,17 +689,13 @@ async function onStreamingClick(event: MouseEvent) {
                 :class="{ 'measure-fading': measurementFading }"
                 aria-hidden="true"
             />
-        </div>
 
-        <!-- 快速到底的按钮 -->
-        <button
-            v-if="!pinned && displayItems.length > 0"
-            type="button"
-            class="scroll-bottom"
-            :title="t('chat.scrollToLatest')"
-            @click="scrollToBottom"
-        >
-            ↓
-        </button>
+            <!-- 滚动速览条 -->
+            <ScrollScrubber
+                :scroll-el="scrollEl"
+                :segments="SCRUBBER_SEGMENTS"
+                @seek="scrollToScrubberSegment"
+            />
+        </div>
     </div>
 </template>
