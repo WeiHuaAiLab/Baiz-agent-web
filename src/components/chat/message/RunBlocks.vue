@@ -83,6 +83,14 @@ const steps = computed(() => {
   }))
 })
 
+/** R1-9b ③：证据摘要——验证结果通过/失败计数（默认折叠，标题只露摘要） */
+const resultPassed = computed(() =>
+  props.run.trace.filter((item) => item.kind === 'tool.result' && item.success === true).length,
+)
+const resultFailed = computed(() =>
+  props.run.trace.filter((item) => item.kind === 'tool.result' && item.success === false).length,
+)
+
 // MSG-3001 ⑤（解双渲重）：命令/结果区默认收起——同一 trace 数据在消息流
 // 已有 ToolRow 条目承载（pre-change 有折叠门闸，always-on 重复为新）；
 // 点击展开 run 级总览（按需现形，勿与条目面并陈）。
@@ -224,7 +232,8 @@ function toolNameOf(callId?: string): string {
       >
         <span class="block-icon">▤</span>
         <span class="block-title">{{ t('chat.blockResults') }}</span>
-        <span class="block-count">×{{ results.length }}</span>
+        <span class="block-count ok">{{ resultPassed }}✓</span>
+        <span v-if="resultFailed" class="block-count failed">{{ resultFailed }}✗</span>
         <span class="block-toggle">{{ resultsOpen ? '▾' : '▸' }}</span>
       </button>
       <ul v-show="resultsOpen" class="block-list">
