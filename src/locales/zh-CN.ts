@@ -459,8 +459,9 @@ export default {
     disconnectedReconnect: '连接已断开，重连中…',
     sendFailed: '发送失败',
     taskError: '任务错误',
-    // MSG-3266 ②：模型输出了未能解析的工具协议文本（已从正文剥离）——给可见交代＋重试入口
-    protocolLeak: '本轮模型输出了工具协议文本（未能解析），已从正文剥离；可点「重试」再试一次',
+    // REQ-1045-37 刀②：未挽救/旧后端 ⇒ 未执行＋重试；已挽救已执行见 protocolLeakExecuted
+    protocolLeak: '本轮模型输出了工具协议文本（未执行），已从正文剥离；可点「重试」再试一次',
+    protocolLeakExecuted: '本轮已按工具协议执行（正文已剥离协议文本）',
     demo: '演示模式（未连接）',
     chars: '字符',
   },

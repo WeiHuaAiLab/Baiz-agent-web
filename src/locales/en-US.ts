@@ -456,9 +456,11 @@ export default {
     disconnectedReconnect: 'Disconnected, reconnecting…',
     sendFailed: 'Send failed',
     taskError: 'Task error',
-    // MSG-3266 ②: unparsed tool-protocol text was stripped from the body — say so and offer retry
+    // REQ-1045-37 knife②: not salvaged / legacy backend ⇒ not executed + retry; salvaged+executed below
     protocolLeak:
-      'The model emitted tool-protocol text that could not be parsed; it was stripped from the reply. Click Retry to try again.',
+      'The model emitted tool-protocol text (not executed); it was stripped from the reply. Click Retry to try again.',
+    protocolLeakExecuted:
+      'This round was executed via the tool protocol (protocol text was stripped from the reply).',
     demo: 'Demo mode (offline)',
     chars: 'chars',
   },

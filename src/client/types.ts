@@ -273,6 +273,16 @@ export interface DoneData {
     cost_usd?: number
     cost_per_mtok?: number
   }
+  /**
+   * **REQ-1045-37 刀②**：终帧**协议泄漏事实**（合同：`{stripped_bytes,salvaged,executed}`）。
+   * 前端据此定两态文案（不再自数自报）；**字段缺失（旧 daemon）⇒ 回落前端自数**（前向兼容）。
+   * `salvaged`＝是否解析成真调用；`executed`＝是否真跑。
+   */
+  protocol_leak?: {
+    stripped_bytes?: number
+    salvaged?: boolean
+    executed?: boolean
+  }
 }
 
 export interface ErrorData {

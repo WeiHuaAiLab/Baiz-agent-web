@@ -31,6 +31,8 @@ const decisionFilters = new Map<string, DecisionStreamFilter>()
 const protocolFilters = new Map<string, ProtocolLeakFilter>()
 /** MSG-3266 ②：本轮是否剥到过协议文本（用于收口时的**可见重试**提示） */
 const protocolLeakSeen = new Map<string, number>()
+/** REQ-1045-37 刀②：后端终帧事实（settle 消费·缺失回落自数） */
+const protocolLeakFacts = new Map<string, NonNullable<DoneData['protocol_leak']>>()
 
 function protocolFilterFor(taskId: string): ProtocolLeakFilter {
   let filter = protocolFilters.get(taskId)
@@ -480,6 +482,8 @@ export const useMessageStore = defineStore('message', {
     settleDecisionStream(taskId: string) {
       const filter = decisionFilters.get(taskId)
       const protocol = protocolFilters.get(taskId)
+      const fact = protocolLeakFacts.get(taskId)
+      protocolLeakFacts.delete(taskId)
       if (!filter && !protocol) return
       decisionFilters.delete(taskId)
       protocolFilters.delete(taskId)
@@ -494,13 +498,15 @@ export const useMessageStore = defineStore('message', {
       // MSG-3266：未闭合的协议残块**不进正文**，零丢证归折叠区（收口时兜底）
       if (leakTail.suppressed) run.decision = `${run.decision ?? ''}${leakTail.suppressed}`
       if (leakTail.body) run.text += leakTail.body
-      // MSG-3266 ②：剥到过协议文本 ⇒ **必须给可见交代＋重试入口**（禁静默吞）
-      if (leakBytes + leakTail.suppressed.length > 0 && run.conversationId) {
+      // REQ-1045-37 刀②：事实优先（缺失回落自数）⇒ 两态文案＋重试（禁静默吞）
+      const strippedBytes = fact ? (fact.stripped_bytes ?? 0) : leakBytes + leakTail.suppressed.length
+      if (strippedBytes > 0 && run.conversationId) {
+        const executed = fact?.salvaged === true && fact?.executed === true
         void this.push(
           run.conversationId,
           makeMessage(run.conversationId, 'status', '', {
-            statusKey: 'protocolLeak',
-            status: 'error',
+            statusKey: executed ? 'protocolLeakExecuted' : 'protocolLeak',
+            status: executed ? 'completed' : 'error',
             taskId,
           }),
         )
@@ -828,6 +834,7 @@ export const useMessageStore = defineStore('message', {
       this.markRunActive(data.task_id)
       const run = this.runs[data.task_id]
       if (!run || run.status === 'cancelled') return
+      if (data.protocol_leak) protocolLeakFacts.set(data.task_id, data.protocol_leak)
       this.flushRun(data.task_id)
       this.settleDecisionStream(data.task_id)
       run.status = 'completed'
