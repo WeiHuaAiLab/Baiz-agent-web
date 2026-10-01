@@ -7,6 +7,8 @@ export type ConnectionState = 'idle' | 'connecting' | 'connected' | 'reconnectin
 // MSG-2358 枚举换正：deepseek 系双名（qwen 假面下架——daemon 侧已归一）；
 // vision-exp 尾系实验件勿入枚举（1.0 勿宣称实验面）
 export type ModelPref = 'deepseek-v4-pro' | 'deepseek-v4-flash'
+// W2：模型服务三档 provider（free＝内置零配置／welink＝第三方通道／deepseek＝原双名·不删不改）
+export type ModelProvider = 'free' | 'welink' | 'deepseek'
 
 /** MSG-2358 旧值迁移闸：localStorage 存量旧值（deepseek/qwen/任意串）系
  * 枚举外值——回落默认 v4-pro（一役双销——S 2351 P3 强转注记并治） */
@@ -48,6 +50,10 @@ export const useSettingsStore = defineStore('settings', {
     connection: 'idle' as ConnectionState,
     demoMode: false,
     model: readModelPref(),
+    provider: readLocal('baiz.provider', 'free') as ModelProvider,
+    weLinkBase: readLocal('baiz.weLinkBase', 'https://www.welinkos.com/v1'),
+    weLinkKey: readLocal('baiz.weLinkKey', ''),
+    weLinkModel: readLocal('baiz.weLinkModel', 'agnes-3.0-flash'),
     username: readLocal('baiz.username', '本地用户'),
     memoryEnabled: readLocal('baiz.memoryEnabled', '1') === '1',
     memoryScope: readLocal('baiz.memoryScope', 'recent') as MemoryScope,
@@ -100,6 +106,22 @@ export const useSettingsStore = defineStore('settings', {
     setModel(model: ModelPref) {
       this.model = model
       localStorage.setItem('baiz.model', model)
+    },
+    setProvider(provider: ModelProvider) {
+      this.provider = provider
+      localStorage.setItem('baiz.provider', provider)
+    },
+    setWeLinkBase(base: string) {
+      this.weLinkBase = base
+      localStorage.setItem('baiz.weLinkBase', base)
+    },
+    setWeLinkKey(key: string) {
+      this.weLinkKey = key
+      localStorage.setItem('baiz.weLinkKey', key)
+    },
+    setWeLinkModel(model: string) {
+      this.weLinkModel = model
+      localStorage.setItem('baiz.weLinkModel', model)
     },
     setMemoryEnabled(enabled: boolean) {
       this.memoryEnabled = enabled

@@ -309,6 +309,11 @@ export default {
     keyHint: 'Key 由 daemon 保管，前端不落明文',
     model: '模型',
     modelHint: '模型路由由 daemon 决定，此处为偏好设置',
+    modelFree: '免费模型',
+    modelConfigured: '已配置',
+    weLinkBase: 'Base URL',
+    weLinkKey: 'API Key',
+    weLinkModel: '模型',
     dirHint: '授权目录用于文件访问与工作区绑定',
     mcp: {
       title: 'MCP 服务',

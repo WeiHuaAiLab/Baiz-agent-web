@@ -310,6 +310,11 @@ export default {
     keyHint: 'Keys are stored by the daemon; never kept in plain text here',
     model: 'Model',
     modelHint: 'Routing is decided by the daemon; this is a preference',
+    modelFree: 'Free model',
+    modelConfigured: 'Configured',
+    weLinkBase: 'Base URL',
+    weLinkKey: 'API Key',
+    weLinkModel: 'Model',
     dirHint: 'Authorized directories are used for file access and workspace binding',
     mcp: {
       title: 'MCP servers',
