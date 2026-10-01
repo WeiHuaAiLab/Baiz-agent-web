@@ -73,6 +73,16 @@ const results = computed<TraceItem[]>(() =>
   props.run.trace.filter((item) => item.kind === 'tool.result'),
 )
 
+/** R1-9b ②：动作步骤条——工具链动作常显（长任务不焦虑）；已完成✓、进行中⋯ */
+const steps = computed(() => {
+  const calls = props.run.trace.filter((item) => item.kind === 'tool.call')
+  const running = props.run.status === 'running'
+  return calls.map((item, i) => ({
+    toolName: item.toolName ?? '',
+    done: !running || i < calls.length - 1,
+  }))
+})
+
 // MSG-3001 ⑤（解双渲重）：命令/结果区默认收起——同一 trace 数据在消息流
 // 已有 ToolRow 条目承载（pre-change 有折叠门闸，always-on 重复为新）；
 // 点击展开 run 级总览（按需现形，勿与条目面并陈）。
@@ -126,6 +136,19 @@ function toolNameOf(callId?: string): string {
         >{{ reasoning }}</div>
       </section>
     </template>
+
+    <!-- R1-9b ②：动作步骤条——常显工具链动作（长任务不焦虑），已完成✓／进行中⋯ -->
+    <div v-if="steps.length" class="run-steps" aria-label="run-steps">
+      <span
+        v-for="(s, i) in steps"
+        :key="i"
+        class="step"
+        :class="{ done: s.done, active: !s.done }"
+      >
+        <span class="step-mark">{{ s.done ? '✓' : '⋯' }}</span>
+        <span class="step-name">{{ s.toolName }}</span>
+      </span>
+    </div>
 
     <!-- 区二：执行命令（tool.call）——默认收起（解双渲重），点击展开总览 -->
     <!-- MSG-3216 P0：内部过程（决策载荷）——受控折叠区，与正文严格分流。
