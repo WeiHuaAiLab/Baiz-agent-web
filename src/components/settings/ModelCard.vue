@@ -1,7 +1,7 @@
 <script setup lang="ts">
 // W2（1.0.48）：模型服务三档 UI——welink 档接真 command（daemon 单源·key 零回显）。
 // free／deepseek 档维持原语义不删不改；welink 档 base/model/key 一律走后端四 command。
-import { computed, onMounted, ref } from 'vue'
+import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useSettingsStore } from '../../stores/settings'
 import type { ModelPref, ModelProvider } from '../../stores/settings'
@@ -23,6 +23,11 @@ const usageMessage = ref('')
 const loading = ref(false)
 const saving = ref(false)
 const errorText = ref('')
+// REQ-1045-40：探测 in-flight 态／上次检测时间戳／保存轻回执（可见性三件·八态语义不动）
+const probing = ref(false)
+const probedAt = ref('')
+const saveNotice = ref(false)
+let saveNoticeTimer: ReturnType<typeof setTimeout> | undefined
 
 const outcome = computed(() => probeOutcome(probe.value))
 const configured = computed(() => outcome.value.ready)
@@ -101,6 +106,7 @@ async function persist(args: { base?: string; model?: string; key?: string }) {
     model.value = face.model ?? model.value
     keySet.value = !!face.keySet
     keyMasked.value = face.keyMasked ?? keyMasked.value
+    flashSaved()
     await refreshProbe()
   } catch (e) {
     errorText.value = e instanceof Error ? e.message : String(e)
@@ -126,12 +132,36 @@ function onKeyChange(e: Event) {
 
 async function refreshProbe() {
   errorText.value = ''
+  probing.value = true
   try {
     probe.value = await modelService.probe()
   } catch (e) {
     errorText.value = e instanceof Error ? e.message : String(e)
+  } finally {
+    // 每次点击均刷新时间戳（含同态重测）——"可见即算有结果"（REQ-1045-40）
+    probedAt.value = formatClock(new Date())
+    probing.value = false
   }
 }
+
+/** HH:mm:ss（本地时区·补零） */
+function formatClock(d: Date): string {
+  const p = (n: number) => String(n).padStart(2, '0')
+  return `${p(d.getHours())}:${p(d.getMinutes())}:${p(d.getSeconds())}`
+}
+
+/** 轻提示「已保存」：2s 自清（重存重置计时；卸载清定时器） */
+function flashSaved() {
+  saveNotice.value = true
+  if (saveNoticeTimer) clearTimeout(saveNoticeTimer)
+  saveNoticeTimer = setTimeout(() => {
+    saveNotice.value = false
+  }, 2000)
+}
+
+onBeforeUnmount(() => {
+  if (saveNoticeTimer) clearTimeout(saveNoticeTimer)
+})
 
 onMounted(() => {
   if (settings.provider === 'welink') void load()
@@ -158,6 +188,7 @@ onMounted(() => {
         <p class="w2-status" :class="{ ok: configured }">
           <span v-if="loading">{{ t('settings.weLinkLoading') }}</span>
           <span v-else>{{ statusText }}</span>
+          <span v-if="probedAt" class="probe-stamp">{{ t('settings.weLinkProbedAt', { time: probedAt }) }}</span>
         </p>
 
         <div class="field">
@@ -182,16 +213,19 @@ onMounted(() => {
         <div class="field">
           <span>{{ t('settings.weLinkModel') }}</span>
           <select :value="model" :disabled="saving || loading" @change="onModelChange">
-            <option v-for="m in modelOptions" :key="m" :value="m">{{ m }}</option>
+            <option v-for="m in modelOptions" :key="m" :value="m">{{ m }}{{ !configured && m === model ? t('settings.weLinkModelNotPulled') : '' }}</option>
           </select>
           <span v-if="modelOptions.length === 0" class="field-hint">{{ t('settings.weLinkModelEmpty') }}</span>
         </div>
 
         <div class="w2-actions">
-          <button type="button" class="btn-ghost" :disabled="loading || saving" @click="refreshProbe">
-            {{ t('settings.weLinkProbe') }}
+          <button type="button" class="btn-ghost" :disabled="loading || saving || probing" @click="refreshProbe">
+            {{ probing ? t('settings.weLinkProbing') : t('settings.weLinkProbe') }}
           </button>
+          <span v-if="saveNotice" class="save-notice" role="status">{{ t('settings.keySaved') }}</span>
         </div>
+
+        <p class="field-hint">{{ t('settings.weLinkPersistHint') }}</p>
 
         <p class="field-hint">{{ t('settings.weLinkUsage') }}：{{ usageMessage || t('settings.weLinkUsageLoading') }}</p>
         <p v-if="errorText" class="field-error">{{ errorText }}</p>
@@ -257,6 +291,14 @@ onMounted(() => {
   color: var(--muted);
 }
 .w2-status.ok {
+  color: var(--success);
+}
+.probe-stamp {
+  margin-left: 8px;
+}
+.save-notice {
+  align-self: center;
+  font-size: 12px;
   color: var(--success);
 }
 .key-masked {
