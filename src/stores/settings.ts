@@ -51,9 +51,6 @@ export const useSettingsStore = defineStore('settings', {
     demoMode: false,
     model: readModelPref(),
     provider: readLocal('baiz.provider', 'free') as ModelProvider,
-    weLinkBase: readLocal('baiz.weLinkBase', 'https://www.welinkos.com/v1'),
-    weLinkKey: readLocal('baiz.weLinkKey', ''),
-    weLinkModel: readLocal('baiz.weLinkModel', 'agnes-3.0-flash'),
     username: readLocal('baiz.username', '本地用户'),
     memoryEnabled: readLocal('baiz.memoryEnabled', '1') === '1',
     memoryScope: readLocal('baiz.memoryScope', 'recent') as MemoryScope,
@@ -110,18 +107,6 @@ export const useSettingsStore = defineStore('settings', {
     setProvider(provider: ModelProvider) {
       this.provider = provider
       localStorage.setItem('baiz.provider', provider)
-    },
-    setWeLinkBase(base: string) {
-      this.weLinkBase = base
-      localStorage.setItem('baiz.weLinkBase', base)
-    },
-    setWeLinkKey(key: string) {
-      this.weLinkKey = key
-      localStorage.setItem('baiz.weLinkKey', key)
-    },
-    setWeLinkModel(model: string) {
-      this.weLinkModel = model
-      localStorage.setItem('baiz.weLinkModel', model)
     },
     setMemoryEnabled(enabled: boolean) {
       this.memoryEnabled = enabled

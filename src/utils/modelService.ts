@@ -1,23 +1,31 @@
-// W2（1.0.47）：模型服务探测结果四态分类（纯函数·不依赖后端 command；供 UI 显示用）。
-// 口径（照令/补告·已定）：「✓ 已配置」＝GET {base}/models 返 200；错误四态＝
-// 200+正文含「没有权限」（模型未加入允许列表）／403 额度不足／503 模型无通道／401 key 无效。
+// W2（1.0.48）：模型服务探测结果展示态（纯函数·不依赖后端 command）。
+// 口径：probe 八态闭集由 daemon 单源返回——前端按 state 分支，勿再按 HTTP 自行分类
+//（1.0.47 的「四态分类」已由壳/daemon 收编为八态闭集）。
+import type { ModelServiceProbe } from '../client/modelService'
 
-export type ModelServiceProbeState =
-  | 'ok' // 200 正常（已配置）
-  | 'no-permission' // 200 + 正文含「没有权限」（模型未加入允许列表）
-  | 'quota' // 403 额度不足（insufficient_user_quota）
-  | 'no-channel' // 503 模型无通道（model_not_found）
-  | 'invalid-key' // 401 key 无效/缺失
+export type { ModelServiceProbeState } from '../client/modelService'
 
-/** 按 HTTP 状态码＋正文把探测结果分类成四态（+正常）；非明确态保守归「invalid-key」。 */
-export function classifyModelServiceProbe(status: number, body = ''): ModelServiceProbeState {
-  if (status === 200) {
-    return body.includes('没有权限') ? 'no-permission' : 'ok'
+export interface ProbeOutcome {
+  /** 仅 ready（真实探活 200）为「已配置」——非本地标记 */
+  ready: boolean
+  kind: ModelServiceProbe['state']
+  models: string[]
+  httpStatus?: number
+  retryAfterSecs?: number
+  detail?: string
+}
+
+/** probe 八态 → 展示态：ready 判定＋models 实拉透传＋限流/HTTP 细节照录。 */
+export function probeOutcome(probe: ModelServiceProbe | null | undefined): ProbeOutcome {
+  const state: ModelServiceProbe['state'] = probe?.state ?? 'unreachable'
+  const rawModels = probe?.models
+  const models = Array.isArray(rawModels) ? rawModels.filter((m) => !!m) : []
+  return {
+    ready: state === 'ready',
+    kind: state,
+    models,
+    httpStatus: probe?.httpStatus,
+    retryAfterSecs: probe?.retryAfterSecs,
+    detail: probe?.detail,
   }
-  if (status === 401) return 'invalid-key'
-  if (status === 403) return 'quota'
-  if (status === 503) return 'no-channel'
-  // 兜底：非 200 且非 401/403/503（如 429 限流、网络不可达）——本阶段保守归 invalid-key，
-  // 真实接线时按探测返回值细分（429 读 Retry-After、网络不可达另列）。
-  return 'invalid-key'
 }
