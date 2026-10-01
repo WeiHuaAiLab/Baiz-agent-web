@@ -46,7 +46,8 @@ const showRunBlocks = computed(() => {
 
 async function copy() {
   try {
-    await getBridge().clipboard.writeText(props.message.text)
+    // R1-9b ⑥：一键复制交付物——只带代码块（交付物），不带人话字幕/解释（字幕不污染）。
+    await getBridge().clipboard.writeText(extractDeliverable(props.message.text))
     copied.value = true
     setTimeout(() => {
       copied.value = false
@@ -54,6 +55,17 @@ async function copy() {
   } catch {
     /* clipboard unavailable */
   }
+}
+
+/** R1-9b ⑥：提取交付物——正文里的 ``` 代码块；无代码块则回退整条正文（复制即用）。 */
+function extractDeliverable(text: string): string {
+  const blocks: string[] = []
+  const re = /```[^\n]*\n([\s\S]*?)\n?```/g
+  let m: RegExpExecArray | null
+  while ((m = re.exec(text)) !== null) {
+    blocks.push(m[1].replace(/\n$/, ''))
+  }
+  return blocks.length ? blocks.join('\n\n') : text
 }
 
 function regenerate() {
