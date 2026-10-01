@@ -31,6 +31,12 @@ const CLOSE_TAGS = [
   'function_calls',
 ] as const
 
+/** 纯半角 XML 工具调用信封标签（不带 DSML 标记；与后端 closer-utils::protocol_leak 同表，两侧判据同源） */
+const ASCII_XML_TAGS = ['tool_call', 'tool_calls', 'function_calls', 'invoke', 'parameter'] as const
+
+/** 旧方括号行内标记（DEBT-673 老逻辑；与 daemon strip_tool_markers 同表） */
+const BRACKET_PREFIXES = ['[tool:', '[工具:'] as const
+
 export interface ProtocolLeakSplit {
   /** 可进正文的部分（协议块已剥离） */
   body: string
@@ -47,6 +53,22 @@ export interface ProtocolLeakFilter {
 /** 文本是否含 DSML 协议标记（快判；供红证与日志用） */
 export function containsDsml(text: string): boolean {
   return text.includes(DSML_MARKER)
+}
+
+/** 文本是否含纯 ASCII 协议信封（半角 XML 标签或旧方括号） */
+export function containsAsciiProtocol(text: string): boolean {
+  for (const tag of ASCII_XML_TAGS) {
+    if (text.includes(`<${tag}`) || text.includes(`</${tag}`)) return true
+  }
+  for (const p of BRACKET_PREFIXES) {
+    if (text.includes(p)) return true
+  }
+  return false
+}
+
+/** 文本是否含任一协议泄漏形态（DSML 或纯 ASCII） */
+export function containsProtocolLeak(text: string): boolean {
+  return containsDsml(text) || containsAsciiProtocol(text)
 }
 
 /**
@@ -80,6 +102,59 @@ export function stripDsmlBlocks(text: string): { text: string; stripped: string 
     return ''
   })
   return { text: out, stripped }
+}
+
+/** 剥离纯 ASCII 协议信封（半角 XML 整块/孤立标签 + 旧方括号），窄口径零扰动 */
+export function stripAsciiProtocolBlocks(text: string): { text: string; stripped: string } {
+  let out = text
+  let stripped = ''
+  // ① 整块信封（含内容一起剥——信封内容系给模型看的参数，非人话）
+  for (const tag of ASCII_XML_TAGS) {
+    const open = `<${tag}`
+    const close = `</${tag}>`
+    let guard = 0
+    while (guard < 64) {
+      guard += 1
+      const start = out.indexOf(open)
+      if (start < 0) break
+      const endRel = out.slice(start).indexOf(close)
+      const end = endRel < 0 ? out.length : start + endRel + close.length
+      stripped += out.slice(start, end)
+      out = out.slice(0, start) + out.slice(end)
+    }
+  }
+  // ② 孤立标签（无配对闭标记的开/闭标签）
+  for (const tag of ASCII_XML_TAGS) {
+    for (const t of [`<${tag}>`, `</${tag}>`, `<${tag} `, `</${tag} `]) {
+      while (out.includes(t)) {
+        stripped += t
+        out = out.split(t).join('')
+      }
+    }
+  }
+  // ③ 旧方括号行内段（至 ] 或行尾）
+  for (const p of BRACKET_PREFIXES) {
+    let idx = out.indexOf(p)
+    while (idx >= 0) {
+      const closeBracket = out.indexOf(']', idx)
+      const newline = out.indexOf('\n', idx)
+      let end: number
+      if (closeBracket >= 0 && (newline < 0 || closeBracket < newline)) end = closeBracket + 1
+      else if (newline >= 0) end = newline
+      else end = out.length
+      stripped += out.slice(idx, end)
+      out = out.slice(0, idx) + out.slice(end)
+      idx = out.indexOf(p)
+    }
+  }
+  return { text: out, stripped }
+}
+
+/** 统一剥离入口：先 DSML 后纯 ASCII（与后端同表·两侧判据同源） */
+export function stripProtocolBlocks(text: string): { text: string; stripped: string } {
+  const dsml = stripDsmlBlocks(text)
+  const ascii = stripAsciiProtocolBlocks(dsml.text)
+  return { text: ascii.text, stripped: dsml.stripped + ascii.stripped }
 }
 
 /**
