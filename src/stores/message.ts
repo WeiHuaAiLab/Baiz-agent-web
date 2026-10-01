@@ -8,8 +8,7 @@ import { createDecisionStreamFilter } from '../utils/decisionStream'
 import type { DecisionStreamFilter } from '../utils/decisionStream'
 import { createProtocolLeakFilter } from '../utils/protocolLeak'
 import type { ProtocolLeakFilter } from '../utils/protocolLeak'
-import { attachmentDigestSource, buildAttachmentEnvelope, newAttachmentNonce, sha256Hex } from '../utils/attachment'
-import type { AttachmentWire } from '../utils/attachment'
+import { buildWireText } from '../utils/messageWire'
 import { formatFileSize } from '../utils/format'
 import { TOOL_LABELS_ZH as TOOL_NAMES_ZH } from '../utils/approvalText'
 import { useUiStore } from './ui'
@@ -250,24 +249,7 @@ export const useMessageStore = defineStore('message', {
         // 分流——缺省/chat 走旧路向后兼容——ChatSendParams.mode 类型已备）
         mode?: string,
       ): Promise<boolean> {
-      let effective = text
-      // MSG-3270 P0：结构化附件（含 sha256）——与行内信封**同源同载荷**，供 daemon 侧对卯
-      let wireAttachments: AttachmentWire[] | undefined
-      if (attachments && attachments.length > 0) {
-        wireAttachments = await Promise.all(
-          attachments.map(async (att) => ({
-            name: att.name,
-            kind: att.kind,
-            mimeType: att.mimeType,
-            size: att.size,
-            sha256: await sha256Hex(attachmentDigestSource(att)),
-            ...(att.content !== undefined ? { content: att.content } : {}),
-            ...(att.dataUrl !== undefined ? { dataUrl: att.dataUrl } : {}),
-          })),
-        )
-        // 信封头与结构化字段**同源**（同一 wire 对象）⇒ sha256 在两侧必然一致（可对卯）
-        effective = text + buildAttachmentEnvelope(wireAttachments ?? [], newAttachmentNonce())
-      }
+      const { effective, wireAttachments } = await buildWireText(text, attachments)
       // 附件随消息 meta 一起入列：消息区渲染缩略图 / 文件概要；
       // 发送给后端的仍是 effective（拼接附件正文），两处各司其职。
       await this.push(
