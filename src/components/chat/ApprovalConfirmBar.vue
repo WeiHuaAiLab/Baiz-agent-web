@@ -30,6 +30,7 @@ import { useApprovalStore } from '../../stores/approval'
 import { useMessageStore, isRunTerminal } from '../../stores/message'
 import { useSessionStore } from '../../stores/session'
 import type { ChatMessage } from '../../models'
+import type { ApprovalScope } from '../../client/types'
 
 const { t } = useI18n()
 const approvals = useApprovalStore()
@@ -91,6 +92,21 @@ const pendingApprovals = computed<ChatMessage[]>(() => {
  * 展开其他条会收起上一条，避免 details 反复跳变让列表"呼吸"。 */
 const expandedId = ref<string | null>(null)
 
+/** bar 卡档位入口（REQ-1045-27）：批量场景下四档可见可选·默认「一次」——与 ApprovalCard 同源。 */
+const scopes = ref<Record<string, ApprovalScope>>({})
+const SCOPE_OPTIONS: Array<{ value: ApprovalScope; label: string }> = [
+  { value: 'once', label: t('approval.scopeOnce') },
+  { value: 'session', label: t('approval.scopeSession') },
+  { value: 'project', label: t('approval.scopeProject') },
+  { value: 'forever', label: t('approval.scopeForever') },
+]
+function scopeOf(itemId: string): ApprovalScope {
+  return scopes.value[itemId] ?? 'once'
+}
+function setScope(itemId: string, scope: ApprovalScope) {
+  scopes.value = { ...scopes.value, [itemId]: scope }
+}
+
 /** 行内 working 态：以消息 id 为键（不是 request_id）——行一旦从消息流消失，
  * 该 working 项就成了死键；finally 块兜底清理，无需多管。 */
 const working = ref<Record<string, boolean>>({})
@@ -107,7 +123,7 @@ async function decide(item: ChatMessage, approved: boolean) {
   if (!requestId || working.value[item.id]) return
   working.value = { ...working.value, [item.id]: true }
   try {
-    await approvals.respond(requestId, approved)
+    await approvals.respond(requestId, approved, scopeOf(item.id))
   } finally {
     // approvals.respond 成功后会从 approvals.pending 摘除该 item，
     // 但本组件的数据源是 messages 流——approve.respond 完成后本行的生命周期
@@ -172,6 +188,17 @@ function prettyDetails(details?: string): string {
           <!-- @click.stop 让按钮不被外层 row 的 toggle 吞掉——否则点 Approve
    会在审批的同时展开/收起 details，造成视觉跳变。 -->
           <div class="approval-confirm-actions" @click.stop>
+            <select
+              class="scope-select"
+              :value="scopeOf(item.id)"
+              :disabled="!!working[item.id]"
+              aria-label="approval scope"
+              @change="setScope(item.id, ($event.target as HTMLSelectElement).value as ApprovalScope)"
+            >
+              <option v-for="opt in SCOPE_OPTIONS" :key="opt.value" :value="opt.value">
+                {{ opt.label }}
+              </option>
+            </select>
             <button
               type="button"
               class="deny"
