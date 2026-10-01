@@ -245,11 +245,11 @@ export const useMessageStore = defineStore('message', {
       conversationId: string,
       text: string,
       workspace?: string,
-      attachments?: AttachmentItem[],
-      // MSG-2722 L3 编程 UI：mode 透传（"programming"→daemon ToolLoop 真件链
-      // 分流——缺省/chat 走旧路向后兼容——ChatSendParams.mode 类型已备）
-      mode?: string,
-    ) {
+        attachments?: AttachmentItem[],
+        // MSG-2722 L3 编程 UI：mode 透传（"programming"→daemon ToolLoop 真件链
+        // 分流——缺省/chat 走旧路向后兼容——ChatSendParams.mode 类型已备）
+        mode?: string,
+      ): Promise<boolean> {
       let effective = text
       // MSG-3270 P0：结构化附件（含 sha256）——与行内信封**同源同载荷**，供 daemon 侧对卯
       let wireAttachments: AttachmentWire[] | undefined
@@ -320,25 +320,26 @@ export const useMessageStore = defineStore('message', {
         }
         // 标准 v1.0 §A3／§C：队列条——chat.send 回执 queued:true／position
         // ⇒ 「排队中·第 N 位」＋单条取消（chat.queue_cancel，见 cancelQueued）
-        if (result.queued === true) {
-          await this.push(
-            conversationId,
-            makeMessage(conversationId, 'status', '', {
-              taskId: result.task_id || clientTaskId,
+          if (result.queued === true) {
+            await this.push(
+              conversationId,
+              makeMessage(conversationId, 'status', '', {
+                taskId: result.task_id || clientTaskId,
               status: 'queued',
               statusKey: 'queued',
               queued: true,
               ...(typeof result.position === 'number' ? { queuePosition: result.position } : {}),
-            }),
-          )
-        }
-      } catch (error) {
-        const run = this.runs[clientTaskId]
+              }),
+            )
+          }
+          return true
+        } catch (error) {
+          const run = this.runs[clientTaskId]
         // MSG-2608 修①收口：用户主动停止（stopRun 已置 cancelled——中性
         // 终态「（已停止）」已现）——在途 chat.send RPC 随 daemon
         // task.cancel 收束以错误回——勿覆 cancelled 勿落 sendFailed 红条
-        // （真失败径零波及——run 非 cancelled 照走下方红面）
-        if (run?.status === 'cancelled') return
+          // （真失败径零波及——run 非 cancelled 照走下方红面）
+          if (run?.status === 'cancelled') return true
         const mapped = mapRpcError(error)
         // DEBT-742 自愈：会话失效（-32002）⇒ 清失效 token ＋ 引导重登——
         // 否则失效 token 一直被随行重发（chat.send 的 session_token），每次发送同样失败。
@@ -355,15 +356,16 @@ export const useMessageStore = defineStore('message', {
           run.finishedAt = Date.now()
           run.elapsedMs = run.finishedAt - run.startedAt
         }
-        await this.push(
-          conversationId,
-          makeMessage(conversationId, 'status', mapped.detail, {
-            status: 'error',
-            statusKey: 'sendFailed',
-            errorKey: mapped.key,
-          }),
-        )
-      }
+          await this.push(
+            conversationId,
+            makeMessage(conversationId, 'status', mapped.detail, {
+              status: 'error',
+              statusKey: 'sendFailed',
+              errorKey: mapped.key,
+            }),
+          )
+          return false
+        }
     },
     async removeMessage(conversationId: string, messageId: string) {
       const list = this.byConversation[conversationId]

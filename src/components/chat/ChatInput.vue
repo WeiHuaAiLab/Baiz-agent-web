@@ -267,8 +267,7 @@ async function sendWith(text: string) {
     void files.clearAttachments();
     void session.touch(activeId.value);
     void clearDraft(activeId.value);
-    input.value = "";
-    await messages.sendUserMessage(
+    const ok = await messages.sendUserMessage(
         activeId.value,
         trimmed,
         settings.activeWorkspace || undefined,
@@ -277,6 +276,8 @@ async function sendWith(text: string) {
         // daemon ToolLoop 真件链分流（缺省 chat 旧路零变）
         ui.programmingMode ? "programming" : undefined,
     );
+    // 1047 可靠性①：发送成功才清空输入——失败保留输入（红条已由 sendUserMessage 内部 push）。
+    if (ok) input.value = "";
     emit("submitted");
 }
 
