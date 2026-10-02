@@ -75,7 +75,12 @@ export default {
     toolCall: 'Tool',
     toolResult: 'Result',
     // MSG-3233 ②: file card (ported from upstream) — click opens it in the side panel
-    fileCard: { open: 'Opened in panel' },
+    // REQ-1045-29: preview entry (FileCard "Preview" button / unsupported-type notice)
+    fileCard: {
+      open: 'Opened in panel',
+      preview: 'Preview',
+      previewUnsupported: 'Preview is not supported for this file type yet',
+    },
     inboxClosedForSend: 'Inbox closed — your message was sent',
     // MSG-3263 ②: export feedback (success shows file + where; failure shows the reason)
     exportDone: 'Exported "{name}" (look in {dir})',

@@ -19,6 +19,7 @@ import { useWorkingTreeStore } from '../../../stores/workingTree'
 import { useUiStore } from '../../../stores/ui'
 import { getBridge } from '../../../bridge'
 import { classifyFile, basenameOf } from '../../../utils/fileCard'
+import { isHtmlPath } from '../../../utils/htmlPreview'
 
 const props = defineProps<{
   path: string
@@ -61,7 +62,25 @@ async function open() {
   if (!body.value) await loadFromDisk()
   working.upsert(props.path, '', body.value)
   working.selectFile(props.path)
+  // REQ-1045-29：源码视图与预览互斥——切源码时清预览请求（否则预览面盖住 diff 视图）
+  working.clearPreviewRequest()
   ui.toast(t('chat.fileCard.open') + ' · ' + name.value, 'info')
+}
+
+/**
+ * REQ-1045-29 预览入口：可预览类型（.html/.htm，与面板路由**同源判定** isHtmlPath）
+ * ⇒ 打开右侧面板并请求沙箱预览（复用 MSG-3187 HtmlPreview 安全三条，零新增外链）；
+ * 其余类型 ⇒ **明示「暂不支持预览」**（禁静默无反应）。
+ */
+const canPreview = computed(() => isHtmlPath(props.path))
+
+function preview() {
+  if (!canPreview.value) {
+    ui.toast(t('chat.fileCard.previewUnsupported'), 'info')
+    return
+  }
+  ui.setExtensionOpen(true)
+  working.requestPreview(props.path, name.value)
 }
 </script>
 
@@ -87,6 +106,15 @@ async function open() {
     </div>
     <div class="file-card-meta">
       <span v-if="lineCount" class="file-card-lines">{{ lineCount }} 行</span>
+      <!-- REQ-1045-29 预览入口：.stop 防冒泡（卡片主点击＝源码视图，不变） -->
+      <button
+        type="button"
+        class="file-card-preview"
+        :title="t('chat.fileCard.preview')"
+        @click.stop="preview"
+      >
+        {{ t('chat.fileCard.preview') }}
+      </button>
     </div>
   </div>
 </template>

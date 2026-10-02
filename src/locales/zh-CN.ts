@@ -77,7 +77,12 @@ export default {
     toolCall: '调用工具',
     toolResult: '工具结果',
     // MSG-3233 ②：文件卡片（自上游挑件）——点击打开到右侧面板
-    fileCard: { open: '已在右侧打开' },
+    // REQ-1045-29：预览入口（FileCard「预览」按钮／不支持类型明示）
+    fileCard: {
+      open: '已在右侧打开',
+      preview: '预览',
+      previewUnsupported: '该类型暂不支持预览',
+    },
     // MSG-3236 ④：收件箱遮罩在途时的发送让路提示（禁静默吞发）
     inboxClosedForSend: '已关闭待办收件箱，消息已发出',
     // MSG-3263 ②：导出回显（成功报文件名＋落点；失败报明确原因——禁静默）

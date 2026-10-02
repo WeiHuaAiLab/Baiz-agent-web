@@ -2,6 +2,7 @@
 // 聊天主视图（页面组装层）：创建会话（CreateChat）/ 创建项目（CreateProject）/ 会话展示（头部 / 内容体 / 输入区）三套布局 + 右侧扩展面板（抽屉）。
 // 页面级快捷键（Ctrl+K 命令面板、Ctrl+N 新建会话、Esc 关闭创建流程）在此统一处理。
 import { computed, onBeforeUnmount, onMounted, ref } from "vue";
+import { storeToRefs } from "pinia";
 import { useI18n } from "vue-i18n";
 import { useSessionStore } from "../stores/session";
 import { useApprovalStore } from "../stores/approval";
@@ -22,7 +23,8 @@ const ui = useUiStore();
 const approvals = useApprovalStore();
 
 // 扩展面板（抽屉）配置：默认打开，内容为 FilesPanel；类型可在 ExtensionPanelType 中扩展
-const extensionOpen = ref(true);
+// REQ-1045-29：接 ui store（预览入口需可编程开面板；store 默认值 true 同前，行为等价）
+const { extensionOpen } = storeToRefs(ui);
 const extensionType = ref<ExtensionPanelType>("files");
 const contentRef = ref<InstanceType<typeof ChatContent>>();
 

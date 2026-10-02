@@ -470,6 +470,29 @@
   font-family: 'Cascadia Code', Consolas, monospace;
 }
 
+/* REQ-1045-29 预览入口：产物卡「预览」按钮（可预览类型 .html/.htm ⇒ 沙箱预览面） */
+.file-card-preview {
+  min-height: 24px;
+  padding: 2px 10px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: transparent;
+  color: var(--text-secondary);
+  font-size: 12px;
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s;
+}
+
+.file-card-preview:hover {
+  background: var(--hover);
+  color: var(--text);
+}
+
+.file-card-preview:focus-visible {
+  outline: none;
+  box-shadow: var(--shadow-focus);
+}
+
 /* ═══ MSG-3236 ①：未决审批卡**常驻区**（不入虚拟滚动 ⇒ UIA/自动化可稳定命中）═══
    间距一律 4 倍数（DESIGN §10 机判）。 */
 .pending-approvals {

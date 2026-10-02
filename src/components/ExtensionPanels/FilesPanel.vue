@@ -2,7 +2,7 @@
 // 文件面板（工作区右栏）：工作树 diff 预览＋已授权目录浏览＋外部文件预览。
 // MSG-3218：授权目录面改为「逐层可展开的树」（原为单层平铺、目录项不可点开），
 // 且列目录失败一律给人话提示（禁静默兜空／禁「暂无文件」糊弄）。
-import { computed, onMounted, ref } from 'vue'
+import { computed, onMounted, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useFilesStore } from '../../stores/files'
 import { useWorkingTreeStore } from '../../stores/workingTree'
@@ -64,9 +64,20 @@ function openPreview(path: string, name: string) {
 }
 
 function closePreview() {
+  working.clearPreviewRequest()
   previewPath.value = ''
   previewName.value = ''
 }
+
+// REQ-1045-29 预览入口：FileCard「预览」⇒ store 请求 ⇒ 本面板切预览面
+// （immediate：面板重挂载时按未消费请求恢复——用户关闭预览时 closePreview 已清请求，不复活）
+watch(
+  () => working.previewRequest,
+  (req) => {
+    if (req) openPreview(req.path, req.name)
+  },
+  { immediate: true },
+)
 
 function dirname(path: string): string {
   const index = path.lastIndexOf('/')

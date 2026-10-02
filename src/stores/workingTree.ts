@@ -33,6 +33,9 @@ export const useWorkingTreeStore = defineStore('workingTree', {
   state: () => ({
     files: {} as Record<string, WorkingFile>,
     activePath: '',
+    // REQ-1045-29 预览入口：FileCard「预览」请求的单一真源——FilesPanel 消费
+    // （watch ⇒ 切沙箱预览面）。null = 无预览意图；对象 ⇒ 请求预览该产物。
+    previewRequest: null as { path: string; name: string } | null,
   }),
   getters: {
     list(): WorkingFile[] {
@@ -84,9 +87,18 @@ export const useWorkingTreeStore = defineStore('workingTree', {
     closeViewer() {
       this.activePath = ''
     },
+    /** REQ-1045-29：请求预览某产物（FileCard「预览」入口 = 设置本请求） */
+    requestPreview(path: string, name: string) {
+      this.previewRequest = { path, name }
+    },
+    /** REQ-1045-29：清预览请求（预览面关闭／切回源码视图时调用——防重挂复活） */
+    clearPreviewRequest() {
+      this.previewRequest = null
+    },
     clear() {
       this.files = {}
       this.activePath = ''
+      this.previewRequest = null
     },
   },
 })
